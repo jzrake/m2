@@ -1,0 +1,5 @@
+/src/Makefile.in
+/src/*.o
+/src/*.dep
+/src/m2
+/src/m2-cfg.h

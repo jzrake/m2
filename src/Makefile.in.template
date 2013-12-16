@@ -1,0 +1,34 @@
+# ----------------------------------------------------------
+# Compiler configuration
+# ----------------------------------------------------------
+CC = cc
+CXX = c++
+#CFLAGS = -Wall -O3
+CFLAGS = -Wall -O0 -g
+#CLIBS = -lm -ldl
+
+
+# ----------------------------------------------------------
+# Dependencies (set to 1 if available) and other flags
+# ----------------------------------------------------------
+HAVE_MPI = 0
+HAVE_GLUT = 0
+DEBUG_FILE = NULL
+
+USE_MPI = 0
+USE_HDF5 = 0
+USE_MPIO = 0
+USE_FFTW = 0
+
+# ----------------------------------------------------------
+# GLUT includes and library,
+# ----------------------------------------------------------
+#
+# OSX 10.8
+# GLUT = -framework GLUT -framework OpenGL -I/usr/X11R6/include
+
+# OSX 10.9
+GLUT = -framework GLUT -framework OpenGL -I/opt/X11/include
+
+# On Redhat 64:
+# GLUT = -L/usr/lib64 -lGLU -lglut
