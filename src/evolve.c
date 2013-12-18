@@ -2,10 +2,6 @@
 #include "m2.h"
 
 
-#define MAX3(a,b,c) ((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c))
-#define MIN3(a,b,c) ((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c))
-
-
 static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
 {
   int q;
@@ -25,8 +21,8 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
   m2aux_fluxes(&AL, n, FL);
   m2aux_fluxes(&AR, n, FR);
 
-  double am = MIN3(lamL[0], lamR[0], 0.0);
-  double ap = MAX3(lamL[4], lamR[4], 0.0);
+  double am = M2_MIN3(lamL[0], lamR[0], 0.0);
+  double ap = M2_MAX3(lamL[4], lamR[4], 0.0);
 
   for (q=0; q<5; ++q) {
     F[q] = (ap*FL[q] - am*FR[q] + ap*am*(UR[q] - UL[q])) / (ap - am);
@@ -140,6 +136,25 @@ int m2sim_from_conserved_all(m2sim *m2)
 			 NULL, &V->prim);
   }
   return 0;
+}
+
+
+double m2sim_minimum_courant_time(m2sim *m2)
+{
+  int n;
+  int *L = m2->local_grid_size;
+  double dt, mindt=-1.0;
+  m2vol *V;
+  m2aux aux;
+  for (n=0; n<L[0]; ++n) {
+    V = m2->volumes + n;
+    m2sim_from_primitive(m2, &V->prim, NULL, NULL, V->volume, NULL, &aux);
+    dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&aux);
+    if (dt < mindt || mindt < 0.0) {
+      mindt = dt;
+    }
+  }
+  return mindt;
 }
 
 

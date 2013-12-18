@@ -79,6 +79,7 @@ struct m2sim
 double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 
+double m2vol_minimum_dimension(m2vol *V);
 
 m2sim *m2sim_new();
 void m2sim_del(m2sim *m2);
@@ -105,8 +106,10 @@ int m2sim_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 			 m2aux *aux, m2prim *P);
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
+double m2sim_minimum_courant_time(m2sim *m2);
 
 
+double m2aux_maximum_wavespeed(m2aux *aux);
 int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);
 int m2aux_fluxes(m2aux *aux, double n[4], double *F);
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
@@ -127,6 +130,9 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 #define M2_IND(i,j,k) (m2->local_grid_size[2] * m2->local_grid_size[3] * i + \
 		       m2->local_grid_size[3] * j +			\
 		       k)						\
+
+#define M2_MAX3(a,b,c) ((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c))
+#define M2_MIN3(a,b,c) ((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c))
 
 #define DEBUG 'D'
 #define INFO 'I'

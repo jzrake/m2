@@ -117,3 +117,24 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   F[S33] = S3 * vn + (pg + pb) * n3 - b3 * Bn / u0;
   return 0;
 }
+double m2aux_maximum_wavespeed(m2aux *aux)
+{
+  double evals[5];
+  double n[4] = { 0.0,
+		  aux->velocity_four_vector[1],
+		  aux->velocity_four_vector[2],
+		  aux->velocity_four_vector[3] };
+  double N = sqrt(n[1]*n[1] + n[2]*n[2] + n[3]*n[3]);
+  if (fabs(N) < 1e-10) { /* if no velocity, then just use sound speed */
+    n[1] = 0.0;
+    n[2] = 0.0;
+    n[3] = 0.0;
+  }
+  else {
+    n[1] /= N;
+    n[2] /= N;
+    n[3] /= N;
+  }
+  m2aux_eigenvalues(aux, n, evals);
+  return fabs(evals[0]) > fabs(evals[4]) ? fabs(evals[0]) : fabs(evals[4]);
+}

@@ -33,7 +33,7 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 1000, 1, 1);
+  m2sim_set_resolution(m2, 400, 1, 1);
   m2sim_set_guard_zones(m2, 2);
   m2sim_set_geometry(m2, M2_CARTESIAN);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_UNMAGNETIZED);
@@ -45,10 +45,13 @@ int main()
 
 
   double time_simulation = 0.0;
-  double dt = 0.001;
+  double dt;
 
 
-  while (time_simulation < 0.4) {
+  while (time_simulation < 0.1) {
+
+    dt = 0.5 * m2sim_minimum_courant_time(m2);
+
     m2sim_cache_conserved(m2);
     m2sim_calculate_flux(m2);
     m2sim_exchange_flux(m2, dt);

@@ -165,3 +165,18 @@ void m2sim_calculate_conserved(m2sim *m2)
 			 V->consA, NULL);
   }
 }
+double m2vol_minimum_dimension(m2vol *V)
+{
+  double I0[4], I1[4], x0[4], x1[4];
+  I0[0] = 0.0;
+  I0[1] = V->global_index[1] - 0.5;
+  I0[2] = V->global_index[2] - 0.5;
+  I0[3] = V->global_index[3] - 0.5;
+  I1[0] = 0.0;
+  I1[1] = V->global_index[1] + 0.5;
+  I1[2] = V->global_index[2] + 0.5;
+  I1[3] = V->global_index[3] + 0.5;
+  m2sim_index_to_position(V->m2, I0, x0);
+  m2sim_index_to_position(V->m2, I1, x1);
+  return M2_MIN3(x1[1] - x0[1], x1[2] - x0[2], x1[3] - x0[3]);
+}
