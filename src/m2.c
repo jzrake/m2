@@ -83,7 +83,7 @@ void m2sim_initialize(m2sim *m2)
 	/* cache cell global index */
 	/* ----------------------- */
 	for (d=1; d<=3; ++d) {
-	  V->global_index[0] = 0;
+	  V->global_index[0] = M2_IND(i,j,k);
 	  V->global_index[1] = i - ng * (N[1] > 1);
 	  V->global_index[2] = j - ng * (N[2] > 1);
 	  V->global_index[3] = k - ng * (N[3] > 1);
@@ -162,7 +162,7 @@ void m2sim_calculate_conserved(m2sim *m2)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-			 V->consA, NULL);
+			 V->consA, &V->aux);
   }
 }
 double m2vol_minimum_dimension(m2vol *V)
@@ -179,4 +179,8 @@ double m2vol_minimum_dimension(m2vol *V)
   m2sim_index_to_position(V->m2, I0, x0);
   m2sim_index_to_position(V->m2, I1, x1);
   return M2_MIN3(x1[1] - x0[1], x1[2] - x0[2], x1[3] - x0[3]);
+}
+int m2sim_memory_usage(m2sim *m2)
+{
+  return m2->local_grid_size[0] * sizeof(m2vol) / (1<<20);
 }

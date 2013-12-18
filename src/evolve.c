@@ -113,6 +113,34 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 }
 
 
+void m2sim_add_source_terms(m2sim *m2, double dt)
+{
+  int n;
+  int *L = m2->local_grid_size;
+  double I0[4], I1[4], x0[4], x1[4];
+  m2vol *V;
+  //  m2aux aux;
+  for (n=0; n<L[0]; ++n) {
+    V = m2->volumes + n;
+    I0[0] = 0.0;
+    I0[1] = V->global_index[1] - 0.5;
+    I0[2] = V->global_index[2] - 0.5;
+    I0[3] = V->global_index[3] - 0.5;
+    I1[0] = 0.0;
+    I1[1] = V->global_index[1] + 0.5;
+    I1[2] = V->global_index[2] + 0.5;
+    I1[3] = V->global_index[3] + 0.5;
+    x0[0] = 0.0;
+    x1[1] = dt;
+    m2sim_index_to_position(V->m2, I0, x0);
+    m2sim_index_to_position(V->m2, I1, x1);
+    //    m2sim_from_primitive(m2, &V->prim, NULL, NULL, V->volume, NULL, &aux);
+    //    m2aux_add_geometrical_source_terms(&aux, x0, x1, V->consA);
+    m2aux_add_geometrical_source_terms(&V->aux, x0, x1, V->consA);
+  }
+}
+
+
 void m2sim_cache_conserved(m2sim *m2)
 {
   int n;
@@ -121,6 +149,20 @@ void m2sim_cache_conserved(m2sim *m2)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     memcpy(V->consB, V->consA, 5 * sizeof(double));
+  }
+}
+
+
+void m2sim_average_runge_kutta(m2sim *m2, double b)
+{
+  int n, q;
+  int *L = m2->local_grid_size;
+  m2vol *V;
+  for (n=0; n<L[0]; ++n) {
+    V = m2->volumes + n;
+    for (q=0; q<5; ++q) {
+      V->consA[q] = b * V->consA[q] + (1.0 - b) * V->consB[q];
+    }
   }
 }
 
@@ -145,11 +187,11 @@ double m2sim_minimum_courant_time(m2sim *m2)
   int *L = m2->local_grid_size;
   double dt, mindt=-1.0;
   m2vol *V;
-  m2aux aux;
+  //  m2aux aux;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    m2sim_from_primitive(m2, &V->prim, NULL, NULL, V->volume, NULL, &aux);
-    dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&aux);
+    //    m2sim_from_primitive(m2, &V->prim, NULL, NULL, V->volume, NULL, &aux);
+    dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux);
     if (dt < mindt || mindt < 0.0) {
       mindt = dt;
     }

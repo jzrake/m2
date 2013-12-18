@@ -55,11 +55,15 @@ struct m2vol
   double flux1[5];
   double flux2[5];
   double flux3[5];
+  double grad1[5];
+  double grad2[5];
+  double grad3[5];
   double area1;
   double area2;
   double area3;
   double volume;
   m2prim prim;
+  m2aux aux;
   m2sim *m2;
 } ;
 
@@ -95,8 +99,11 @@ void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
 void m2sim_calculate_conserved(m2sim *m2);
 void m2sim_calculate_flux(m2sim *m2);
 void m2sim_exchange_flux(m2sim *m2, double dt);
+void m2sim_add_source_terms(m2sim *m2, double dt);
 void m2sim_cache_conserved(m2sim *m2);
+void m2sim_average_runge_kutta(m2sim *m2, double b);
 void m2sim_enforce_boundary_condition(m2sim *m2);
+int m2sim_memory_usage(m2sim *m2);
 
 
 int m2sim_from_conserved_all(m2sim *m2);
