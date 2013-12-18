@@ -109,7 +109,7 @@ int main()
 	    m2->volumes[M2_IND(i,0,0)].prim.p,
 	    m2->volumes[M2_IND(i,0,0)].prim.v1);
   }
-
+  fclose(outfile);
   m2sim_del(m2);
 
 
