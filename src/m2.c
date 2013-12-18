@@ -180,6 +180,16 @@ double m2vol_minimum_dimension(m2vol *V)
   m2sim_index_to_position(V->m2, I1, x1);
   return M2_MIN3(x1[1] - x0[1], x1[2] - x0[2], x1[3] - x0[3]);
 }
+double m2vol_coordinate_centroid(m2vol *V, int axis)
+{
+  double I[4], x[4];
+  I[0] = 0.0;
+  I[1] = V->global_index[1];
+  I[2] = V->global_index[2];
+  I[3] = V->global_index[3];
+  m2sim_index_to_position(V->m2, I, x);
+  return x[axis];
+}
 int m2sim_memory_usage(m2sim *m2)
 {
   return m2->local_grid_size[0] * sizeof(m2vol) / (1<<20);

@@ -47,7 +47,7 @@ void m2sim_calculate_flux(m2sim *m2)
 	  n[1] = 0.0;
 	}
 	else {
-	  for (q=0; q<5; ++q) VL->flux1[q] = 0.0;	  
+	  for (q=0; q<5; ++q) VL->flux1[q] = 0.0;
 	}
 	if (j != L[2] - 1) {
 	  VL = m2->volumes + M2_IND(i,j+0,k);
@@ -57,7 +57,7 @@ void m2sim_calculate_flux(m2sim *m2)
 	  n[2] = 0.0;
 	}
 	else {
-	  for (q=0; q<5; ++q) VL->flux2[q] = 0.0;	  
+	  for (q=0; q<5; ++q) VL->flux2[q] = 0.0;
 	}
 	if (k != L[3] - 1) {
 	  VL = m2->volumes + M2_IND(i,j,k+0);
@@ -67,7 +67,7 @@ void m2sim_calculate_flux(m2sim *m2)
 	  n[3] = 0.0;
 	}
 	else {
-	  for (q=0; q<5; ++q) VL->flux3[q] = 0.0;	  
+	  for (q=0; q<5; ++q) VL->flux3[q] = 0.0;
 	}
       }
     }
@@ -119,7 +119,6 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   double I0[4], I1[4], x0[4], x1[4];
   m2vol *V;
-  //  m2aux aux;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I0[0] = 0.0;
@@ -130,12 +129,10 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
     I1[1] = V->global_index[1] + 0.5;
     I1[2] = V->global_index[2] + 0.5;
     I1[3] = V->global_index[3] + 0.5;
-    x0[0] = 0.0;
-    x1[1] = dt;
     m2sim_index_to_position(V->m2, I0, x0);
     m2sim_index_to_position(V->m2, I1, x1);
-    //    m2sim_from_primitive(m2, &V->prim, NULL, NULL, V->volume, NULL, &aux);
-    //    m2aux_add_geometrical_source_terms(&aux, x0, x1, V->consA);
+    x0[0] = 0.0;
+    x1[0] = dt;
     m2aux_add_geometrical_source_terms(&V->aux, x0, x1, V->consA);
   }
 }
@@ -175,7 +172,7 @@ int m2sim_from_conserved_all(m2sim *m2)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     m2sim_from_conserved(m2, V->consA, NULL, NULL, V->volume,
-			 NULL, &V->prim);
+			 &V->aux, &V->prim);
   }
   return 0;
 }
@@ -185,12 +182,10 @@ double m2sim_minimum_courant_time(m2sim *m2)
 {
   int n;
   int *L = m2->local_grid_size;
-  double dt, mindt=-1.0;
+  double dt, mindt = -1.0;
   m2vol *V;
-  //  m2aux aux;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    //    m2sim_from_primitive(m2, &V->prim, NULL, NULL, V->volume, NULL, &aux);
     dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux);
     if (dt < mindt || mindt < 0.0) {
       mindt = dt;
@@ -203,6 +198,16 @@ double m2sim_minimum_courant_time(m2sim *m2)
 void m2sim_enforce_boundary_condition(m2sim *m2)
 {
   int *L = m2->local_grid_size;
-  m2->volumes[     0] = m2->volumes[     1];
-  m2->volumes[L[1]-2] = m2->volumes[L[1]-1];
+  m2->volumes[     0].prim = m2->volumes[     1].prim;
+  m2->volumes[L[1]-2].prim = m2->volumes[L[1]-3].prim;
+  m2sim_from_primitive(m2,
+		       &m2->volumes[0].prim, NULL, NULL,
+		       m2 ->volumes[0].volume,
+		       m2 ->volumes[0].consA,
+		       &m2->volumes[0].aux);
+  m2sim_from_primitive(m2,
+  		       &m2->volumes[L[1]-2].prim, NULL, NULL,
+  		       m2 ->volumes[L[1]-2].volume,
+  		       m2 ->volumes[L[1]-2].consA,
+  		       &m2->volumes[L[1]-2].aux);
 }

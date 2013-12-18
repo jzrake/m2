@@ -46,7 +46,7 @@ double m2_area_measure(double x0[4], double x1[4], int geometry, int axis)
     break;
   case M2_SPHERICAL:
     switch (axis) {
-    case 1: return -x0[1]*x0[1] * (cos(x1[2]) - cos(x0[2])) * (x1[3] - x1[3]);
+    case 1: return -x0[1]*x0[1] * (cos(x1[2]) - cos(x0[2])) * (x1[3] - x0[3]);
     case 2: return (x1[1]*x1[1] - x0[1]*x0[1]) * (x1[3] - x0[3]) * sin(x0[2])/2;
     case 3: return (x1[1]*x1[1] - x0[1]*x0[1]) * (x1[2] - x0[2])/2;
     default: MSG(FATAL, "internal error"); return 0.0;

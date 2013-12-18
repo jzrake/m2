@@ -84,6 +84,7 @@ double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 
 double m2vol_minimum_dimension(m2vol *V);
+double m2vol_coordinate_centroid(m2vol *V, int axis);
 
 m2sim *m2sim_new();
 void m2sim_del(m2sim *m2);
@@ -131,6 +132,7 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 /* ------------------------------------------------------------------
  * DEBUG MACROS AND UTILITY
  * --------------------------------------------------------------- */
+#define M2_PI 3.14159265358979
 #define M2_STRING_LEN 256
 #define M2_STRING_SET(d,s) strncpy(d, s, 256); d[255] = '\0';
 
