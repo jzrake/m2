@@ -39,8 +39,8 @@ void m2sim_calculate_flux(m2sim *m2)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
+	VL = m2->volumes + M2_IND(i,j,k);
 	if (i != L[1] - 1) {
-	  VL = m2->volumes + M2_IND(i+0,j,k);
 	  VR = m2->volumes + M2_IND(i+1,j,k);
 	  n[1] = 1.0;
 	  riemann_hll(VL, VR, n, VL->flux1);
@@ -50,7 +50,6 @@ void m2sim_calculate_flux(m2sim *m2)
 	  for (q=0; q<5; ++q) VL->flux1[q] = 0.0;
 	}
 	if (j != L[2] - 1) {
-	  VL = m2->volumes + M2_IND(i,j+0,k);
 	  VR = m2->volumes + M2_IND(i,j+1,k);
 	  n[2] = 1.0;
 	  riemann_hll(VL, VR, n, VL->flux2);
@@ -60,7 +59,6 @@ void m2sim_calculate_flux(m2sim *m2)
 	  for (q=0; q<5; ++q) VL->flux2[q] = 0.0;
 	}
 	if (k != L[3] - 1) {
-	  VL = m2->volumes + M2_IND(i,j,k+0);
 	  VR = m2->volumes + M2_IND(i,j,k+1);
 	  n[3] = 1.0;
 	  riemann_hll(VL, VR, n, VL->flux3);
@@ -188,15 +186,15 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
 {
   int *L = m2->local_grid_size;
   m2->volumes[     0].prim = m2->volumes[     1].prim;
-  m2->volumes[L[1]-2].prim = m2->volumes[L[1]-3].prim;
+  m2->volumes[L[1]-1].prim = m2->volumes[L[1]-2].prim;
   m2sim_from_primitive(m2,
 		       &m2->volumes[0].prim, NULL, NULL,
 		       m2 ->volumes[0].volume,
 		       m2 ->volumes[0].consA,
 		       &m2->volumes[0].aux);
   m2sim_from_primitive(m2,
-  		       &m2->volumes[L[1]-2].prim, NULL, NULL,
-  		       m2 ->volumes[L[1]-2].volume,
-  		       m2 ->volumes[L[1]-2].consA,
-  		       &m2->volumes[L[1]-2].aux);
+  		       &m2->volumes[L[1]-1].prim, NULL, NULL,
+  		       m2 ->volumes[L[1]-1].volume,
+  		       m2 ->volumes[L[1]-1].consA,
+  		       &m2->volumes[L[1]-1].aux);
 }
