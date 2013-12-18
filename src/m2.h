@@ -50,6 +50,8 @@ struct m2aux
 struct m2vol
 {
   int global_index[4];
+  double x0[4];
+  double x1[4];
   double consA[5];
   double consB[5];
   double flux1[5];
@@ -85,6 +87,7 @@ double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 
 double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);
+void m2vol_coordinate_centroid_3d(m2vol *V, double x[4]);
 
 m2sim *m2sim_new();
 void m2sim_del(m2sim *m2);

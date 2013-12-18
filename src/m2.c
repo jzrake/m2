@@ -1,3 +1,4 @@
+#include <string.h>
 #include "m2.h"
 
 
@@ -102,6 +103,8 @@ void m2sim_initialize(m2sim *m2)
 	m2sim_index_to_position(m2, I0, x0);
 	m2sim_index_to_position(m2, I1, x1);
 	V->volume = m2_volume_measure(x0, x1, m2->geometry);
+	memcpy(V->x0, x0, 4 * sizeof(double));
+	memcpy(V->x1, x1, 4 * sizeof(double));
 	/* ----------------------- */
 	/* cache cell surace areas */
 	/* ----------------------- */
@@ -167,28 +170,20 @@ void m2sim_calculate_conserved(m2sim *m2)
 }
 double m2vol_minimum_dimension(m2vol *V)
 {
-  double I0[4], I1[4], x0[4], x1[4];
-  I0[0] = 0.0;
-  I0[1] = V->global_index[1] - 0.5;
-  I0[2] = V->global_index[2] - 0.5;
-  I0[3] = V->global_index[3] - 0.5;
-  I1[0] = 0.0;
-  I1[1] = V->global_index[1] + 0.5;
-  I1[2] = V->global_index[2] + 0.5;
-  I1[3] = V->global_index[3] + 0.5;
-  m2sim_index_to_position(V->m2, I0, x0);
-  m2sim_index_to_position(V->m2, I1, x1);
+  double *x0 = V->x0;
+  double *x1 = V->x1;
   return M2_MIN3(x1[1] - x0[1], x1[2] - x0[2], x1[3] - x0[3]);
 }
 double m2vol_coordinate_centroid(m2vol *V, int axis)
 {
-  double I[4], x[4];
-  I[0] = 0.0;
-  I[1] = V->global_index[1];
-  I[2] = V->global_index[2];
-  I[3] = V->global_index[3];
-  m2sim_index_to_position(V->m2, I, x);
-  return x[axis];
+  return 0.5 * (V->x1[axis] + V->x0[axis]);
+}
+void m2vol_coordinate_centroid_3d(m2vol *V, double x[4])
+{
+  x[0] = 0.0;
+  x[1] = 0.5 * (V->x1[1] + V->x0[1]);
+  x[2] = 0.5 * (V->x1[2] + V->x0[2]);
+  x[3] = 0.5 * (V->x1[3] + V->x0[3]);
 }
 int m2sim_memory_usage(m2sim *m2)
 {

@@ -117,23 +117,12 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
 {
   int n;
   int *L = m2->local_grid_size;
-  double I0[4], I1[4], x0[4], x1[4];
   m2vol *V;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    I0[0] = 0.0;
-    I0[1] = V->global_index[1] - 0.5;
-    I0[2] = V->global_index[2] - 0.5;
-    I0[3] = V->global_index[3] - 0.5;
-    I1[0] = 0.0;
-    I1[1] = V->global_index[1] + 0.5;
-    I1[2] = V->global_index[2] + 0.5;
-    I1[3] = V->global_index[3] + 0.5;
-    m2sim_index_to_position(V->m2, I0, x0);
-    m2sim_index_to_position(V->m2, I1, x1);
-    x0[0] = 0.0;
-    x1[0] = dt;
-    m2aux_add_geometrical_source_terms(&V->aux, x0, x1, V->consA);
+    V->x0[0] = 0.0;
+    V->x1[0] = dt;
+    m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
   }
 }
 

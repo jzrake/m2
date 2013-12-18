@@ -6,11 +6,7 @@
 void initial_data(m2vol *V)
 {
   double x[4];
-  double index[4] = { V->global_index[0],
-		      V->global_index[1],
-		      V->global_index[2],
-		      V->global_index[3] };
-  m2sim_index_to_position(V->m2, index, x);
+  m2vol_coordinate_centroid_3d(V, x);
   if (x[1] < 0.5) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
@@ -46,8 +42,8 @@ int main()
 
   m2sim_set_resolution(m2, 1024, 1, 1);
   m2sim_set_guard_zones(m2, 1);
-  //  m2sim_set_geometry(m2, M2_CARTESIAN);
-  m2sim_set_geometry(m2, M2_SPHERICAL);
+  m2sim_set_geometry(m2, M2_CARTESIAN);
+  //  m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_UNMAGNETIZED);
   m2sim_set_extent0(m2, 0.1, 0.5*M2_PI-0.1, -0.1);
   m2sim_set_extent1(m2, 1.0, 0.5*M2_PI+0.1,  0.1);
@@ -58,7 +54,6 @@ int main()
 
   printf("[m2]: astrophysical MHD code\n");
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
-
 
   double time_simulation = 0.0;
   double dt;
@@ -109,10 +104,10 @@ int main()
   int i;
   for (i=0; i<m2->local_grid_size[1]; ++i) {
     fprintf(outfile, "%f %f %f %f\n",
-	    m2vol_coordinate_centroid(&m2->volumes[i], 1),
-	    m2->volumes[i].prim.d,
-	    m2->volumes[i].prim.p,
-	    m2->volumes[i].prim.v1);
+	    m2vol_coordinate_centroid(&m2->volumes[M2_IND(i,0,0)], 1),
+	    m2->volumes[M2_IND(i,0,0)].prim.d,
+	    m2->volumes[M2_IND(i,0,0)].prim.p,
+	    m2->volumes[M2_IND(i,0,0)].prim.v1);
   }
 
   m2sim_del(m2);
