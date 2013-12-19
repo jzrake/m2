@@ -108,16 +108,28 @@ int nrmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
   const double d = aux->comoving_mass_density;
   const double p = aux->gas_pressure;
-  const double u0 = aux->velocity_four_vector[0];
-  const double v1 = aux->velocity_four_vector[1] / u0;
-  const double v2 = aux->velocity_four_vector[2] / u0;
-  const double v3 = aux->velocity_four_vector[3] / u0;
+  const double v1 = aux->velocity_four_vector[1];
+  const double v2 = aux->velocity_four_vector[2];
+  const double v3 = aux->velocity_four_vector[3];
+  const double B1 = aux->magnetic_four_vector[1];
+  const double B2 = aux->magnetic_four_vector[2];
+  const double B3 = aux->magnetic_four_vector[3];
+  const double BB = B1*B1 + B2*B2 + B3*B3;
   const double vn = v1*n[1] + v2*n[2] + v3*n[3];
-  const double cs = sqrt(gamma_law_index * p / d);
-  evals[0] = vn - cs;
-  evals[1] = vn;
-  evals[2] = vn;
+  const double Bn = B1*n[1] + B2*n[2] + B3*n[3];
+  const double Bn2 = Bn * Bn;
+  const double cs2 = gamma_law_index * p / d; /* sound */
+  const double ca2 = BB / d; /* Alfven */
+  const double cw4 = (cs2 + ca2) * (cs2 + ca2);
+  const double cF2 = 0.5*(cs2 + ca2 + sqrt(cw4 - 4*cs2*Bn2/d)); /* fast */
+  const double cS2 = 0.5*(cs2 + ca2 - sqrt(cw4 - 4*cs2*Bn2/d)); /* slow */
+  evals[0] = vn - sqrt(cF2);
+  evals[1] = vn - sqrt(ca2);
+  evals[2] = vn - sqrt(cS2);
   evals[3] = vn;
-  evals[4] = vn + cs;
+  evals[4] = vn;
+  evals[5] = vn + sqrt(cS2);
+  evals[6] = vn + sqrt(ca2);
+  evals[7] = vn + sqrt(cF2);
   return 0;
 }

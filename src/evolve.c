@@ -9,8 +9,8 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
   double UR[5];
   double FL[5];
   double FR[5];
-  double lamL[5];
-  double lamR[5];
+  double lamL[8];
+  double lamR[8];
   m2aux AL;
   m2aux AR;
 
@@ -22,7 +22,7 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
   m2aux_fluxes(&AR, n, FR);
 
   double am = M2_MIN3(lamL[0], lamR[0], 0.0);
-  double ap = M2_MAX3(lamL[4], lamR[4], 0.0);
+  double ap = M2_MAX3(lamL[7], lamR[7], 0.0);
 
   if (ap != ap || am != am) {
     MSG(FATAL, "got NAN wave speeds");

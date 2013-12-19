@@ -111,6 +111,9 @@ int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
   evals[1] = vn;
   evals[2] = vn;
   evals[3] = vn;
-  evals[4] = vn + cs;
+  evals[4] = vn;
+  evals[5] = vn;
+  evals[6] = vn;
+  evals[7] = vn + cs;
   return 0;
 }

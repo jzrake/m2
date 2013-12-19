@@ -119,7 +119,7 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
 }
 double m2aux_maximum_wavespeed(m2aux *aux)
 {
-  double evals[5];
+  double evals[8];
   double n[4] = { 0.0,
 		  aux->velocity_four_vector[1],
 		  aux->velocity_four_vector[2],
@@ -136,5 +136,5 @@ double m2aux_maximum_wavespeed(m2aux *aux)
     n[3] /= N;
   }
   m2aux_eigenvalues(aux, n, evals);
-  return fabs(evals[0]) > fabs(evals[4]) ? fabs(evals[0]) : fabs(evals[4]);
+  return fabs(evals[0]) > fabs(evals[7]) ? fabs(evals[0]) : fabs(evals[7]);
 }

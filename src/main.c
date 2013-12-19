@@ -69,7 +69,7 @@ int main()
   double kzps; /* kilozones per second */
 
 
-  while (time_simulation < 0.05) {
+  while (time_simulation < 0.1) {
 
     dt = 0.5 * m2sim_minimum_courant_time(m2);
 

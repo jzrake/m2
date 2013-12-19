@@ -186,6 +186,9 @@ int srhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
   evals[1] = vn;
   evals[2] = vn;
   evals[3] = vn;
-  evals[4] = (vn*(1-cs2) + sqrt(cs2*(1-vv)*(1-vv*cs2-vn2*(1-cs2))))/(1-vv*cs2);
+  evals[4] = vn;
+  evals[5] = vn;
+  evals[6] = vn;
+  evals[7] = (vn*(1-cs2) + sqrt(cs2*(1-vv)*(1-vv*cs2-vn2*(1-cs2))))/(1-vv*cs2);
   return 0;
 }
