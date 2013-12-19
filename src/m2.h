@@ -22,7 +22,8 @@ enum m2flag {
   M2_MAGNETIZED=(1<<2),
 } ;
 
-enum { TAU, S11, S22, S33, DDD };
+/* indices into cons[AB] and flux[123] arrays */
+enum { TAU, S11, S22, S33, DDD, B11, B22, B33 };
 
 typedef struct m2sim m2sim;
 typedef struct m2vol m2vol;
@@ -33,6 +34,7 @@ typedef void (*m2vol_operator)(m2vol *vol);
 struct m2prim
 {
   double v1, v2, v3; /* three-velocity (beta) */
+  double B1, B2, B3; /* cell-centered magnetic field */
   double p, d;
 } ;
 
@@ -54,17 +56,23 @@ struct m2vol
   double x1[4];
   double consA[5];
   double consB[5];
-  double flux1[5];
-  double flux2[5];
-  double flux3[5];
-  double grad1[5];
-  double grad2[5];
-  double grad3[5];
+  double flux1[8];
+  double flux2[8];
+  double flux3[8];
+  double grad1[8];
+  double grad2[8];
+  double grad3[8];
   double area1;
   double area2;
   double area3;
   double volume;
   m2prim prim;
+  double Bflux1A, Bflux1B; /* magnetic flux through (+1/2) faces */
+  double Bflux2A, Bflux2B;
+  double Bflux3A, Bflux3B;
+  double emf1; /* line integral of electric field along (+1/2, +1/2) edges */
+  double emf2;
+  double emf3;
   m2aux aux;
   m2sim *m2;
 } ;
@@ -106,6 +114,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt);
 void m2sim_add_source_terms(m2sim *m2, double dt);
 void m2sim_cache_conserved(m2sim *m2);
 void m2sim_average_runge_kutta(m2sim *m2, double b);
+void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
 void m2sim_enforce_boundary_condition(m2sim *m2);
 int m2sim_memory_usage(m2sim *m2);
 

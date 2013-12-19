@@ -5,7 +5,7 @@
 #define gamma_law_index (4./3.)
 
 
-int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
+int nrmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 			 double *U, m2aux *aux)
 {
   double v1 = P->v1;
@@ -14,6 +14,7 @@ int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
   double d = P->d;
   double p = P->p;
   double u = p / (gamma_law_index - 1.0);
+  double Eb = 0.5 * (P->B1*P->B1 + P->B2*P->B2 + P->B3*P->B3);
 
   if (aux) {
     aux->velocity_four_vector[0] = 1.0;
@@ -21,21 +22,21 @@ int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
     aux->velocity_four_vector[2] = v2;
     aux->velocity_four_vector[3] = v3;
     aux->magnetic_four_vector[0] = 0.0;
-    aux->magnetic_four_vector[1] = 0.0;
-    aux->magnetic_four_vector[2] = 0.0;
-    aux->magnetic_four_vector[3] = 0.0;
-    aux->momentum_density[0] = d * 0.5 * (v1*v1 + v2*v2 + v3*v3) + u + d;
+    aux->magnetic_four_vector[1] = P->B1;
+    aux->magnetic_four_vector[2] = P->B2;
+    aux->magnetic_four_vector[3] = P->B3;
+    aux->momentum_density[0] = d * 0.5 * (v1*v1 + v2*v2 + v3*v3) + u + Eb + d;
     aux->momentum_density[1] = d * v1;
     aux->momentum_density[2] = d * v2;
     aux->momentum_density[3] = d * v3;
     aux->comoving_mass_density = d;
     aux->gas_pressure = p;
-    aux->magnetic_pressure = 0.0;
+    aux->magnetic_pressure = Eb;
     aux->m2 = m2;
   }
   if (U) {
     U[DDD] = dV * (d);
-    U[TAU] = dV * (d * 0.5 * (v1*v1 + v2*v2 + v3*v3) + u);
+    U[TAU] = dV * (d * 0.5 * (v1*v1 + v2*v2 + v3*v3) + u + Eb);
     U[S11] = dV * (d * v1);
     U[S22] = dV * (d * v2);
     U[S33] = dV * (d * v3);
@@ -45,7 +46,7 @@ int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 }
 
 
-int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
+int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 			 m2aux *aux, m2prim *P)
 {
   double T0 = U[TAU] / dV; /* total energy density */
@@ -54,10 +55,16 @@ int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double S3 = U[S33] / dV;
   double D0 = U[DDD] / dV;
 
-  double pg = (T0 - 0.5*(S1*S1 + S2*S2 + S3*S3)/D0) * (gamma_law_index - 1.0);
+  double Ek = 0.5 * (S1*S1 + S2*S2 + S3*S3) / D0;
+  double Eb = 0.5 * (B[1]*B[1] + B[2]*B[2] + B[3]*B[3]);
+  double pg = (T0 - Ek - Eb) * (gamma_law_index - 1.0);
   double v1 = S1 / D0;
   double v2 = S2 / D0;
   double v3 = S3 / D0;
+
+  if (pg < 0.0) {
+    MSGF(FATAL, "got negative p: %f %f %f", T0, Ek, Eb);
+  }
 
   if (aux) {
     aux->velocity_four_vector[0] = 1.0;
@@ -65,16 +72,16 @@ int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     aux->velocity_four_vector[2] = v2;
     aux->velocity_four_vector[3] = v3;
     aux->magnetic_four_vector[0] = 0.0;
-    aux->magnetic_four_vector[1] = 0.0;
-    aux->magnetic_four_vector[2] = 0.0;
-    aux->magnetic_four_vector[3] = 0.0;
+    aux->magnetic_four_vector[1] = B[1];
+    aux->magnetic_four_vector[2] = B[2];
+    aux->magnetic_four_vector[3] = B[3];
     aux->momentum_density[0] = T0 + D0; /* odd for Newtonian, see fluxes */
     aux->momentum_density[1] = S1;
     aux->momentum_density[2] = S2;
     aux->momentum_density[3] = S3;
     aux->comoving_mass_density = D0;
     aux->gas_pressure = pg;
-    aux->magnetic_pressure = 0.0;
+    aux->magnetic_pressure = Eb;
     aux->m2 = m2;
   }
 
@@ -90,14 +97,14 @@ int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 }
 
 
-int nrhyd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
+int nrmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U)
 {
   return 0;
 }
 
 
-int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
+int nrmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
   const double d = aux->comoving_mass_density;
   const double p = aux->gas_pressure;

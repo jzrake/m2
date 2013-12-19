@@ -4,24 +4,24 @@
 
 #define SYSTEM_CHOICE(m2,E)						\
   do {									\
-  if (0) { }								\
-  else if (m2->physics == (M2_RELATIVISTIC | M2_MAGNETIZED)) {		\
-    MSG(FATAL, "srmhd not yet implemented");				\
-    return -1;								\
-  }									\
-  else if (m2->physics == (M2_RELATIVISTIC | M2_UNMAGNETIZED)) {	\
-    return srhyd_##E;							\
-  }									\
-  else if (m2->physics == (M2_NONRELATIVISTIC | M2_MAGNETIZED)) {	\
-    MSG(FATAL, "nrmhd not yet implemented");				\
-  }									\
-  else if (m2->physics == (M2_NONRELATIVISTIC | M2_UNMAGNETIZED)) {	\
-    return nrhyd_##E;							\
-  }									\
-  else {								\
-    MSG(FATAL, "unknown physics");					\
-    return -1;								\
-  }									\
+    if (0) { }								\
+    else if (m2->physics == (M2_RELATIVISTIC | M2_MAGNETIZED)) {	\
+      MSG(FATAL, "srmhd not yet implemented");				\
+      return -1;							\
+    }									\
+    else if (m2->physics == (M2_RELATIVISTIC | M2_UNMAGNETIZED)) {	\
+      return srhyd_##E;							\
+    }									\
+    else if (m2->physics == (M2_NONRELATIVISTIC | M2_MAGNETIZED)) {	\
+      return nrmhd_##E;							\
+    }									\
+    else if (m2->physics == (M2_NONRELATIVISTIC | M2_UNMAGNETIZED)) {	\
+      return nrhyd_##E;							\
+    }									\
+    else {								\
+      MSG(FATAL, "unknown physics");					\
+      return -1;							\
+    }									\
   } while (0)								\
 
 
