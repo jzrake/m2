@@ -85,6 +85,7 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 }
 int m2aux_fluxes(m2aux *aux, double n[4], double *F)
 {
+  const double SR = aux->m2->physics & M2_RELATIVISTIC ? 1.0 : 0.0;
   const double u0 = aux->velocity_four_vector[0];
   const double u1 = aux->velocity_four_vector[1];
   const double u2 = aux->velocity_four_vector[2];
@@ -94,9 +95,9 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   const double b2 = aux->magnetic_four_vector[2];
   const double b3 = aux->magnetic_four_vector[3];
   const double S0 = aux->momentum_density[0]; /* T^{0,0} = tau + D */
-  /* const double S1 = aux->momentum_density[1]; */
-  /* const double S2 = aux->momentum_density[2]; */
-  /* const double S3 = aux->momentum_density[3]; */
+  const double S1 = aux->momentum_density[1];
+  const double S2 = aux->momentum_density[2];
+  const double S3 = aux->momentum_density[3];
   const double d0 = aux->comoving_mass_density;
   const double pg = aux->gas_pressure;
   const double pb = aux->magnetic_pressure;
@@ -108,30 +109,19 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   const double v1 = u1 / u0;
   const double v2 = u2 / u0;
   const double v3 = u3 / u0;
-  const double B1 = b1 * u0 - b0 * u1;
-  const double B2 = b2 * u0 - b0 * u2;
-  const double B3 = b3 * u0 - b0 * u3;
+  const double B1 = b1 * u0 - b0 * u1 * SR;
+  const double B2 = b2 * u0 - b0 * u2 * SR;
+  const double B3 = b3 * u0 - b0 * u3 * SR;
   const double Bn = B1*n1 + B2*n2 + B3*n3;
   const double vn = v1*n1 + v2*n2 + v3*n3;
-  /* F[DDD] = D0 * vn; */
-  /* F[TAU] = T0 * vn + (pg + pb) * vn - b0 * Bn / u0; */
-  /* F[S11] = S1 * vn + (pg + pb) * n1 - b1 * Bn / u0; */
-  /* F[S22] = S2 * vn + (pg + pb) * n2 - b2 * Bn / u0; */
-  /* F[S33] = S3 * vn + (pg + pb) * n3 - b3 * Bn / u0; */
-  /* F[B11] = B1 * vn - Bn * v1; */
-  /* F[B22] = B2 * vn - Bn * v2; */
-  /* F[B33] = B3 * vn - Bn * v3; */
-
-
   F[DDD] = D0 * vn;
-  F[TAU] = (T0 + (pg + pb)) * vn - (B1*v1 + B2*v2 + B3*v3) * vn;
-  F[S11] = D0 * v1 * vn - B1 * Bn + (pg + pb) * n1;
-  F[S22] = D0 * v2 * vn - B2 * Bn + (pg + pb) * n2;
-  F[S33] = D0 * v3 * vn - B3 * Bn + (pg + pb) * n3;
+  F[TAU] = T0 * vn + (pg + pb) * vn - b0 * Bn / u0;
+  F[S11] = S1 * vn + (pg + pb) * n1 - b1 * Bn / u0;
+  F[S22] = S2 * vn + (pg + pb) * n2 - b2 * Bn / u0;
+  F[S33] = S3 * vn + (pg + pb) * n3 - b3 * Bn / u0;
   F[B11] = B1 * vn - Bn * v1;
   F[B22] = B2 * vn - Bn * v2;
   F[B33] = B3 * vn - Bn * v3;
-
   return 0;
 }
 double m2aux_maximum_wavespeed(m2aux *aux)

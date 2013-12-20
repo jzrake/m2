@@ -21,7 +21,7 @@ int nrmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
     aux->velocity_four_vector[1] = v1;
     aux->velocity_four_vector[2] = v2;
     aux->velocity_four_vector[3] = v3;
-    aux->magnetic_four_vector[0] = 0.0;
+    aux->magnetic_four_vector[0] = P->B1 * v1 + P->B2 * v2 + P->B3 * v3;
     aux->magnetic_four_vector[1] = P->B1;
     aux->magnetic_four_vector[2] = P->B2;
     aux->magnetic_four_vector[3] = P->B3;
@@ -72,7 +72,7 @@ int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     aux->velocity_four_vector[1] = v1;
     aux->velocity_four_vector[2] = v2;
     aux->velocity_four_vector[3] = v3;
-    aux->magnetic_four_vector[0] = 0.0;
+    aux->magnetic_four_vector[0] = B[1] * v1 + B[2] * v2 + B[3] * v3;
     aux->magnetic_four_vector[1] = B[1];
     aux->magnetic_four_vector[2] = B[2];
     aux->magnetic_four_vector[3] = B[3];

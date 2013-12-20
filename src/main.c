@@ -14,7 +14,7 @@ void initial_data(m2vol *V)
     V->prim.d  = 1.0;
     V->prim.p  = 1.0;
 
-    V->Bflux1A =  0.00 * V->area1;
+    V->Bflux1A =  0.75 * V->area1;
     V->Bflux2A =  1.00 * V->area2;
     V->Bflux3A =  0.00 * V->area3;
   }
@@ -25,7 +25,7 @@ void initial_data(m2vol *V)
     V->prim.d  = 0.125;
     V->prim.p  = 0.100;
 
-    V->Bflux1A =  0.00 * V->area1;
+    V->Bflux1A =  0.75 * V->area1;
     V->Bflux2A = -1.00 * V->area2;
     V->Bflux3A =  0.00 * V->area3;
   }
