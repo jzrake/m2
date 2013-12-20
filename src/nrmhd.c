@@ -63,7 +63,8 @@ int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double v3 = S3 / D0;
 
   if (pg < 0.0) {
-    MSGF(FATAL, "got negative p: %f %f %f", T0, Ek, Eb);
+    MSGF(FATAL, "got negative pressure: E=%f Ek=%f Eb=%f (Ek + Eb = %f)\n",
+	 T0, Ek, Eb, Ek + Eb);
   }
 
   if (aux) {

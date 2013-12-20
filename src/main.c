@@ -11,20 +11,24 @@ void initial_data(m2vol *V)
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d = 1.0;
-    V->prim.p = 1.0;
+    V->prim.d  = 1.0;
+    V->prim.p  = 1.0;
+
+    V->Bflux1A =  0.00 * V->area1;
+    V->Bflux2A =  1.00 * V->area2;
+    V->Bflux3A =  0.00 * V->area3;
   }
   else {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d = 0.125;
-    V->prim.p = 0.1;
-  }
+    V->prim.d  = 0.125;
+    V->prim.p  = 0.100;
 
-  V->Bflux1A = 1.0 * V->area1;
-  V->Bflux2A = 0.0;
-  V->Bflux3A = 0.0;
+    V->Bflux1A =  0.00 * V->area1;
+    V->Bflux2A = -1.00 * V->area2;
+    V->Bflux3A =  0.00 * V->area3;
+  }
 }
 
 
@@ -46,7 +50,7 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 1024, 1, 1);
+  m2sim_set_resolution(m2, 2048, 1, 1);
   m2sim_set_guard_zones(m2, 1);
   m2sim_set_geometry(m2, M2_CARTESIAN);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
@@ -64,13 +68,13 @@ int main()
   double time_simulation = 0.0;
   double dt;
   int iteration_number = 0;
-  int rk_order = 1;
+  int rk_order = 3;
 
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
 
 
-  while (time_simulation < 0.1) {
+  while (time_simulation < 0.08) {
 
     dt = 0.5 * m2sim_minimum_courant_time(m2);
 
@@ -109,11 +113,16 @@ int main()
   FILE *outfile = fopen("m2.dat", "w");
   int i;
   for (i=0; i<m2->local_grid_size[1]; ++i) {
-    fprintf(outfile, "%f %f %f %f\n",
+    fprintf(outfile, "%f %f %f %f %f %f %f %f %f\n",
 	    m2vol_coordinate_centroid(&m2->volumes[M2_IND(i,0,0)], 1),
 	    m2->volumes[M2_IND(i,0,0)].prim.d,
 	    m2->volumes[M2_IND(i,0,0)].prim.p,
-	    m2->volumes[M2_IND(i,0,0)].prim.v1);
+	    m2->volumes[M2_IND(i,0,0)].prim.v1,
+	    m2->volumes[M2_IND(i,0,0)].prim.v2,
+	    m2->volumes[M2_IND(i,0,0)].prim.v3,
+	    m2->volumes[M2_IND(i,0,0)].prim.B1,
+	    m2->volumes[M2_IND(i,0,0)].prim.B2,
+	    m2->volumes[M2_IND(i,0,0)].prim.B3);
   }
   fclose(outfile);
   m2sim_del(m2);

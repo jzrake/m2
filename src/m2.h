@@ -153,7 +153,7 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 		       m2->local_grid_size[3] * j +			\
 		       k)						\
 
-#define M2_VOL(i,j,k) M2_IND(i,j,k) < L[0] ? m2->volumes + M2_IND(i,j,k) : NULL
+#define M2_VOL(i,j,k) i<L[1]&&j<L[2]&&k<L[3]?m2->volumes+M2_IND(i,j,k):NULL
 #define M2_MAX3(a,b,c) ((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c))
 #define M2_MIN3(a,b,c) ((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c))
 

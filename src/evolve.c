@@ -5,10 +5,10 @@
 static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
 {
   int q;
-  double UL[5];
-  double UR[5];
-  double FL[5];
-  double FR[5];
+  double UL[8];
+  double UR[8];
+  double FL[8];
+  double FR[8];
   double lamL[8];
   double lamR[8];
   m2aux AL;
@@ -21,6 +21,13 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
   m2aux_fluxes(&AL, n, FL);
   m2aux_fluxes(&AR, n, FR);
 
+  UL[B11] = VL->prim.B1;
+  UL[B22] = VL->prim.B2;
+  UL[B33] = VL->prim.B3;
+  UR[B11] = VR->prim.B1;
+  UR[B22] = VR->prim.B2;
+  UR[B33] = VR->prim.B3;
+
   double am = M2_MIN3(lamL[0], lamR[0], 0.0);
   double ap = M2_MAX3(lamL[7], lamR[7], 0.0);
 
@@ -28,7 +35,7 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
     MSG(FATAL, "got NAN wave speeds");
   }
 
-  for (q=0; q<5; ++q) {
+  for (q=0; q<8; ++q) {
     F[q] = (ap*FL[q] - am*FR[q] + ap*am*(UR[q] - UL[q])) / (ap - am);
   }
 }
@@ -38,39 +45,27 @@ void m2sim_calculate_flux(m2sim *m2)
 {
   int i, j, k, q;
   int *L = m2->local_grid_size;
-  double n[4] = { 0, 0, 0, 0 };
-  m2vol *VL, *VR;
+  double n1[4] = { 0, 1, 0, 0 };
+  double n2[4] = { 0, 0, 1, 0 };
+  double n3[4] = { 0, 0, 0, 1 };
+  m2vol *V0, *V1, *V2, *V3;
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-	VL = m2->volumes + M2_IND(i,j,k);
-	if (i != L[1] - 1) {
-	  VR = m2->volumes + M2_IND(i+1,j,k);
-	  n[1] = 1.0;
-	  riemann_hll(VL, VR, n, VL->flux1);
-	  n[1] = 0.0;
-	}
-	else {
-	  for (q=0; q<5; ++q) VL->flux1[q] = 0.0;
-	}
-	if (j != L[2] - 1) {
-	  VR = m2->volumes + M2_IND(i,j+1,k);
-	  n[2] = 1.0;
-	  riemann_hll(VL, VR, n, VL->flux2);
-	  n[2] = 0.0;
-	}
-	else {
-	  for (q=0; q<5; ++q) VL->flux2[q] = 0.0;
-	}
-	if (k != L[3] - 1) {
-	  VR = m2->volumes + M2_IND(i,j,k+1);
-	  n[3] = 1.0;
-	  riemann_hll(VL, VR, n, VL->flux3);
-	  n[3] = 0.0;
-	}
-	else {
-	  for (q=0; q<5; ++q) VL->flux3[q] = 0.0;
-	}
+
+	V0 = M2_VOL(i+0, j+0, k+0);
+	V1 = M2_VOL(i+1, j+0, k+0);
+	V2 = M2_VOL(i+0, j+1, k+0);
+	V3 = M2_VOL(i+0, j+0, k+1);
+
+	if (V1) riemann_hll(V0, V1, n1, V0->flux1);
+	else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
+
+	if (V2) riemann_hll(V0, V2, n2, V0->flux2);
+	else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
+
+	if (V3) riemann_hll(V0, V3, n3, V0->flux3);
+	else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
       }
     }
   }
@@ -86,9 +81,9 @@ void m2sim_calculate_emf(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 	V0 = M2_VOL(i, j, k);
-	V0->emf1 = 0.0;
-	V0->emf2 = 0.0;
-	V0->emf3 = 0.0;
+	V0->emf1 =  0.0;
+	V0->emf2 = +V0->flux1[B33] * (V0->x1[2] - V0->x0[2]);
+	V0->emf3 = -V0->flux1[B22] * (V0->x1[3] - V0->x0[3]);
       }
     }
   }
@@ -105,36 +100,36 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
-	if (0) {
+	if (1) {
 	  /* x-directed edge */
 	  V0 = M2_VOL(i, j+0, k+0);
 	  V1 = M2_VOL(i, j+1, k+0);
 	  V2 = M2_VOL(i, j+1, k+1);
 	  V3 = M2_VOL(i, j+0, k+1);
-	  if (V0) V0->Bflux2A -= dt * V0->emf2;
-	  if (V0) V0->Bflux3A += dt * V0->emf2;
-	  if (V1) V1->Bflux3A -= dt * V0->emf2;
-	  if (V3) V3->Bflux2A += dt * V0->emf2;
+	  if (V0) V0->Bflux2A -= dt * V0->emf1;
+	  if (V0) V0->Bflux3A += dt * V0->emf1;
+	  if (V1) V1->Bflux3A -= dt * V0->emf1;
+	  if (V3) V3->Bflux2A += dt * V0->emf1;
 
 	  /* y-directed edge */
 	  V0 = M2_VOL(i+0, j, k+0);
 	  V1 = M2_VOL(i+0, j, k+1);
 	  V2 = M2_VOL(i+1, j, k+1);
 	  V3 = M2_VOL(i+1, j, k+0);
-	  if (V0) V0->Bflux3A -= dt * V0->emf3;
-	  if (V0) V0->Bflux1A += dt * V0->emf3;
-	  if (V1) V1->Bflux1A -= dt * V0->emf3;
-	  if (V3) V3->Bflux3A += dt * V0->emf3;
+	  if (V0) V0->Bflux3A -= dt * V0->emf2;
+	  if (V0) V0->Bflux1A += dt * V0->emf2;
+	  if (V1) V1->Bflux1A -= dt * V0->emf2;
+	  if (V3) V3->Bflux3A += dt * V0->emf2;
 
 	  /* z-directed edge */
 	  V0 = M2_VOL(i+0, j+0, k);
 	  V1 = M2_VOL(i+1, j+0, k);
 	  V2 = M2_VOL(i+1, j+1, k);
 	  V3 = M2_VOL(i+0, j+1, k);
-	  if (V0) V0->Bflux1A -= dt * V0->emf1;
-	  if (V0) V0->Bflux2A += dt * V0->emf1;
-	  if (V1) V1->Bflux2A -= dt * V0->emf1;
-	  if (V3) V3->Bflux1A += dt * V0->emf1;
+	  if (V0) V0->Bflux1A -= dt * V0->emf3;
+	  if (V0) V0->Bflux2A += dt * V0->emf3;
+	  if (V1) V1->Bflux2A -= dt * V0->emf3;
+	  if (V3) V3->Bflux1A += dt * V0->emf3;
 	}
 
 	if (1) {
