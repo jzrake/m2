@@ -77,36 +77,84 @@ void m2sim_calculate_flux(m2sim *m2)
 }
 
 
+void m2sim_calculate_emf(m2sim *m2)
+{
+  int i, j, k;
+  int *L = m2->local_grid_size;
+  m2vol *V0;
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
+	V0 = M2_VOL(i, j, k);
+	V0->emf1 = 0.0;
+	V0->emf2 = 0.0;
+	V0->emf3 = 0.0;
+      }
+    }
+  }
+}
+
+
 void m2sim_exchange_flux(m2sim *m2, double dt)
 {
   int i, j, k, q;
   int *L = m2->local_grid_size;
-  m2vol *VL, *VR;
+  m2vol *V0, *V1, *V2, *V3;
+
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-	if (i != L[1] - 1) {
-	  VL = m2->volumes + M2_IND(i+0,j,k);
-	  VR = m2->volumes + M2_IND(i+1,j,k);
-	  for (q=0; q<5; ++q) {
-	    VL->consA[q] -= dt * VL->area1 * VL->flux1[q];
-	    VR->consA[q] += dt * VL->area1 * VL->flux1[q];
-	  }
+
+	if (0) {
+	  /* x-directed edge */
+	  V0 = M2_VOL(i, j+0, k+0);
+	  V1 = M2_VOL(i, j+1, k+0);
+	  V2 = M2_VOL(i, j+1, k+1);
+	  V3 = M2_VOL(i, j+0, k+1);
+	  if (V0) V0->Bflux2A -= dt * V0->emf2;
+	  if (V0) V0->Bflux3A += dt * V0->emf2;
+	  if (V1) V1->Bflux3A -= dt * V0->emf2;
+	  if (V3) V3->Bflux2A += dt * V0->emf2;
+
+	  /* y-directed edge */
+	  V0 = M2_VOL(i+0, j, k+0);
+	  V1 = M2_VOL(i+0, j, k+1);
+	  V2 = M2_VOL(i+1, j, k+1);
+	  V3 = M2_VOL(i+1, j, k+0);
+	  if (V0) V0->Bflux3A -= dt * V0->emf3;
+	  if (V0) V0->Bflux1A += dt * V0->emf3;
+	  if (V1) V1->Bflux1A -= dt * V0->emf3;
+	  if (V3) V3->Bflux3A += dt * V0->emf3;
+
+	  /* z-directed edge */
+	  V0 = M2_VOL(i+0, j+0, k);
+	  V1 = M2_VOL(i+1, j+0, k);
+	  V2 = M2_VOL(i+1, j+1, k);
+	  V3 = M2_VOL(i+0, j+1, k);
+	  if (V0) V0->Bflux1A -= dt * V0->emf1;
+	  if (V0) V0->Bflux2A += dt * V0->emf1;
+	  if (V1) V1->Bflux2A -= dt * V0->emf1;
+	  if (V3) V3->Bflux1A += dt * V0->emf1;
 	}
-	if (j != L[2] - 1) {
-	  VL = m2->volumes + M2_IND(i,j+0,k);
-	  VR = m2->volumes + M2_IND(i,j+1,k);
+
+	if (1) {
+	  V0 = M2_VOL(i+0, j+0, k+0);
+	  V1 = M2_VOL(i+1, j+0, k+0);
+	  V2 = M2_VOL(i+0, j+1, k+0);
+	  V3 = M2_VOL(i+0, j+0, k+1);
+
 	  for (q=0; q<5; ++q) {
-	    VL->consA[q] -= dt * VL->area2 * VL->flux2[q];
-	    VR->consA[q] += dt * VL->area2 * VL->flux2[q];
-	  }
-	}
-	if (k != L[3] - 1) {
-	  VL = m2->volumes + M2_IND(i,j,k+0);
-	  VR = m2->volumes + M2_IND(i,j,k+1);
-	  for (q=0; q<5; ++q) {
-	    VL->consA[q] -= dt * VL->area3 * VL->flux3[q];
-	    VR->consA[q] += dt * VL->area3 * VL->flux3[q];
+	    /* x-face */
+	    if (V0) V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
+	    if (V1) V1->consA[q] += dt * V0->area1 * V0->flux1[q];
+
+	    /* y-face */
+	    if (V0) V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
+	    if (V2) V2->consA[q] += dt * V0->area2 * V0->flux2[q];
+
+	    /* z-face */
+	    if (V0) V0->consA[q] -= dt * V0->area3 * V0->flux3[q];
+	    if (V3) V3->consA[q] += dt * V0->area3 * V0->flux3[q];
 	  }
 	}
       }
