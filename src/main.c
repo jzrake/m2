@@ -14,9 +14,9 @@ void initial_data(m2vol *V)
     V->prim.d  = 1.0;
     V->prim.p  = 1.0;
 
-    V->Bflux1A =  0.75 * V->area1;
-    V->Bflux2A =  1.00 * V->area2;
-    V->Bflux3A =  0.00 * V->area3;
+    V->Bflux1A =  0.75 * V->area1*0;
+    V->Bflux2A =  1.00 * V->area2*0;
+    V->Bflux3A =  1.00 * V->area3*1;
   }
   else {
     V->prim.v1 = 0.0;
@@ -25,9 +25,9 @@ void initial_data(m2vol *V)
     V->prim.d  = 0.125;
     V->prim.p  = 0.100;
 
-    V->Bflux1A =  0.75 * V->area1;
-    V->Bflux2A = -1.00 * V->area2;
-    V->Bflux3A =  0.00 * V->area3;
+    V->Bflux1A =  0.75 * V->area1*0;
+    V->Bflux2A = -1.00 * V->area2*0;
+    V->Bflux3A =  1.00 * V->area3*1;
   }
 }
 
@@ -50,12 +50,12 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 2048, 1, 1);
+  m2sim_set_resolution(m2, 512, 1, 1);
   m2sim_set_guard_zones(m2, 1);
-  m2sim_set_geometry(m2, M2_CARTESIAN);
+  m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
-  m2sim_set_extent0(m2, 0.0, 0.0, 0.0);
-  m2sim_set_extent1(m2, 1.0, 1.0, 1.0);
+  m2sim_set_extent0(m2, 0.2, 0.5*M2_PI-0.01, -0.01);
+  m2sim_set_extent1(m2, 1.0, 0.5*M2_PI+0.01,  0.01);
   m2sim_initialize(m2);
   m2sim_map(m2, initial_data);
   m2sim_magnetic_flux_to_cell_center(m2);
@@ -68,13 +68,13 @@ int main()
   double time_simulation = 0.0;
   double dt;
   int iteration_number = 0;
-  int rk_order = 3;
+  int rk_order = 2;
 
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
 
 
-  while (time_simulation < 0.08) {
+  while (time_simulation < 0.023) {
 
     dt = 0.5 * m2sim_minimum_courant_time(m2);
 

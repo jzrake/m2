@@ -51,10 +51,7 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     return 0;
   }
   else if (aux->m2->geometry == M2_SPHERICAL) {
-    if (aux->m2->physics & M2_MAGNETIZED) {
-      MSG(FATAL, "MHD source terms not yet added");
-    }
-    const double p  = aux->gas_pressure;
+    const double SR = aux->m2->physics & M2_RELATIVISTIC ? 1.0 : 0.0;
     const double dt = x1[0] - x0[0];
     const double r0 = x0[1];
     const double r1 = x1[1];
@@ -62,20 +59,36 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     const double t1 = x1[2];
     const double f0 = x0[3];
     const double f1 = x1[3];
-    const double u0 = aux->velocity_four_vector[0];
-    const double v2 = aux->velocity_four_vector[2] / u0;
-    const double v3 = aux->velocity_four_vector[3] / u0;
     const double S1 = aux->momentum_density[1];
     const double S2 = aux->momentum_density[2];
     const double S3 = aux->momentum_density[3];
-    U[S11] += dt * 0.5 * (-1.0) *
-      (r1 - r0)*(r1 + r0)*(2*p + S2*v2 + S3*v3)*(f1 - f0)*(cos(t1) - cos(t0));
-    U[S22] += dt * 0.5 *
-      (r1*r1 - r0*r0)*(f1 - f0)*((0 + S1*v2)*(cos(t1) - cos(t0)) +
-				 (p + S3*v3)*(sin(t1) - sin(t0)));
-    U[S33] += dt * 0.5 * v3 *
-      (r1*r1 - r0*r0)*(f1 - f0)*(S1*(cos(t1) - cos(t0)) -
-				 S2*(sin(t1) - sin(t0)));
+    const double u0 = aux->velocity_four_vector[0];
+    const double u1 = aux->velocity_four_vector[1];
+    const double u2 = aux->velocity_four_vector[2];
+    const double u3 = aux->velocity_four_vector[3];
+    const double b0 = aux->magnetic_four_vector[0];
+    const double b1 = aux->magnetic_four_vector[1];
+    const double b2 = aux->magnetic_four_vector[2];
+    const double b3 = aux->magnetic_four_vector[3];
+    const double v2 = aux->velocity_four_vector[2] / u0;
+    const double v3 = aux->velocity_four_vector[3] / u0;
+    const double B1 = b1 * u0 - b0 * u1 * SR;
+    const double B2 = b2 * u0 - b0 * u2 * SR;
+    const double B3 = b3 * u0 - b0 * u3 * SR;
+    const double p  = aux->gas_pressure + aux->magnetic_pressure;
+    /* ------------------------------------ */
+    /* Mathematica made the following mess: */
+    /* ------------------------------------ */
+    U[S11] += dt * ((B2*b2 + B3*b3 - (2*p + S2*v2 + S3*v3)*u0)*(f0 - f1)*
+		    (cos(t0) - cos(t1))*(-(r0*r0) + r1*r1))/(2.*u0);
+    U[S22] += dt * ((r0 - r1)*(r0 + r1)*(f0 - f1)*
+		    ((B1*b2 - S1*v2*u0)*cos(t0) +
+		     (-(B1*b2) + S1*v2*u0)*cos(t1) + (B3*b3 - (p + S3*v3)*u0)*
+		     (sin(t0) - sin(t1))))/(2.*u0);
+    U[S33] += dt * ((f0 - f1)*((-(B1*b3) + S1*v3*u0)*cos(t0) +
+			       (B1*b3 - S1*v3*u0)*cos(t1) +
+			       (B2*b3 - S2*v3*u0)*(sin(t0) - sin(t1)))*
+		    (-(r0*r0) + r1*r1))/(2.*u0);
     return 0;
   }
   else {

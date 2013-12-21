@@ -57,7 +57,7 @@ show :
 	@echo "DEP: $(DEP)"
 
 clean :
-	$(RM) *.o $(EXE)
+	$(RM) $(OBJ) $(DEP) $(EXE)
 
 .FORCE :
 
