@@ -50,6 +50,33 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
   if (aux->m2->geometry == M2_CARTESIAN) {
     return 0;
   }
+  else if (aux->m2->geometry == M2_CYLINDRICAL) {
+    const double SR = aux->m2->physics & M2_RELATIVISTIC ? 1.0 : 0.0;
+    const double dt = x1[0] - x0[0];
+    const double r0 = x0[1];
+    const double r1 = x1[1];
+    const double f0 = x0[2];
+    const double f1 = x1[2];
+    const double z0 = x0[3];
+    const double z1 = x1[3];
+    const double S1 = aux->momentum_density[1];
+    const double S2 = aux->momentum_density[2];
+    const double u0 = aux->velocity_four_vector[0];
+    const double u1 = aux->velocity_four_vector[1];
+    const double u2 = aux->velocity_four_vector[2];
+    const double b0 = aux->magnetic_four_vector[0];
+    const double b1 = aux->magnetic_four_vector[1];
+    const double b2 = aux->magnetic_four_vector[2];
+    const double v2 = aux->velocity_four_vector[2] / u0;
+    const double B1 = b1 * u0 - b0 * u1 * SR;
+    const double B2 = b2 * u0 - b0 * u2 * SR;
+    const double p  = aux->gas_pressure + aux->magnetic_pressure;
+    U[S11] += dt * ((-f0 + f1)*(-r0 + r1)*
+		    (-(b2*B2) + u0*(p + S2*v2))*(-z0 + z1))/u0;
+    U[S22] += dt * ((f0 - f1)*(r0 - r1)*(-(B1*b2) + S1*u0*v2)*(z0 - z1))/u0;
+    U[S33] += dt * 0.0;
+    return 0;
+  }
   else if (aux->m2->geometry == M2_SPHERICAL) {
     const double SR = aux->m2->physics & M2_RELATIVISTIC ? 1.0 : 0.0;
     const double dt = x1[0] - x0[0];
