@@ -65,6 +65,9 @@ struct m2vol
   double area1;
   double area2;
   double area3;
+  double line1;
+  double line2;
+  double line3;
   double volume;
   m2prim prim;
   double Bflux1A, Bflux1B; /* magnetic flux through (+1/2) faces */
@@ -92,6 +95,7 @@ struct m2sim
 
 double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
+double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
 
 double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);

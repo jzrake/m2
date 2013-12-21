@@ -105,9 +105,9 @@ void m2sim_initialize(m2sim *m2)
 	V->volume = m2_volume_measure(x0, x1, m2->geometry);
 	memcpy(V->x0, x0, 4 * sizeof(double));
 	memcpy(V->x1, x1, 4 * sizeof(double));
-	/* ----------------------- */
-	/* cache cell surace areas */
-	/* ----------------------- */
+	/* ------------------------ */
+	/* cache cell surface areas */
+	/* ------------------------ */
 	I0[0] = 0.0;
 	I0[1] = V->global_index[1] + 0.5;
 	I0[2] = V->global_index[2] - 0.5;
@@ -141,6 +141,42 @@ void m2sim_initialize(m2sim *m2)
 	m2sim_index_to_position(m2, I0, x0);
 	m2sim_index_to_position(m2, I1, x1);
 	V->area3 = m2_area_measure(x0, x1, m2->geometry, 3); /* axis 3 */
+	/* ---------------------------- */
+	/* cache cell linear dimensions */
+	/* ---------------------------- */
+	I0[0] = 0.0;
+	I0[1] = V->global_index[1] - 0.5;
+	I0[2] = V->global_index[2] + 0.5;
+	I0[3] = V->global_index[3] + 0.5;
+	I1[0] = 0.0;
+	I1[1] = V->global_index[1] + 0.5;
+	I1[2] = V->global_index[2] + 0.5;
+	I1[3] = V->global_index[3] + 0.5;
+	m2sim_index_to_position(m2, I0, x0);
+	m2sim_index_to_position(m2, I1, x1);
+	V->line1 = m2_line_measure(x0, x1, m2->geometry, 1); /* axis 1 */
+	I0[0] = 0.0;
+	I0[1] = V->global_index[1] + 0.5;
+	I0[2] = V->global_index[2] - 0.5;
+	I0[3] = V->global_index[3] + 0.5;
+	I1[0] = 0.0;
+	I1[1] = V->global_index[1] + 0.5;
+	I1[2] = V->global_index[2] + 0.5;
+	I1[3] = V->global_index[3] + 0.5;
+	m2sim_index_to_position(m2, I0, x0);
+	m2sim_index_to_position(m2, I1, x1);
+	V->line2 = m2_line_measure(x0, x1, m2->geometry, 2); /* axis 2 */
+	I0[0] = 0.0;
+	I0[1] = V->global_index[1] + 0.5;
+	I0[2] = V->global_index[2] + 0.5;
+	I0[3] = V->global_index[3] - 0.5;
+	I1[0] = 0.0;
+	I1[1] = V->global_index[1] + 0.5;
+	I1[2] = V->global_index[2] + 0.5;
+	I1[3] = V->global_index[3] + 0.5;
+	m2sim_index_to_position(m2, I0, x0);
+	m2sim_index_to_position(m2, I1, x1);
+	V->line3 = m2_line_measure(x0, x1, m2->geometry, 3); /* axis 3 */
       }
     }
   }
@@ -170,9 +206,7 @@ void m2sim_calculate_conserved(m2sim *m2)
 }
 double m2vol_minimum_dimension(m2vol *V)
 {
-  double *x0 = V->x0;
-  double *x1 = V->x1;
-  return M2_MIN3(x1[1] - x0[1], x1[2] - x0[2], x1[3] - x0[3]);
+  return M2_MIN3(V->line1, V->line2, V->line3);
 }
 double m2vol_coordinate_centroid(m2vol *V, int axis)
 {

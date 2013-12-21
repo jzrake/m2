@@ -82,8 +82,8 @@ void m2sim_calculate_emf(m2sim *m2)
       for (k=0; k<L[3]; ++k) {
 	V0 = M2_VOL(i, j, k);
 	V0->emf1 =  0.0;
-	V0->emf2 = +V0->flux1[B33] * (V0->x1[2] - V0->x0[2]);
-	V0->emf3 = -V0->flux1[B22] * (V0->x1[3] - V0->x0[3]);
+	V0->emf2 = +V0->flux1[B33] * V0->line2;
+	V0->emf3 = -V0->flux1[B22] * V0->line3;
       }
     }
   }
@@ -266,11 +266,14 @@ double m2sim_minimum_courant_time(m2sim *m2)
 }
 
 
+void initial_data(m2vol *V);
 void m2sim_enforce_boundary_condition(m2sim *m2)
 {
   int *L = m2->local_grid_size;
-  m2->volumes[     0].prim = m2->volumes[     1].prim;
-  m2->volumes[L[1]-1].prim = m2->volumes[L[1]-2].prim;
+
+  initial_data(&m2->volumes[0]);
+  initial_data(&m2->volumes[L[1]-1]);
+
   m2sim_from_primitive(m2,
 		       &m2->volumes[0].prim, NULL, NULL,
 		       m2 ->volumes[0].volume,
