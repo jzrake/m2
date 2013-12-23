@@ -50,9 +50,10 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 2048, 1, 1);
+  m2sim_set_resolution(m2, 512, 1, 1);
   m2sim_set_guard_zones(m2, 1);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
+
 
   if (1) {
     m2sim_set_geometry(m2, M2_CYLINDRICAL);
@@ -65,13 +66,28 @@ int main()
     m2sim_set_extent1(m2, 1.0, 0.5*M2_PI+0.1, 2*M2_PI);
   }
 
+
   m2sim_initialize(m2);
   m2sim_map(m2, initial_data);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_calculate_conserved(m2);
 
+
   printf("[m2]: astrophysical MHD code\n");
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
+
+
+  m2sim_save_checkpoint(m2, "m2.tpl");
+  m2sim_del(m2);
+
+
+  m2sim *m2B = m2sim_new();
+  m2sim_load_checkpoint(m2B, "m2.tpl");
+  m2sim_print(m2B);
+  m2sim_del(m2B);
+
+  return 0; /* shows that save/load works */
+
 
 
   double time_simulation = 0.0;

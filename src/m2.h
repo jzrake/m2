@@ -121,6 +121,9 @@ void m2sim_cache_conserved(m2sim *m2);
 void m2sim_average_runge_kutta(m2sim *m2, double b);
 void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
 void m2sim_enforce_boundary_condition(m2sim *m2);
+void m2sim_print(m2sim *m2);
+void m2sim_save_checkpoint(m2sim *m2, char *fname);
+void m2sim_load_checkpoint(m2sim *m2, char *fname);
 int m2sim_memory_usage(m2sim *m2);
 
 
