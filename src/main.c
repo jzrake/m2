@@ -15,8 +15,8 @@ void initial_data(m2vol *V)
     V->prim.p  = 1.0;
 
     V->Bflux1A =  0.75 * V->area1*0;
-    V->Bflux2A =  1.00 * V->area2*0;
-    V->Bflux3A =  1.00 * V->area3*1;
+    V->Bflux2A =  1.00 * V->area2 * 1.0/x[1];
+    V->Bflux3A =  1.00 * V->area3*0;
   }
   else {
     V->prim.v1 = 0.0;
@@ -26,8 +26,8 @@ void initial_data(m2vol *V)
     V->prim.p  = 1;//0.100;
 
     V->Bflux1A =  0.75 * V->area1*0;
-    V->Bflux2A =  1.00 * V->area2*0;
-    V->Bflux3A =  1.00 * V->area3*1;
+    V->Bflux2A =  1.00 * V->area2 * 1.0/x[1];
+    V->Bflux3A =  1.00 * V->area3*0;
   }
 }
 
@@ -50,7 +50,7 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 128, 1, 1);
+  m2sim_set_resolution(m2, 2048, 1, 1);
   m2sim_set_guard_zones(m2, 1);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
 
@@ -82,7 +82,7 @@ int main()
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
 
-  while (time_simulation < 0.2) {
+  while (time_simulation < 0.01) {
 
     dt = 0.5 * m2sim_minimum_courant_time(m2);
 
