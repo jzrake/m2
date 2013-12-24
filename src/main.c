@@ -7,7 +7,9 @@ void initial_data(m2vol *V)
 {
   double x[4];
   m2vol_coordinate_centroid_3d(V, x);
-  if (x[1] < 0.5) {
+  double r2 = x[1]*x[1] + x[2]*x[2];
+
+  if (r2 < 0.1) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
@@ -22,8 +24,8 @@ void initial_data(m2vol *V)
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 1;//0.125;
-    V->prim.p  = 1;//0.100;
+    V->prim.d  = 0.125;
+    V->prim.p  = 0.100;
 
     V->Bflux1A =  0.75 * V->area1*0;
     V->Bflux2A =  1.00 * V->area2 * 1.0/x[1];
@@ -50,22 +52,28 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 512, 1, 1);
+  m2sim_set_resolution(m2, 100, 100, 1);
   m2sim_set_guard_zones(m2, 1);
-  m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
 
 
-  if (1) {
+  if (0) {
     m2sim_set_geometry(m2, M2_CYLINDRICAL);
     m2sim_set_extent0(m2, 0.1, 0.0    , 0.0);
     m2sim_set_extent1(m2, 1.0, 2*M2_PI, 1.0);
+    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   }
-  else {
+  else if (0) {
     m2sim_set_geometry(m2, M2_SPHERICAL);
     m2sim_set_extent0(m2, 0.2, 0.5*M2_PI-0.1, 0.0);
     m2sim_set_extent1(m2, 1.0, 0.5*M2_PI+0.1, 2*M2_PI);
+    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_UNMAGNETIZED);
   }
-
+  else if (1) {
+    m2sim_set_geometry(m2, M2_CARTESIAN);
+    m2sim_set_extent0(m2, -0.5, -0.5, 0.0);
+    m2sim_set_extent1(m2, +0.5, +0.5, 1.0);
+    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_UNMAGNETIZED);
+  }
 
   m2sim_initialize(m2);
   m2sim_map(m2, initial_data);
@@ -77,16 +85,16 @@ int main()
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
 
 
-  m2sim_save_checkpoint(m2, "m2.tpl");
-  m2sim_del(m2);
+  /* m2sim_save_checkpoint(m2, "m2.tpl"); */
+  /* m2sim_del(m2); */
 
 
-  m2sim *m2B = m2sim_new();
-  m2sim_load_checkpoint(m2B, "m2.tpl");
-  m2sim_print(m2B);
-  m2sim_del(m2B);
+  /* m2sim *m2B = m2sim_new(); */
+  /* m2sim_load_checkpoint(m2B, "m2.tpl"); */
+  /* m2sim_print(m2B); */
+  /* m2sim_del(m2B); */
 
-  return 0; /* shows that save/load works */
+  /* return 0; /\* shows that save/load works *\/ */
 
 
 
@@ -98,7 +106,7 @@ int main()
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
 
-  while (time_simulation < 0.01) {
+  while (time_simulation < 0.05) {
 
     dt = 0.5 * m2sim_minimum_courant_time(m2);
 
@@ -134,21 +142,8 @@ int main()
     time_simulation += dt;
   }
 
-  FILE *outfile = fopen("m2.dat", "w");
-  int i;
-  for (i=0; i<m2->local_grid_size[1]; ++i) {
-    fprintf(outfile, "%f %f %f %f %f %f %f %f %f\n",
-	    m2vol_coordinate_centroid(&m2->volumes[M2_IND(i,0,0)], 1),
-	    m2->volumes[M2_IND(i,0,0)].prim.d,
-	    m2->volumes[M2_IND(i,0,0)].prim.p,
-	    m2->volumes[M2_IND(i,0,0)].prim.v1,
-	    m2->volumes[M2_IND(i,0,0)].prim.v2,
-	    m2->volumes[M2_IND(i,0,0)].prim.v3,
-	    m2->volumes[M2_IND(i,0,0)].prim.B1,
-	    m2->volumes[M2_IND(i,0,0)].prim.B2,
-	    m2->volumes[M2_IND(i,0,0)].prim.B3);
-  }
-  fclose(outfile);
+
+  m2sim_write_ascii_2d(m2, "m2.dat");
   m2sim_del(m2);
 
 

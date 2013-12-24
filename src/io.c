@@ -104,3 +104,41 @@ void m2sim_load_checkpoint(m2sim *m2, char *fname)
   m2sim_load_volumes(m2, of);
   fclose(of);
 }
+
+void m2sim_write_ascii_1d(m2sim *m2, char *fname)
+{
+  printf("[write ascii 1d: %s]\n", fname);
+  FILE *outfile = fopen(fname, "w");
+  int *L = m2->local_grid_size;
+  int i;
+  for (i=0; i<m2->local_grid_size[1]; ++i) {
+    fprintf(outfile, "%8.6e %8.6e %8.6e %8.6e %8.6e %8.6e %8.6e %8.6e %8.6e\n",
+	    m2vol_coordinate_centroid(&m2->volumes[M2_IND(i,0,0)], 1),
+	    m2->volumes[M2_IND(i,0,0)].prim.d,
+	    m2->volumes[M2_IND(i,0,0)].prim.p,
+	    m2->volumes[M2_IND(i,0,0)].prim.v1,
+	    m2->volumes[M2_IND(i,0,0)].prim.v2,
+	    m2->volumes[M2_IND(i,0,0)].prim.v3,
+	    m2->volumes[M2_IND(i,0,0)].prim.B1,
+	    m2->volumes[M2_IND(i,0,0)].prim.B2,
+	    m2->volumes[M2_IND(i,0,0)].prim.B3);
+  }
+  fclose(outfile);
+}
+
+void m2sim_write_ascii_2d(m2sim *m2, char *fname)
+{
+  printf("[write ascii 2d: %s]\n", fname);
+  FILE *outfile = fopen(fname, "w");
+  int *L = m2->local_grid_size;
+  int i, j;
+  for (i=0; i<m2->local_grid_size[1]; ++i) {
+    for (j=0; j<m2->local_grid_size[2]; ++j) {
+      fprintf(outfile, "%8.6e %8.6e %8.6e\n",
+	      m2vol_coordinate_centroid(&m2->volumes[M2_IND(i,j,0)], 1),
+	      m2vol_coordinate_centroid(&m2->volumes[M2_IND(i,j,0)], 2),
+	      m2->volumes[M2_IND(i,j,0)].prim.d);
+    }
+  }
+  fclose(outfile);
+}

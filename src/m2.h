@@ -124,6 +124,8 @@ void m2sim_enforce_boundary_condition(m2sim *m2);
 void m2sim_print(m2sim *m2);
 void m2sim_save_checkpoint(m2sim *m2, char *fname);
 void m2sim_load_checkpoint(m2sim *m2, char *fname);
+void m2sim_write_ascii_1d(m2sim *m2, char *fname);
+void m2sim_write_ascii_2d(m2sim *m2, char *fname);
 int m2sim_memory_usage(m2sim *m2);
 
 
@@ -156,13 +158,10 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 #define M2_STRING_LEN 256
 #define M2_STRING_SET(d,s) strncpy(d, s, 256); d[255] = '\0';
 
-#define M2_IND(i,j,k) (m2->local_grid_size[2] * m2->local_grid_size[3] * i + \
-		       m2->local_grid_size[3] * j +			\
-		       k)						\
-
-#define M2_VOL(i,j,k) i<L[1]&&j<L[2]&&k<L[3]?m2->volumes+M2_IND(i,j,k):NULL
-#define M2_MAX3(a,b,c) ((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c))
-#define M2_MIN3(a,b,c) ((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c))
+#define M2_IND(i,j,k)(i)*L[2]*L[3]+(j)*L[3]+(k)
+#define M2_VOL(i,j,k)(i)<L[1]&&(j)<L[2]&&(k)<L[3]?m2->volumes+M2_IND(i,j,k):NULL
+#define M2_MAX3(a,b,c)((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c))
+#define M2_MIN3(a,b,c)((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c))
 
 #define DEBUG 'D'
 #define INFO 'I'

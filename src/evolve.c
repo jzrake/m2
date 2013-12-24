@@ -138,6 +138,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 	V2 = M2_VOL(i+0, j+1, k+0);
 	V3 = M2_VOL(i+0, j+0, k+1);
 
+
 	for (q=0; q<5; ++q) {
 	  /* x-face */
 	  if (V0) V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
@@ -269,19 +270,23 @@ double m2sim_minimum_courant_time(m2sim *m2)
 void initial_data(m2vol *V);
 void m2sim_enforce_boundary_condition(m2sim *m2)
 {
+  int n;
   int *L = m2->local_grid_size;
-
-  initial_data(&m2->volumes[0]);
-  initial_data(&m2->volumes[L[1]-1]);
-
-  m2sim_from_primitive(m2,
-		       &m2->volumes[0].prim, NULL, NULL,
-		       m2 ->volumes[0].volume,
-		       m2 ->volumes[0].consA,
-		       &m2->volumes[0].aux);
-  m2sim_from_primitive(m2,
-  		       &m2->volumes[L[1]-1].prim, NULL, NULL,
-  		       m2 ->volumes[L[1]-1].volume,
-  		       m2 ->volumes[L[1]-1].consA,
-  		       &m2->volumes[L[1]-1].aux);
+  m2vol *V;
+  for (n=0; n<L[0]; ++n) {
+    V = m2->volumes + n;
+    if (V->global_index[1] < 0 ||
+	V->global_index[2] < 0 ||
+	V->global_index[3] < 0 ||
+	V->global_index[1] >= m2->domain_resolution[1] ||
+	V->global_index[2] >= m2->domain_resolution[2] ||
+	V->global_index[3] >= m2->domain_resolution[3]) {
+      initial_data(V);
+      m2sim_from_primitive(m2,
+			   &V->prim, NULL, NULL,
+			   V ->volume,
+			   V ->consA,
+			   &V->aux);
+    }
+  }
 }
