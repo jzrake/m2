@@ -5,6 +5,9 @@ struct reduced_volume
 {
   int global_index[4];
   m2prim prim;
+  double Bflux1;
+  double Bflux2;
+  double Bflux3;
 } ;
 
 void m2sim_print(m2sim *m2)
@@ -50,17 +53,20 @@ void m2sim_save_volumes(m2sim *m2, FILE *of)
   printf("\t[save volumes]\n");
   int n, d;
   tpl_node *tpl;
+  m2vol *V;
   struct reduced_volume v;
-  tpl = tpl_map("A(S(i#$(ffffffff)))", &v, 4);
-
+  tpl = tpl_map("A(S(i#$(ffffffff)fff))", &v, 4);
   for (n=0; n<m2->local_grid_size[0]; ++n) {
+    V = m2->volumes + n;
     for (d=0; d<4; ++d) {
-      v.global_index[d] = m2->volumes[n].global_index[d];
+      v.global_index[d] = V->global_index[d];
     }
-    v.prim = m2->volumes[n].prim;
+    v.prim = V->prim;
+    v.Bflux1 = V->Bflux1A;
+    v.Bflux2 = V->Bflux2A;
+    v.Bflux3 = V->Bflux3A;
     tpl_pack(tpl, 1);
   }
-
   tpl_dump(tpl, TPL_FD, fileno(of));
   tpl_free(tpl);
 }
@@ -70,19 +76,23 @@ void m2sim_load_volumes(m2sim *m2, FILE *of)
   printf("\t[load volumes]\n");
   int n, d;
   tpl_node *tpl;
+  m2vol *V;
   struct reduced_volume v;
-  tpl = tpl_map("A(S(i#$(ffffffff)))", &v, 4);
-
+  tpl = tpl_map("A(S(i#$(ffffffff)fff))", &v, 4);
   tpl_load(tpl, TPL_FD, fileno(of));
-
   for (n=0; n<m2->local_grid_size[0]; ++n) {
+    V = m2->volumes + n;
     tpl_unpack(tpl, 1);
     for (d=0; d<4; ++d) {
-      m2->volumes[n].global_index[d] = v.global_index[d];
+      if (V->global_index[d] != v.global_index[d]) {
+	MSG(FATAL, "data format mismatch");
+      }
     }
-    m2->volumes[n].prim = v.prim;
+    V->prim = v.prim;
+    V->Bflux1A = v.Bflux1;
+    V->Bflux2A = v.Bflux2;
+    V->Bflux3A = v.Bflux3;
   }
-
   tpl_free(tpl);
 }
 

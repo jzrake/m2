@@ -9,7 +9,7 @@ void initial_data(m2vol *V)
   m2vol_coordinate_centroid_3d(V, x);
   double r2 = x[1]*x[1] + x[2]*x[2];
 
-  if (r2 < 0.1) {
+  if (r2 < 0.025) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
@@ -52,7 +52,7 @@ int main()
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 100, 100, 1);
+  m2sim_set_resolution(m2, 400, 400, 1);
   m2sim_set_guard_zones(m2, 1);
 
 
@@ -85,16 +85,16 @@ int main()
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
 
 
-  /* m2sim_save_checkpoint(m2, "m2.tpl"); */
-  /* m2sim_del(m2); */
+  m2sim_save_checkpoint(m2, "m2.tpl");
+  m2sim_del(m2);
 
 
-  /* m2sim *m2B = m2sim_new(); */
-  /* m2sim_load_checkpoint(m2B, "m2.tpl"); */
-  /* m2sim_print(m2B); */
-  /* m2sim_del(m2B); */
+  m2sim *m2B = m2sim_new();
+  m2sim_load_checkpoint(m2B, "m2.tpl");
+  m2sim_print(m2B);
+  m2sim_del(m2B);
 
-  /* return 0; /\* shows that save/load works *\/ */
+  return 0; /* shows that save/load works */
 
 
 
