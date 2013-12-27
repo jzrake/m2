@@ -47,7 +47,49 @@ void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 }
 
 
-int main()
+void m2sim_drive(m2sim *m2)
+{
+  double dt;
+  int rk_order = 2;
+
+  clock_t start_cycle = 0, stop_cycle = 0;
+  double kzps; /* kilozones per second */
+
+  dt = 0.5 * m2sim_minimum_courant_time(m2);
+
+  m2sim_cache_conserved(m2);
+
+  start_cycle = clock();
+  switch (rk_order) {
+  case 1:
+    m2sim_runge_kutta_substep(m2, dt, 1.0);
+    break;
+  case 2:
+    m2sim_runge_kutta_substep(m2, dt, 1.0);
+    m2sim_runge_kutta_substep(m2, dt, 0.5);
+    break;
+  case 3:
+    m2sim_runge_kutta_substep(m2, dt, 1.0);
+    m2sim_runge_kutta_substep(m2, dt, 1.0/4.0);
+    m2sim_runge_kutta_substep(m2, dt, 2.0/3.0);
+    break;
+  }
+  stop_cycle = clock();
+  kzps = 1e-3 * m2->local_grid_size[0] /
+    (stop_cycle - start_cycle) * CLOCKS_PER_SEC;
+
+  /* print status message */
+  printf("%08d: t=%5.4f dt=%5.4e kzps=%4.3f\n",
+	 m2->status.iteration_number,
+	 m2->status.time_simulation,
+	 dt,
+	 kzps);
+
+  m2->status.iteration_number += 1;
+  m2->status.time_simulation += dt;
+}
+
+int main(int argc, char **argv)
 {
   m2sim *m2 = m2sim_new();
 
@@ -85,65 +127,29 @@ int main()
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
 
 
-  m2sim_save_checkpoint(m2, "m2.tpl");
-  m2sim_del(m2);
+  /* m2sim_save_checkpoint(m2, "m2.tpl"); */
+  /* m2sim_del(m2); */
 
 
-  m2sim *m2B = m2sim_new();
-  m2sim_load_checkpoint(m2B, "m2.tpl");
-  m2sim_print(m2B);
-  m2sim_del(m2B);
+  /* m2sim *m2B = m2sim_new(); */
+  /* m2sim_load_checkpoint(m2B, "m2.tpl"); */
+  /* m2sim_print(m2B); */
+  /* m2sim_del(m2B); */
 
-  return 0; /* shows that save/load works */
+  /* return 0; /\* shows that save/load works *\/ */
 
 
-
-  double time_simulation = 0.0;
-  double dt;
-  int iteration_number = 0;
-  int rk_order = 3;
-
-  clock_t start_cycle = 0, stop_cycle = 0;
-  double kzps; /* kilozones per second */
-
-  while (time_simulation < 0.05) {
-
-    dt = 0.5 * m2sim_minimum_courant_time(m2);
-
-    m2sim_cache_conserved(m2);
-
-    start_cycle = clock();
-    switch (rk_order) {
-    case 1:
-      m2sim_runge_kutta_substep(m2, dt, 1.0);
-      break;
-    case 2:
-      m2sim_runge_kutta_substep(m2, dt, 1.0);
-      m2sim_runge_kutta_substep(m2, dt, 0.5);
-      break;
-    case 3:
-      m2sim_runge_kutta_substep(m2, dt, 1.0);
-      m2sim_runge_kutta_substep(m2, dt, 1.0/4.0);
-      m2sim_runge_kutta_substep(m2, dt, 2.0/3.0);
-      break;
-    }
-    stop_cycle = clock();
-    kzps = 1e-3 * m2->local_grid_size[0] /
-      (stop_cycle - start_cycle) * CLOCKS_PER_SEC;
-
-    /* print status message */
-    printf("%08d: t=%5.4f dt=%5.4e kzps=%4.3f\n",
-	   iteration_number,
-	   time_simulation,
-	   dt,
-	   kzps);
-
-    iteration_number += 1;
-    time_simulation += dt;
+  if (1) {
+    m2sim_visualize(m2, argc, argv);
   }
-
-
+  else {
+    while (m2->status.time_simulation < 0.05) {
+      m2sim_drive(m2);
+    }
+  }
   m2sim_write_ascii_2d(m2, "m2.dat");
+
+
   m2sim_del(m2);
 
 

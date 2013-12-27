@@ -15,20 +15,18 @@ HAVE_MPI = 0
 HAVE_GLUT = 0
 DEBUG_FILE = NULL
 
-USE_MPI = 0
-USE_HDF5 = 0
-USE_MPIO = 0
-USE_FFTW = 0
-
 # ----------------------------------------------------------
 # GLUT includes and library,
 # ----------------------------------------------------------
 #
 # OSX 10.8
-# GLUT = -framework GLUT -framework OpenGL -I/usr/X11R6/include
+# GLUT_I = -I/usr/X11R6/include
+# GLUT_L = -framework GLUT -framework OpenGL
 
 # OSX 10.9
-GLUT = -framework GLUT -framework OpenGL -I/opt/X11/include
+GLUT_I = -I/opt/X11/include -Wno-deprecated-declarations
+GLUT_L = -framework GLUT -framework OpenGL
 
 # On Redhat 64:
-# GLUT = -L/usr/lib64 -lGLU -lglut
+# GLUT_I =
+# GLUT_L = -L/usr/lib64 -lGLU -lglut

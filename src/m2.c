@@ -25,6 +25,8 @@ m2sim *m2sim_new()
   m2->geometry = M2_CARTESIAN;
   m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
   m2->volumes = NULL;
+  m2->status.time_simulation = 0.0;
+  m2->status.iteration_number = 0;
   return m2;
 }
 void m2sim_del(m2sim *m2)

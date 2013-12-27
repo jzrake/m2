@@ -29,6 +29,7 @@ typedef struct m2sim m2sim;
 typedef struct m2vol m2vol;
 typedef struct m2aux m2aux;
 typedef struct m2prim m2prim;
+typedef struct m2sim_status m2sim_status;
 typedef void (*m2vol_operator)(m2vol *vol);
 
 struct m2prim
@@ -80,6 +81,12 @@ struct m2vol
   m2sim *m2;
 } ;
 
+struct m2sim_status
+{
+  double time_simulation;
+  int iteration_number;
+} ;
+
 struct m2sim
 {
   double domain_extent_lower[4];
@@ -89,6 +96,7 @@ struct m2sim
   int number_guard_zones;
   int geometry;
   int physics;
+  m2sim_status status;
   m2vol *volumes;
 } ;
 
@@ -128,7 +136,6 @@ void m2sim_write_ascii_1d(m2sim *m2, char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, char *fname);
 int m2sim_memory_usage(m2sim *m2);
 
-
 int m2sim_from_conserved_all(m2sim *m2);
 int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 			 double *U, m2aux *aux);
@@ -138,6 +145,8 @@ int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
 
+void m2sim_drive(m2sim *m2);
+void m2sim_visualize(m2sim *m2, int argc, char **argv);
 
 double m2aux_maximum_wavespeed(m2aux *aux);
 int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);

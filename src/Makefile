@@ -32,12 +32,16 @@ DEP = $(SRC:.c=.dep)
 # --------------------------------------------------
 default : $(EXE)
 
+vis.o : vis.c m2-cfg.h $(MAKEFILE_IN)
+	@$(CC) -MM $< > $(<:.c=.dep) $(GLUT_I)
+	$(CC) $(CFLAGS) $< -c $(GLUT_I)
+
 %.o : %.c m2-cfg.h $(MAKEFILE_IN)
 	@$(CC) -MM $< > $(<:.c=.dep)
 	$(CC) $(CFLAGS) $< -c
 
 m2 : $(OBJ)
-	$(CC) $(CFLAGS) $^ $(CLIBS) -o $@
+	$(CC) $(CFLAGS) $^ $(CLIBS) $(GLUT_L) -o $@
 
 m2-cfg.h : .FORCE
 	@echo "/* m2 config header file */" > $(TMP_H)
