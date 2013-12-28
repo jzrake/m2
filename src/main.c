@@ -148,15 +148,15 @@ int main(int argc, char **argv)
   /* return 0; /\* shows that save/load works *\/ */
 
 
-  if (0) {
+  if (1) {
     m2sim_visualize(m2, argc, argv);
   }
   else {
-    while (m2->status.time_simulation < 0.07) {
+    while (m2->status.time_simulation < 0.02) {
       m2sim_drive(m2);
     }
   }
-  m2sim_visualize(m2, argc, argv);
+  //  m2sim_visualize(m2, argc, argv);
   //  m2sim_write_ascii_2d(m2, "m2.dat");
   //  m2sim_write_ascii_1d(m2, "m2.dat");
   m2sim_del(m2);

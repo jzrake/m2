@@ -16,6 +16,20 @@ enum m2flag {
   M2_CONSERVED,
   M2_PRIMITIVE,
   M2_AUXILIARY,
+
+  /* integer values for getting m2aux data members */
+  M2_VELOCITY_FOUR_VECTOR0,
+  M2_VELOCITY_FOUR_VECTOR1,
+  M2_VELOCITY_FOUR_VECTOR2,
+  M2_VELOCITY_FOUR_VECTOR3,
+  M2_MAGNETIC_FOUR_VECTOR0,
+  M2_MAGNETIC_FOUR_VECTOR1,
+  M2_MAGNETIC_FOUR_VECTOR2,
+  M2_MAGNETIC_FOUR_VECTOR3,
+  M2_COMOVING_MASS_DENSITY,
+  M2_GAS_PRESSURE,
+  M2_MAGNETIC_PRESSURE,
+
   M2_NONRELATIVISTIC=0,
   M2_UNMAGNETIZED=0,
   M2_RELATIVISTIC=(1<<1),
@@ -153,7 +167,7 @@ int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);
 int m2aux_fluxes(m2aux *aux, double n[4], double *F);
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 				       double *U);
-
+int m2aux_get(m2aux *aux, int member, double *value);
 
 
 

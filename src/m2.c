@@ -225,3 +225,21 @@ int m2sim_memory_usage(m2sim *m2)
 {
   return m2->local_grid_size[0] * sizeof(m2vol) / (1<<20);
 }
+int m2aux_get(m2aux *aux, int member, double *value)
+{
+  switch (member) {
+  case M2_VELOCITY_FOUR_VECTOR0: *value = aux->velocity_four_vector[0]; break;
+  case M2_VELOCITY_FOUR_VECTOR1: *value = aux->velocity_four_vector[1]; break;
+  case M2_VELOCITY_FOUR_VECTOR2: *value = aux->velocity_four_vector[2]; break;
+  case M2_VELOCITY_FOUR_VECTOR3: *value = aux->velocity_four_vector[3]; break;
+  case M2_MAGNETIC_FOUR_VECTOR0: *value = aux->magnetic_four_vector[0]; break;
+  case M2_MAGNETIC_FOUR_VECTOR1: *value = aux->magnetic_four_vector[1]; break;
+  case M2_MAGNETIC_FOUR_VECTOR2: *value = aux->magnetic_four_vector[2]; break;
+  case M2_MAGNETIC_FOUR_VECTOR3: *value = aux->magnetic_four_vector[3]; break;
+  case M2_COMOVING_MASS_DENSITY: *value = aux->comoving_mass_density; break;
+  case M2_GAS_PRESSURE: *value = aux->gas_pressure; break;
+  case M2_MAGNETIC_PRESSURE: *value = aux->magnetic_pressure; break;
+  default: MSG(FATAL, "no such data member"); break;
+  }
+  return 0;
+}
