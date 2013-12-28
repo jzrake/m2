@@ -11,10 +11,10 @@ static void GLUTKeyboardFunc(unsigned char key, int x, int y);
 static void GLUTSpecialFunc(int key, int x, int y);
  
 static int GlutWindow;
-static double TranslateZ = -3.0;
-static double RotationX = 0.0;
-static double RotationY = 0.0;
-static double RotationZ = 0.0;
+static double TranslateZ = -2.0;
+static double RotationX = 90.0;
+static double RotationY =  0.0;
+//static double RotationZ = 0.0;
 static m2sim *M2; 
 
  
@@ -40,8 +40,8 @@ static void create_menu()
   glutAddMenuEntry("Torus", 4);
   glutAddMenuEntry("Teapot", 5);
   menu_id = glutCreateMenu(menu_callback);
-  glutAddMenuEntry("Clear", 1);
   glutAddSubMenu("Draw", submenu_id);
+  glutAddMenuEntry("Clear", 1);
   glutAddMenuEntry("Quit", 0);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
@@ -92,11 +92,11 @@ void GLUTDisplayFunc()
     V = M2->volumes + n;
     //glBegin(GL_LINE_LOOP);
     glBegin(GL_QUADS);
-    glColor3d(V->prim.d, V->prim.d, V->prim.d);
-    glVertex3d(V->x0[1], V->x0[2], V->prim.d);
-    glVertex3d(V->x1[1], V->x0[2], V->prim.d);
-    glVertex3d(V->x1[1], V->x1[2], V->prim.d);
-    glVertex3d(V->x0[1], V->x1[2], V->prim.d);
+    glColor3d(V->prim.B3, V->prim.B3, V->prim.B3);
+    glVertex3d(V->x0[1], V->x0[2], 0.0);
+    glVertex3d(V->x1[1], V->x0[2], 0.0);
+    glVertex3d(V->x1[1], V->x1[2], 0.0);
+    glVertex3d(V->x0[1], V->x1[2], 0.0);
     glEnd();
   }
 
