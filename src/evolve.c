@@ -145,7 +145,11 @@ void m2sim_calculate_emf(m2sim *m2)
 void m2sim_exchange_flux(m2sim *m2, double dt)
 {
   int i, j, k, q;
+  int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
+  int D1 = G[2] > 1 || G[3] > 1;
+  int D2 = G[3] > 1 || G[1] > 1;
+  int D3 = G[1] > 1 || G[2] > 1;
   m2vol *V0, *V1, *V2, *V3;
 
   for (i=0; i<L[1]; ++i) {
@@ -158,30 +162,30 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 	  V1 = M2_VOL(i, j+1, k+0);
 	  V2 = M2_VOL(i, j+1, k+1);
 	  V3 = M2_VOL(i, j+0, k+1);
-	  if (V0) V0->Bflux2A -= dt * V0->emf1;
-	  if (V0) V0->Bflux3A += dt * V0->emf1;
-	  if (V1) V1->Bflux3A -= dt * V0->emf1;
-	  if (V3) V3->Bflux2A += dt * V0->emf1;
+	  if (V0 && D2) V0->Bflux2A -= dt * V0->emf1;
+	  if (V0 && D3) V0->Bflux3A += dt * V0->emf1;
+	  if (V1 && D3) V1->Bflux3A -= dt * V0->emf1;
+	  if (V3 && D2) V3->Bflux2A += dt * V0->emf1;
 
 	  /* y-directed edge */
 	  V0 = M2_VOL(i+0, j, k+0);
 	  V1 = M2_VOL(i+0, j, k+1);
 	  V2 = M2_VOL(i+1, j, k+1);
 	  V3 = M2_VOL(i+1, j, k+0);
-	  if (V0) V0->Bflux3A -= dt * V0->emf2;
-	  if (V0) V0->Bflux1A += dt * V0->emf2;
-	  if (V1) V1->Bflux1A -= dt * V0->emf2;
-	  if (V3) V3->Bflux3A += dt * V0->emf2;
+	  if (V0 && D3) V0->Bflux3A -= dt * V0->emf2;
+	  if (V0 && D1) V0->Bflux1A += dt * V0->emf2;
+	  if (V1 && D1) V1->Bflux1A -= dt * V0->emf2;
+	  if (V3 && D3) V3->Bflux3A += dt * V0->emf2;
 
 	  /* z-directed edge */
 	  V0 = M2_VOL(i+0, j+0, k);
 	  V1 = M2_VOL(i+1, j+0, k);
 	  V2 = M2_VOL(i+1, j+1, k);
 	  V3 = M2_VOL(i+0, j+1, k);
-	  if (V0) V0->Bflux1A -= dt * V0->emf3;
-	  if (V0) V0->Bflux2A += dt * V0->emf3;
-	  if (V1) V1->Bflux2A -= dt * V0->emf3;
-	  if (V3) V3->Bflux1A += dt * V0->emf3;
+	  if (V0 && D1) V0->Bflux1A -= dt * V0->emf3;
+	  if (V0 && D2) V0->Bflux2A += dt * V0->emf3;
+	  if (V1 && D2) V1->Bflux2A -= dt * V0->emf3;
+	  if (V3 && D1) V3->Bflux1A += dt * V0->emf3;
 	}
 
 
