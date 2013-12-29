@@ -284,7 +284,7 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
 
 int m2sim_from_conserved_all(m2sim *m2)
 {
-  int n;
+  int n, error;
   int *L = m2->local_grid_size;
   m2vol *V;
   double B[4];
@@ -294,8 +294,14 @@ int m2sim_from_conserved_all(m2sim *m2)
     B[1] = V->prim.B1;
     B[2] = V->prim.B2;
     B[3] = V->prim.B3;
-    m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
-			 &V->aux, &V->prim);
+    error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
+				 &V->aux, &V->prim);
+    if (error) {
+      MSGF(FATAL, "at global index [%d %d %d]",
+	   V->global_index[1],
+	   V->global_index[2],
+	   V->global_index[3]);
+    }
   }
   return 0;
 }

@@ -118,6 +118,7 @@ struct m2sim
 double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
+void m2_to_cartesian(double x[4], double xcart[4], int geometry);
 
 double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);

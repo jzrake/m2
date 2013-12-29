@@ -93,6 +93,7 @@ void GLUTDisplayFunc()
     V = M2->volumes + n;
 
     glBegin(GL_QUADS);
+    //    glBegin(GL_LINE_LOOP);
     glColor3fv(&ColorData[3*n]);
     glVertex3fv(&VertexData[4*3*n + 0*3]);
     glVertex3fv(&VertexData[4*3*n + 1*3]);
@@ -211,6 +212,14 @@ void reload_rgb_data()
   int *L = M2->local_grid_size;
   m2vol *V;
   double y;
+  double x00[4]; /* vertex coordinates */
+  double x01[4];
+  double x11[4];
+  double x10[4];
+  double x00c[4]; /* in cartesian geometry */
+  double x01c[4];
+  double x11c[4];
+  double x10c[4];
 
   VertexData = (GLfloat*) realloc(VertexData, L[0] * 3 * 4 * sizeof(GLfloat));
   ColorData = (GLfloat*) realloc(ColorData, L[0] * 3 * sizeof(GLfloat));
@@ -236,23 +245,40 @@ void reload_rgb_data()
 
   for (n=0; n<L[0]; ++n) {
     V = M2->volumes + n;
-    VertexData[4*3*n + 0*3 + 0] = V->x0[1];
-    VertexData[4*3*n + 0*3 + 1] = V->x0[2];
-    VertexData[4*3*n + 0*3 + 2] = V->x0[3];
 
-    VertexData[4*3*n + 1*3 + 0] = V->x1[1];
-    VertexData[4*3*n + 1*3 + 1] = V->x0[2];
-    VertexData[4*3*n + 1*3 + 2] = V->x0[3];
+    x00[1] = V->x0[1];
+    x00[2] = V->x0[2];
+    x00[3] = V->x0[3];
+    x01[1] = V->x1[1];
+    x01[2] = V->x0[2];
+    x01[3] = V->x0[3];
+    x11[1] = V->x1[1];
+    x11[2] = V->x1[2];
+    x11[3] = V->x0[3];
+    x10[1] = V->x0[1];
+    x10[2] = V->x1[2];
+    x10[3] = V->x0[3];
 
-    VertexData[4*3*n + 2*3 + 0] = V->x1[1];
-    VertexData[4*3*n + 2*3 + 1] = V->x1[2];
-    VertexData[4*3*n + 2*3 + 2] = V->x0[3];
+    m2_to_cartesian(x00, x00c, M2->geometry);
+    m2_to_cartesian(x01, x01c, M2->geometry);
+    m2_to_cartesian(x11, x11c, M2->geometry);
+    m2_to_cartesian(x10, x10c, M2->geometry);
 
-    VertexData[4*3*n + 3*3 + 0] = V->x0[1];
-    VertexData[4*3*n + 3*3 + 1] = V->x1[2];
-    VertexData[4*3*n + 3*3 + 2] = V->x0[3];
+    VertexData[4*3*n + 0*3 + 0] = x00c[1];
+    VertexData[4*3*n + 0*3 + 1] = x00c[2];
+    VertexData[4*3*n + 0*3 + 2] = x00c[3];
+    VertexData[4*3*n + 1*3 + 0] = x01c[1];
+    VertexData[4*3*n + 1*3 + 1] = x01c[2];
+    VertexData[4*3*n + 1*3 + 2] = x01c[3];
+    VertexData[4*3*n + 2*3 + 0] = x11c[1];
+    VertexData[4*3*n + 2*3 + 1] = x11c[2];
+    VertexData[4*3*n + 2*3 + 2] = x11c[3];
+    VertexData[4*3*n + 3*3 + 0] = x10c[1];
+    VertexData[4*3*n + 3*3 + 1] = x10c[2];
+    VertexData[4*3*n + 3*3 + 2] = x10c[3];
 
     m2aux_get(&V->aux, DataMember, &y);
+
     y -= DataRange[0];
     y /= DataRange[1] - DataRange[0];
     color_map(y, &ColorData[3*n]);

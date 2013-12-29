@@ -2,6 +2,31 @@
 #include "m2.h"
 
 
+void m2_to_cartesian(double x[4], double xcart[4], int geometry)
+{
+  switch (geometry) {
+  case M2_CARTESIAN:
+    xcart[1] = x[1];
+    xcart[2] = x[2];
+    xcart[3] = x[3];
+    break;
+  case M2_CYLINDRICAL:
+    xcart[1] = x[1] * cos(x[2]);
+    xcart[2] = x[1] * sin(x[2]);
+    xcart[3] = x[3];
+    break;
+  case M2_SPHERICAL:
+    xcart[1] = x[1] * sin(x[2]) * cos(x[3]);
+    xcart[2] = x[1] * sin(x[2]) * sin(x[3]);
+    xcart[3] = x[1] * cos(x[2]);
+    break;
+  default:
+    MSG(FATAL, "internal error");
+    break;
+  }
+}
+
+
 double m2_volume_measure(double x0[4], double x1[4], int geometry)
 {
   double dV;
