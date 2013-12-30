@@ -26,12 +26,12 @@ void initial_data(m2vol *V)
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 1;//0.125;
-    V->prim.p  = 1;//0.100;
+    V->prim.d  = 0.125;
+    V->prim.p  = 0.100;
 
     V->Bflux1A =  0.75 * V->area1*0;
     V->Bflux2A =  0.00 * V->area2*1;// * 1.0/x[1];
-    V->Bflux3A =  3.30 * V->area3*1;
+    V->Bflux3A =  0.00 * V->area3*1;
   }
 }
 
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
   /* return 0; /\* shows that save/load works *\/ */
 
 
-  if (1) {
+  if (0) {
     m2sim_visualize(m2, argc, argv);
   }
   else {

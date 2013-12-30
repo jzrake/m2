@@ -329,16 +329,30 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
 {
   int n;
   int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
+  int n1 = m2->number_guard_zones * (G[1] > 1);
+  int n2 = m2->number_guard_zones * (G[2] > 1);
+  int n3 = m2->number_guard_zones * (G[3] > 1);
+  int *I;
   m2vol *V;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->global_index[1] < 0 ||
-	V->global_index[2] < 0 ||
-	V->global_index[3] < 0 ||
-	V->global_index[1] >= m2->domain_resolution[1] ||
-	V->global_index[2] >= m2->domain_resolution[2] ||
-	V->global_index[3] >= m2->domain_resolution[3]) {
-      initial_data(V);
+    I = V->global_index;
+    if (I[1] < 0) V->prim = M2_VOL(n1, I[2]+n2, I[3]+n3)->prim;
+    if (I[2] < 0) V->prim = M2_VOL(I[1]+n1, n2, I[3]+n3)->prim;
+    if (I[3] < 0) V->prim = M2_VOL(I[1]+n1, I[2]+n2, n3)->prim;
+
+    if (I[1] >= G[1]) V->prim = M2_VOL(L[1]-2*n1-1, I[2]+n2, I[3]+n3)->prim;
+    if (I[2] >= G[2]) V->prim = M2_VOL(I[1]+n1, L[2]-2*n2-1, I[3]+n3)->prim;
+    if (I[3] >= G[3]) V->prim = M2_VOL(I[1]+n1, I[2]+n2, L[3]-2*n3-1)->prim;
+
+    if (I[1] < 0 ||
+	I[2] < 0 ||
+	I[3] < 0 ||
+	I[1] >= G[1] ||
+	I[2] >= G[2] ||
+	I[3] >= G[3]) {
+      //      initial_data(V);
       m2sim_from_primitive(m2,
 			   &V->prim, NULL, NULL,
 			   V ->volume,
