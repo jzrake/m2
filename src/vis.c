@@ -31,18 +31,23 @@ static void reload_rgb_data();
 static void color_map(double val, GLfloat rgb[3]);
 
 static double TranslateZ = -2.0;
-static double RotationX = 90.0;
-static double RotationY =  0.0;
+static double RotationX = 0.0;
+static double RotationY = 0.0;
 static m2sim *M2; 
 
 static int DataMember = M2_COMOVING_MASS_DENSITY;
 static int ColorTable = 3;
 static int LogScaling = 0;
+static int DrawMesh = 0;
 static double DataRange[2];
 static GLfloat *VertexData = NULL;
 static GLfloat *ColorData = NULL;
 
-
+enum {
+  VIS_EXIT,
+  VIS_TOGGLE_LOG_SCALE,
+  VIS_TOGGLE_DRAW_MESH,
+} ;
 
 
 void m2sim_visualize(m2sim *m2, int argc, char **argv)
@@ -92,8 +97,12 @@ void GLUTDisplayFunc()
   for (n=0; n<M2->local_grid_size[0]; ++n) {
     V = M2->volumes + n;
 
-    glBegin(GL_QUADS);
-    //    glBegin(GL_LINE_LOOP);
+    if (DrawMesh) {
+      glBegin(GL_LINE_LOOP);
+    }
+    else {
+      glBegin(GL_QUADS);
+    }
     glColor3fv(&ColorData[3*n]);
     glVertex3fv(&VertexData[4*3*n + 0*3]);
     glVertex3fv(&VertexData[4*3*n + 1*3]);
@@ -165,9 +174,19 @@ void menu_callback_color_mapping(int num)
 }
 void menu_callback_main(int num)
 {
-  if (num == 0) {
+  switch (num) {
+  case VIS_EXIT:
     glutDestroyWindow(GlutWindow);
     exit(0);
+    break;
+  case VIS_TOGGLE_LOG_SCALE:
+    LogScaling ^= 1;
+    reload_rgb_data();
+    printf("Log scaling is %s\n", LogScaling ? "enabled" : "disabled");
+    break;
+  case VIS_TOGGLE_DRAW_MESH:
+    DrawMesh ^= 1;
+    break;
   }
 }
 void create_menu()
@@ -203,7 +222,8 @@ void create_menu()
   main_menu = glutCreateMenu(menu_callback_main);
   glutAddSubMenu("Field Variable", field_variable);
   glutAddSubMenu("Color Mapping", color_mapping);
-  glutAddMenuEntry("Quit", 0);
+  glutAddMenuEntry("Toggle log scale", VIS_TOGGLE_LOG_SCALE);
+  glutAddMenuEntry("Quit", VIS_EXIT);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 void reload_rgb_data()
@@ -230,7 +250,7 @@ void reload_rgb_data()
     m2aux_get(&V->aux, DataMember, &y);
 
     if (LogScaling) {
-      y = log10(y);
+      y = log10(fabs(y));
     }
 
     if (n == 0) {
@@ -278,6 +298,10 @@ void reload_rgb_data()
     VertexData[4*3*n + 3*3 + 2] = x10c[3];
 
     m2aux_get(&V->aux, DataMember, &y);
+
+    if (LogScaling) {
+      y = log10(fabs(y));
+    }
 
     y -= DataRange[0];
     y /= DataRange[1] - DataRange[0];

@@ -183,8 +183,9 @@ int m2aux_get(m2aux *aux, int member, double *value);
 #define M2_STRING_SET(d,s) strncpy(d, s, 256); d[255] = '\0';
 
 #define M2_IND(i,j,k)((i)*L[2]*L[3]+(j)*L[3]+(k))
-#define M2_VOL(i,j,k)((i)<L[1]&&(j)<L[2]&&(k)<L[3]?m2->volumes+M2_IND(i,j,k): \
-		      NULL)
+#define M2_VOL(i,j,k)(((i)>=0)&&(i)<L[1]&&				\
+		      ((j)>=0)&&(j)<L[2]&&				\
+		      ((k)>=0)&&(k)<L[3]?m2->volumes+M2_IND(i,j,k):NULL)
 #define M2_MAX3(a,b,c)(((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c)))
 #define M2_MIN3(a,b,c)(((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c)))
 

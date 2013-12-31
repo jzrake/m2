@@ -131,6 +131,11 @@ void m2sim_calculate_emf(m2sim *m2)
 				-V2->flux1[B22]*V0->line3
 				+V0->flux2[B11]*V0->line3
 				+V1->flux2[B11]*V0->line3);
+
+	/* if (V0->global_index[2] == 0) { */
+	/*   printf("on the North pole: theta-EMF=%f phi-EMF=%f\n", */
+	/* 	 V0->emf2, V0->emf3); */
+	/* } */
       }
     }
   }
@@ -142,9 +147,6 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   int i, j, k, q;
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
-  int D1 = G[2] > 1 || G[3] > 1;
-  int D2 = G[3] > 1 || G[1] > 1;
-  int D3 = G[1] > 1 || G[2] > 1;
   m2vol *V0, *V1, *V2, *V3;
 
   for (i=0; i<L[1]; ++i) {
@@ -152,43 +154,86 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
       for (k=0; k<L[3]; ++k) {
 
 	if (m2->physics & M2_MAGNETIZED) {
-	  /* x-directed edge */
+
+	  /* --------------- */
+	  /* x-directed face */
+	  /* --------------- */
 	  V0 = M2_VOL(i, j+0, k+0);
-	  V1 = M2_VOL(i, j+1, k+0);
-	  V2 = M2_VOL(i, j+1, k+1);
-	  V3 = M2_VOL(i, j+0, k+1);
-	  if (V0 && D2) V0->Bflux2A -= dt * V0->emf1;
-	  if (V0 && D3) V0->Bflux3A += dt * V0->emf1;
-	  if (V1 && D3) V1->Bflux3A -= dt * V0->emf1;
-	  if (V3 && D2) V3->Bflux2A += dt * V0->emf1;
+	  V1 = M2_VOL(i, j-1, k+0); V1 = V1 ? V1 : V0;
+	  V2 = M2_VOL(i, j+0, k-1); V2 = V2 ? V2 : V0;
+	  if (G[2] == 1 && G[3] == 1) { /* symmetric in y and z */
 
-	  /* y-directed edge */
+	  }
+	  else if (G[2] == 1) { /* symmetric in y */
+	    V0->Bflux1A += dt * V0->emf2;
+	    V0->Bflux1A -= dt * V2->emf2;
+	  }
+	  else if (G[3] == 1) { /* symmetric in z */
+	    V0->Bflux1A += dt * V1->emf3;
+	    V0->Bflux1A -= dt * V0->emf3;
+	  }
+	  else {
+	    V0->Bflux1A += dt * V0->emf2;
+	    V0->Bflux1A -= dt * V2->emf2;
+	    V0->Bflux1A += dt * V1->emf3;
+	    V0->Bflux1A -= dt * V0->emf3;
+	  }
+
+	  /* --------------- */
+	  /* y-directed face */
+	  /* --------------- */
 	  V0 = M2_VOL(i+0, j, k+0);
-	  V1 = M2_VOL(i+0, j, k+1);
-	  V2 = M2_VOL(i+1, j, k+1);
-	  V3 = M2_VOL(i+1, j, k+0);
-	  if (V0 && D3) V0->Bflux3A -= dt * V0->emf2;
-	  if (V0 && D1) V0->Bflux1A += dt * V0->emf2;
-	  if (V1 && D1) V1->Bflux1A -= dt * V0->emf2;
-	  if (V3 && D3) V3->Bflux3A += dt * V0->emf2;
+	  V1 = M2_VOL(i+0, j, k-1); V1 = V1 ? V1 : V0;
+	  V2 = M2_VOL(i-1, j, k+0); V2 = V2 ? V2 : V0;
+	  if (G[3] == 1 && G[1] == 1) { /* symmetric in z and x */
 
-	  /* z-directed edge */
+	  }
+	  else if (G[3] == 1) { /* symmetric in z */
+	    V0->Bflux2A += dt * V0->emf3;
+	    V0->Bflux2A -= dt * V2->emf3;
+	  }
+	  else if (G[1] == 1) { /* symmetric in x */
+	    V0->Bflux2A += dt * V1->emf1;
+	    V0->Bflux2A -= dt * V0->emf1;
+	  }
+	  else {
+	    V0->Bflux2A += dt * V0->emf3;
+	    V0->Bflux2A -= dt * V2->emf3;
+	    V0->Bflux2A += dt * V1->emf1;
+	    V0->Bflux2A -= dt * V0->emf1;
+	  }
+
+	  /* --------------- */
+	  /* z-directed face */
+	  /* --------------- */
 	  V0 = M2_VOL(i+0, j+0, k);
-	  V1 = M2_VOL(i+1, j+0, k);
-	  V2 = M2_VOL(i+1, j+1, k);
-	  V3 = M2_VOL(i+0, j+1, k);
-	  if (V0 && D1) V0->Bflux1A -= dt * V0->emf3;
-	  if (V0 && D2) V0->Bflux2A += dt * V0->emf3;
-	  if (V1 && D2) V1->Bflux2A -= dt * V0->emf3;
-	  if (V3 && D1) V3->Bflux1A += dt * V0->emf3;
+	  V1 = M2_VOL(i-1, j+0, k); V1 = V1 ? V1 : V0;
+	  V2 = M2_VOL(i+0, j-1, k); V2 = V2 ? V2 : V0;
+	  if (G[1] == 1 && G[2] == 1) { /* symmetric in x and y */
+
+	  }
+	  else if (G[1] == 1) { /* symmetric in x */
+	    V0->Bflux3A += dt * V0->emf1;
+	    V0->Bflux3A -= dt * V2->emf1;
+	  }
+	  else if (G[2] == 1) { /* symmetric in y */
+	    V0->Bflux3A += dt * V1->emf2;
+	    V0->Bflux3A -= dt * V0->emf2;
+	  }
+	  else {
+	    V0->Bflux3A += dt * V0->emf1;
+	    V0->Bflux3A -= dt * V2->emf1;
+	    V0->Bflux3A += dt * V1->emf2;
+	    V0->Bflux3A -= dt * V0->emf2;
+	  }
 	}
+
 
 
 	V0 = M2_VOL(i+0, j+0, k+0);
 	V1 = M2_VOL(i+1, j+0, k+0);
 	V2 = M2_VOL(i+0, j+1, k+0);
 	V3 = M2_VOL(i+0, j+0, k+1);
-
 
 	for (q=0; q<5; ++q) {
 	  /* x-face */
@@ -213,12 +258,24 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
 {
   int n;
   int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
+  int *I;
   m2vol *V;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     V->x0[0] = 0.0;
     V->x1[0] = dt;
-    m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
+    I = V->global_index;
+    if (I[1] < 0 ||
+	I[2] < 0 ||
+	I[3] < 0 ||
+	I[1] >= G[1] ||
+	I[2] >= G[2] ||
+	I[3] >= G[3]) {
+    }
+    else {
+      m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
+    }
   }
 }
 
@@ -330,34 +387,23 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
   int n;
   int *L = m2->local_grid_size;
   int *G = m2->domain_resolution;
-  int n1 = m2->number_guard_zones * (G[1] > 1);
-  int n2 = m2->number_guard_zones * (G[2] > 1);
-  int n3 = m2->number_guard_zones * (G[3] > 1);
   int *I;
   m2vol *V;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
-    if (I[1] < 0) V->prim = M2_VOL(n1, I[2]+n2, I[3]+n3)->prim;
-    if (I[2] < 0) V->prim = M2_VOL(I[1]+n1, n2, I[3]+n3)->prim;
-    if (I[3] < 0) V->prim = M2_VOL(I[1]+n1, I[2]+n2, n3)->prim;
-
-    if (I[1] >= G[1]) V->prim = M2_VOL(L[1]-2*n1-1, I[2]+n2, I[3]+n3)->prim;
-    if (I[2] >= G[2]) V->prim = M2_VOL(I[1]+n1, L[2]-2*n2-1, I[3]+n3)->prim;
-    if (I[3] >= G[3]) V->prim = M2_VOL(I[1]+n1, I[2]+n2, L[3]-2*n3-1)->prim;
-
     if (I[1] < 0 ||
-	I[2] < 0 ||
-	I[3] < 0 ||
-	I[1] >= G[1] ||
-	I[2] >= G[2] ||
-	I[3] >= G[3]) {
-      //      initial_data(V);
+  	I[2] < 0 ||
+  	I[3] < 0 ||
+  	I[1] >= G[1] ||
+  	I[2] >= G[2] ||
+  	I[3] >= G[3]) {
+      initial_data(V);
       m2sim_from_primitive(m2,
-			   &V->prim, NULL, NULL,
-			   V ->volume,
-			   V ->consA,
-			   &V->aux);
+  			   &V->prim, NULL, NULL,
+  			   V ->volume,
+  			   V ->consA,
+  			   &V->aux);
     }
   }
 }

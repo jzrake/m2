@@ -1,4 +1,5 @@
 #include <string.h>
+#include <float.h>
 #include "m2.h"
 
 
@@ -208,7 +209,10 @@ void m2sim_calculate_conserved(m2sim *m2)
 }
 double m2vol_minimum_dimension(m2vol *V)
 {
-  return M2_MIN3(V->line1, V->line2, V->line3);
+  double l1 = V->m2->domain_resolution[1] > 1 ? V->line1 : DBL_MAX;
+  double l2 = V->m2->domain_resolution[2] > 1 ? V->line2 : DBL_MAX;
+  double l3 = V->m2->domain_resolution[3] > 1 ? V->line3 : DBL_MAX;
+  return M2_MIN3(l1, l2, l3);
 }
 double m2vol_coordinate_centroid(m2vol *V, int axis)
 {
