@@ -243,6 +243,7 @@ int m2aux_get(m2aux *aux, int member, double *value)
   case M2_COMOVING_MASS_DENSITY: *value = aux->comoving_mass_density; break;
   case M2_GAS_PRESSURE: *value = aux->gas_pressure; break;
   case M2_MAGNETIC_PRESSURE: *value = aux->magnetic_pressure; break;
+  case M2_SIGMA: *value = aux->magnetic_pressure/aux->gas_pressure; break;
   default: MSG(FATAL, "no such data member"); break;
   }
   return 0;

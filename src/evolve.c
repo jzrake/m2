@@ -1,4 +1,5 @@
 #include <string.h>
+#include <math.h>
 #include "m2.h"
 
 
@@ -148,12 +149,31 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
+  char method = '1';
 
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
-	if (m2->physics & M2_MAGNETIZED) {
+	if ((m2->physics & M2_MAGNETIZED) && method == '1') {
+
+	  double dBphi = 0.0;
+
+	  V0 = M2_VOL(i+0, j+0, k);
+	  V1 = M2_VOL(i-1, j+0, k);
+	  V2 = M2_VOL(i+0, j-1, k);
+
+	  if (V0) dBphi -= dt * V0->flux1[B33] * V0->area1;
+	  if (V1) dBphi += dt * V1->flux1[B33] * V1->area1;
+	  if (V0) dBphi -= dt * V0->flux2[B33] * V0->area2;
+	  if (V2) dBphi += dt * V2->flux2[B33] * V2->area2;
+
+	  dBphi /= V0->volume;
+	  dBphi *= V0->area3;
+
+	  V0->Bflux3A += dBphi;
+	}
+	if ((m2->physics & M2_MAGNETIZED) && method == '2') {
 
 	  /* --------------- */
 	  /* x-directed face */
@@ -389,9 +409,35 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
+  double theta;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
+
+    if (I[1] == 0) {
+      theta = m2vol_coordinate_centroid(V, 2);
+      V->prim.v1 = 10;
+      V->prim.v2 = 0.0;
+      V->prim.v3 = 0.0;
+      V->prim.d = 1.0;
+      V->prim.p = 1.0;
+      V->Bflux1A = 0.0;
+      V->Bflux2A = 0.0;
+      V->Bflux3A = 5.0 * sin(theta)*sin(theta) * V->area3;
+      m2sim_from_primitive(m2,
+  			   &V->prim, NULL, NULL,
+  			   V ->volume,
+  			   V ->consA,
+  			   &V->aux);
+    }
+    else if (I[1] == G[1] - 1) {
+      initial_data(V);
+      m2sim_from_primitive(m2,
+  			   &V->prim, NULL, NULL,
+  			   V ->volume,
+  			   V ->consA,
+  			   &V->aux);
+    }
     if (I[1] < 0 ||
   	I[2] < 0 ||
   	I[3] < 0 ||

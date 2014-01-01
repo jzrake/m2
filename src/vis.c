@@ -141,6 +141,7 @@ void GLUTKeyboardFunc(unsigned char key, int x, int y)
   case '-': TranslateZ *= 1.1; break;
   case '=': TranslateZ /= 1.1; break;
   case 's': m2sim_drive(M2); reload_rgb_data(); break;
+  case 'p': printf("data range: [%4.3e %4.3e]\n", DataRange[0], DataRange[1]); break;
   }
 }
  
@@ -208,6 +209,7 @@ void create_menu()
   glutAddMenuEntry("comoving mass density", M2_COMOVING_MASS_DENSITY);
   glutAddMenuEntry("gas pressure", M2_GAS_PRESSURE);
   glutAddMenuEntry("magnetic pressure", M2_MAGNETIC_PRESSURE);
+  glutAddMenuEntry("sigma", M2_SIGMA);
 
 
   color_mapping = glutCreateMenu(menu_callback_color_mapping);
@@ -223,6 +225,7 @@ void create_menu()
   glutAddSubMenu("Field Variable", field_variable);
   glutAddSubMenu("Color Mapping", color_mapping);
   glutAddMenuEntry("Toggle log scale", VIS_TOGGLE_LOG_SCALE);
+  glutAddMenuEntry("Toggle draw mesh", VIS_TOGGLE_DRAW_MESH);
   glutAddMenuEntry("Quit", VIS_EXIT);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
