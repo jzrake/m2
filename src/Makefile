@@ -16,32 +16,30 @@ TMP_H := $(shell mktemp -u make.XXXXXX)
 # m2 executables
 # --------------------------------------------------
 EXE = m2
-ifeq ($(HAVE_GLUT), 1)
-
-endif
 
 
 # object code required for executables
 # --------------------------------------------------
-SRC = $(wildcard *.c)
-OBJ = $(SRC:.c=.o)
-DEP = $(SRC:.c=.dep)
+SRC1 = $(wildcard *.c)
+SRC2 = $(wildcard *.cpp)
+OBJ = $(SRC1:.c=.o) $(SRC2:.cpp=.o)
+DEP = $(SRC1:.c=.dep) $(SRC2:.cpp=.dep)
 
 
 # build rules
 # --------------------------------------------------
 default : $(EXE)
 
-vis.o : vis.c m2-cfg.h $(MAKEFILE_IN)
-	@$(CC) -MM $< > $(<:.c=.dep) $(GLUT_I)
+vis.o : vis.cpp m2-cfg.h $(MAKEFILE_IN)
+	@$(CC) -MM $< > $(<:.cpp=.dep) $(GLUT_I)
 	$(CC) $(CFLAGS) $< -c $(GLUT_I)
 
 %.o : %.c m2-cfg.h $(MAKEFILE_IN)
 	@$(CC) -MM $< > $(<:.c=.dep)
 	$(CC) $(CFLAGS) $< -c
 
-m2 : $(OBJ)
-	$(CC) $(CFLAGS) $^ $(CLIBS) $(GLUT_L) -o $@
+m2 : $(OBJ) build_glui
+	$(CXX) $(CFLAGS) $(OBJ) $(CLIBS) $(GLUT_L) $(wildcard glui/*.o) -o $@
 
 m2-cfg.h : .FORCE
 	@echo "/* m2 config header file */" > $(TMP_H)
@@ -57,12 +55,17 @@ show :
 	@echo "CFLAGS: $(CFLAGS)"
 	@echo "EXE: $(EXE)"
 	@echo "OBJ: $(OBJ)"
-	@echo "SRC: $(SRC)"
+	@echo "SRC: $(SRC1) $(SRC2)"
 	@echo "DEP: $(DEP)"
 
 clean :
+	$(MAKE) -C glui clean
 	$(RM) $(OBJ) $(DEP) $(EXE)
 
+build_glui :
+	$(MAKE) -C glui lib
+
 .FORCE :
+.PHONY : show clean build_glui
 
 -include *.dep

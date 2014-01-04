@@ -3,8 +3,9 @@
 #include <math.h>
 #include <GL/glut.h>
 #define ESCAPE_KEY 27
+extern "C" {
 #include "m2.h" 
- 
+}
  
 
 /* ------------------------------------------ */

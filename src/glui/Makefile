@@ -30,6 +30,7 @@ DEP = $(SRC:.cpp=.dep)
 # build rules
 # --------------------------------------------------
 default : $(EXE)
+lib : $(OBJ)
 
 example/%.o : example/%.cpp $(MAKEFILE_IN)
 	@$(CXX) -MM $< > $(<:.cpp=.dep) $(GLUT_I) -I$(PWD)
