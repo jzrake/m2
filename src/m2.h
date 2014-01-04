@@ -136,6 +136,7 @@ void m2sim_set_physics(m2sim *m2, int modes);
 void m2sim_initialize(m2sim *m2);
 void m2sim_map(m2sim *m2, m2vol_operator f);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
+void m2sim_calculate_gradient(m2sim *m2);
 void m2sim_calculate_conserved(m2sim *m2);
 void m2sim_calculate_flux(m2sim *m2);
 void m2sim_calculate_emf(m2sim *m2);

@@ -40,6 +40,7 @@ void initial_data(m2vol *V)
 
 void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
+  m2sim_calculate_gradient(m2);
   m2sim_calculate_flux(m2);
   m2sim_calculate_emf(m2);
   m2sim_exchange_flux(m2, dt);

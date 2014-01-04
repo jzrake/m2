@@ -38,6 +38,7 @@ static m2sim *M2;
 static int DataMember = M2_COMOVING_MASS_DENSITY;
 static int ColorTable = 3;
 static int LogScaling = 0;
+static int AutoPlay = 0;
 static int DrawMesh = 0;
 static double DataRange[2];
 static GLfloat *VertexData = NULL;
@@ -47,6 +48,7 @@ enum {
   VIS_EXIT,
   VIS_TOGGLE_LOG_SCALE,
   VIS_TOGGLE_DRAW_MESH,
+  VIS_TOGGLE_AUTO_PLAY,
 } ;
 
 
@@ -115,6 +117,11 @@ void GLUTDisplayFunc()
  
   /* end drawing */
   glutSwapBuffers();
+
+  if (AutoPlay) {
+    m2sim_drive(M2);
+    reload_rgb_data();
+  }
 }
  
 void GLUTIdleFunc()
@@ -188,6 +195,9 @@ void menu_callback_main(int num)
   case VIS_TOGGLE_DRAW_MESH:
     DrawMesh ^= 1;
     break;
+  case VIS_TOGGLE_AUTO_PLAY:
+    AutoPlay ^= 1;
+    break;
   }
 }
 void create_menu()
@@ -226,6 +236,7 @@ void create_menu()
   glutAddSubMenu("Color Mapping", color_mapping);
   glutAddMenuEntry("Toggle log scale", VIS_TOGGLE_LOG_SCALE);
   glutAddMenuEntry("Toggle draw mesh", VIS_TOGGLE_DRAW_MESH);
+  glutAddMenuEntry("Toggle auto play", VIS_TOGGLE_AUTO_PLAY);
   glutAddMenuEntry("Quit", VIS_EXIT);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 }

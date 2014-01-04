@@ -3,8 +3,23 @@
 #include "m2.h"
 
 
-static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
+static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
 {
+#define INTERP_PRIM(mem, ind)						\
+  do {									\
+    switch (axis) {							\
+    case 1:								\
+      PL.mem = VL->prim.mem + VL->grad1[ind] * (VL->x1[1] - xL);	\
+      PR.mem = VR->prim.mem + VR->grad1[ind] * (VR->x0[1] - xR);	\
+    case 2:								\
+      PL.mem = VL->prim.mem + VL->grad2[ind] * (VL->x1[2] - xL);	\
+      PR.mem = VR->prim.mem + VR->grad2[ind] * (VR->x0[2] - xR);	\
+    case 3:								\
+      PL.mem = VL->prim.mem + VL->grad3[ind] * (VL->x1[3] - xL);	\
+      PR.mem = VR->prim.mem + VR->grad3[ind] * (VR->x0[3] - xR);	\
+    }									\
+  } while (0)								\
+
   int q;
   double UL[8];
   double UR[8];
@@ -12,22 +27,45 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
   double FR[8];
   double lamL[8];
   double lamR[8];
+  m2prim PL;
+  m2prim PR;
   m2aux AL;
   m2aux AR;
 
-  m2sim_from_primitive(VL->m2, &VL->prim, NULL, NULL, 1.0, UL, &AL);
-  m2sim_from_primitive(VR->m2, &VR->prim, NULL, NULL, 1.0, UR, &AR);
+  double xL = m2vol_coordinate_centroid(VL, axis);
+  double xR = m2vol_coordinate_centroid(VR, axis);
+  double n[4] = { 0.0, 0.0, 0.0, 0.0 };
+
+  n[axis] = 1.0;
+
+  INTERP_PRIM(v1, 0);
+  INTERP_PRIM(v2, 1);
+  INTERP_PRIM(v3, 2);
+  INTERP_PRIM(B1, 3);
+  INTERP_PRIM(B2, 4);
+  INTERP_PRIM(B3, 5);
+  INTERP_PRIM( d, 6);
+  INTERP_PRIM( p, 7);
+
+  UL[B11] = PL.B1;
+  UL[B22] = PL.B2;
+  UL[B33] = PL.B3;
+  UR[B11] = PR.B1;
+  UR[B22] = PR.B2;
+  UR[B33] = PR.B3;
+
+  switch (axis) {
+  case 1: UL[B11] = UR[B11] = PL.B1 = PR.B1 = VL->Bflux1A / VL->area1; break;
+  case 2: UL[B22] = UR[B22] = PL.B2 = PR.B2 = VL->Bflux2A / VL->area2; break;
+  case 3: UL[B33] = UR[B33] = PL.B3 = PR.B3 = VL->Bflux3A / VL->area3; break;
+  }
+
+  m2sim_from_primitive(VL->m2, &PL, NULL, NULL, 1.0, UL, &AL);
+  m2sim_from_primitive(VR->m2, &PR, NULL, NULL, 1.0, UR, &AR);
   m2aux_eigenvalues(&AL, n, lamL);
   m2aux_eigenvalues(&AR, n, lamR);
   m2aux_fluxes(&AL, n, FL);
   m2aux_fluxes(&AR, n, FR);
-
-  UL[B11] = VL->prim.B1;
-  UL[B22] = VL->prim.B2;
-  UL[B33] = VL->prim.B3;
-  UR[B11] = VR->prim.B1;
-  UR[B22] = VR->prim.B2;
-  UR[B33] = VR->prim.B3;
 
   double am = M2_MIN3(lamL[0], lamR[0], 0.0);
   double ap = M2_MAX3(lamL[7], lamR[7], 0.0);
@@ -39,6 +77,34 @@ static void riemann_hll(m2vol *VL, m2vol *VR, double n[4], double *F)
   for (q=0; q<8; ++q) {
     F[q] = (ap*FL[q] - am*FR[q] + ap*am*(UR[q] - UL[q])) / (ap - am);
   }
+#undef INTERP_PRIM
+}
+
+static double plm_gradient(double *fs, double *xs)
+{
+#define minval3(a,b,c) ((a<b) ? ((a<c) ? a : c) : ((b<c) ? b : c))
+#define sign(x) ((x > 0.0) - (x < 0.0))
+  double plm = 2.0;
+
+  double xL = xs[0];
+  double x0 = xs[1];
+  double xR = xs[2];
+
+  double yL = fs[0];
+  double y0 = fs[1];
+  double yR = fs[2];
+
+  double a = (yL - y0) / (xL - x0) * plm;
+  double b = (yL - yR) / (xL - xR);
+  double c = (y0 - yR) / (x0 - xR) * plm;
+
+  double sa = sign(a), sb = sign(b), sc = sign(c);
+  double fa = fabs(a), fb = fabs(b), fc = fabs(c);
+  double g = 0.25 * fabs(sa + sb) * (sa + sc) * minval3(fa, fb, fc);
+
+  return g;
+#undef minval3
+#undef sign
 }
 
 
@@ -46,9 +112,6 @@ void m2sim_calculate_flux(m2sim *m2)
 {
   int i, j, k, q;
   int *L = m2->local_grid_size;
-  double n1[4] = { 0, 1, 0, 0 };
-  double n2[4] = { 0, 0, 1, 0 };
-  double n3[4] = { 0, 0, 0, 1 };
   m2vol *V0, *V1, *V2, *V3;
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
@@ -59,13 +122,13 @@ void m2sim_calculate_flux(m2sim *m2)
 	V2 = M2_VOL(i+0, j+1, k+0);
 	V3 = M2_VOL(i+0, j+0, k+1);
 
-	if (V1) riemann_hll(V0, V1, n1, V0->flux1);
+	if (V1) riemann_hll(V0, V1, 1, V0->flux1);
 	else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
 
-	if (V2) riemann_hll(V0, V2, n2, V0->flux2);
+	if (V2) riemann_hll(V0, V2, 2, V0->flux2);
 	else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
 
-	if (V3) riemann_hll(V0, V3, n3, V0->flux3);
+	if (V3) riemann_hll(V0, V3, 3, V0->flux3);
 	else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
       }
     }
@@ -143,6 +206,108 @@ void m2sim_calculate_emf(m2sim *m2)
 }
 
 
+void m2sim_calculate_gradient(m2sim *m2)
+{
+#define INTERP_PRIM(mem, ind, grad)		\
+  for (n=0; n<3; ++n) {				\
+    y[n] = V[n]->prim.mem;			\
+  }						\
+  V[1]->grad[ind] = plm_gradient(x, y)
+
+  int i, j, k, q, n;
+  int *L = m2->local_grid_size;
+  m2vol *V[3];
+  double x[3];
+  double y[3];
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
+
+
+	/* ----------------------- */
+	/* gradient in x-direction */
+	/* ----------------------- */
+	V[0] = M2_VOL(i-1, j, k);
+	V[1] = M2_VOL(i+0, j, k);
+	V[2] = M2_VOL(i+1, j, k);
+	if (V[0] && V[2]) {
+	  for (n=0; n<3; ++n) {
+	    x[n] = m2vol_coordinate_centroid(V[n], 1);
+	  }
+	  INTERP_PRIM(v1, 0, grad1);
+	  INTERP_PRIM(v2, 1, grad1);
+	  INTERP_PRIM(v3, 2, grad1);
+	  INTERP_PRIM(B1, 3, grad1);
+	  INTERP_PRIM(B2, 4, grad1);
+	  INTERP_PRIM(B3, 5, grad1);
+	  INTERP_PRIM( d, 6, grad1);
+	  INTERP_PRIM( p, 7, grad1);
+	}
+	else {
+	  for (q=0; q<8; ++q) {
+	    V[1]->grad1[q] = 0.0;
+	  }
+	}
+
+
+	/* ----------------------- */
+	/* gradient in y-direction */
+	/* ----------------------- */
+	V[0] = M2_VOL(i, j-1, k);
+	V[1] = M2_VOL(i, j+0, k);
+	V[2] = M2_VOL(i, j+1, k);
+	if (V[0] && V[2]) {
+	  for (n=0; n<3; ++n) {
+	    x[n] = m2vol_coordinate_centroid(V[n], 2);
+	  }
+	  INTERP_PRIM(v1, 0, grad2);
+	  INTERP_PRIM(v2, 1, grad2);
+	  INTERP_PRIM(v3, 2, grad2);
+	  INTERP_PRIM(B1, 3, grad2);
+	  INTERP_PRIM(B2, 4, grad2);
+	  INTERP_PRIM(B3, 5, grad2);
+	  INTERP_PRIM( d, 6, grad2);
+	  INTERP_PRIM( p, 7, grad2);
+	}
+	else {
+	  for (q=0; q<8; ++q) {
+	    V[1]->grad2[q] = 0.0;
+	  }
+	}
+
+
+	/* ----------------------- */
+	/* gradient in z-direction */
+	/* ----------------------- */
+	V[0] = M2_VOL(i, j, k-1);
+	V[1] = M2_VOL(i, j, k+0);
+	V[2] = M2_VOL(i, j, k+1);
+	if (V[0] && V[2]) {
+	  for (n=0; n<3; ++n) {
+	    x[n] = m2vol_coordinate_centroid(V[n], 3);
+	  }
+	  INTERP_PRIM(v1, 0, grad3);
+	  INTERP_PRIM(v2, 1, grad3);
+	  INTERP_PRIM(v3, 2, grad3);
+	  INTERP_PRIM(B1, 3, grad3);
+	  INTERP_PRIM(B2, 4, grad3);
+	  INTERP_PRIM(B3, 5, grad3);
+	  INTERP_PRIM( d, 6, grad3);
+	  INTERP_PRIM( p, 7, grad3);
+	}
+	else {
+	  for (q=0; q<8; ++q) {
+	    V[1]->grad3[q] = 0.0;
+	  }
+	}
+      }
+    }
+  }
+#undef INTERP_PRIM
+}
+
+
 void m2sim_exchange_flux(m2sim *m2, double dt)
 {
   int i, j, k, q;
@@ -156,7 +321,8 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
       for (k=0; k<L[3]; ++k) {
 
 	if ((m2->physics & M2_MAGNETIZED) && method == '1') {
-
+	  /* special case of 2d simulation with symmetry and B-field in the
+	     3-direction */
 	  double dBphi = 0.0;
 
 	  V0 = M2_VOL(i+0, j+0, k);
@@ -423,7 +589,7 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
       V->prim.p = 1.0;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
-      V->Bflux3A = 5.0 * sin(theta)*sin(theta) * V->area3;
+      V->Bflux3A = 0.0 * pow(sin(theta), 6) * V->area3;
       m2sim_from_primitive(m2,
   			   &V->prim, NULL, NULL,
   			   V ->volume,
