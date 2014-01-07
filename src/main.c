@@ -6,21 +6,24 @@
 
 void initial_data(m2vol *V)
 {
-  double R = m2vol_coordinate_centroid(V, 1);
+  //  double R = m2vol_coordinate_centroid(V, 1);
+  double x = m2vol_coordinate_centroid(V, 1);
+  double y = m2vol_coordinate_centroid(V, 2);
+  double R = sqrt(x*x + y*y);
 
-  if (R < 0.0) {
+  if (R < 0.125) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
     V->prim.d  = 1.0;
-    V->prim.p  = 1.0;
+    V->prim.p  = 100.0;
   }
   else {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 0.1;
-    V->prim.p  = 0.125;
+    V->prim.d  = 1.0;
+    V->prim.p  = 1.0;
   }
 
   /* V->prim.v1 = 0.0; */
@@ -29,9 +32,9 @@ void initial_data(m2vol *V)
   /* V->prim.d  = 1.0; */
   /* V->prim.p  = 1.0; */
 
-  V->Bflux1A =  0.0 * V->area1;
-  V->Bflux2A =  0.1 * V->area2 * 1.0/R;
-  V->Bflux3A =  0.0 * V->area3;
+  V->Bflux1A =10.0 * V->area1;
+  V->Bflux2A = 0.0 * V->area2;
+  V->Bflux3A = 0.0 * V->area3;
 }
 
 
@@ -52,7 +55,7 @@ void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 void m2sim_drive(m2sim *m2)
 {
   double dt;
-  int rk_order = 3;
+  int rk_order = 2;
 
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
@@ -97,7 +100,7 @@ int main(int argc, char **argv)
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 256, 1, 1);
+  m2sim_set_resolution(m2, 200, 200, 1);
   m2sim_set_guard_zones(m2, 0);
 
 
@@ -117,7 +120,7 @@ int main(int argc, char **argv)
     m2sim_set_geometry(m2, M2_CARTESIAN);
     m2sim_set_extent0(m2, -0.5, -0.5, 0.0);
     m2sim_set_extent1(m2, +0.5, +0.5, 1.0);
-    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_UNMAGNETIZED);
+    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   }
   else if (0) {
     m2sim_set_geometry(m2, M2_CARTESIAN);
@@ -137,7 +140,7 @@ int main(int argc, char **argv)
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
 
 
-  if (0) {
+  if (1) {
     m2sim_visualize(m2, argc, argv);
   }
   else {

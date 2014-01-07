@@ -10,8 +10,8 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   do {									\
     switch (axis) {							\
     case 1:								\
-      PL.mem = VL->prim.mem + VL->grad1[ind] * 0.5; 			\
-      PR.mem = VR->prim.mem - VR->grad1[ind] * 0.5;			\
+      PL.mem = VL->prim.mem + VL->grad1[ind] * (VL->x1[1] - xL);	\
+      PR.mem = VR->prim.mem + VR->grad1[ind] * (VR->x0[1] - xR);	\
       break;								\
     case 2:								\
       PL.mem = VL->prim.mem + VL->grad2[ind] * (VL->x1[2] - xL);	\
@@ -238,7 +238,7 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[2] = M2_VOL(i+1, j, k);
 	if (V[0] && V[2] && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
-	    x[n] = n;//m2vol_coordinate_centroid(V[n], 1);
+	    x[n] = m2vol_coordinate_centroid(V[n], 1);
 	  }
 	  INTERP_PRIM(v1, 0, grad1);
 	  INTERP_PRIM(v2, 1, grad1);
@@ -591,6 +591,42 @@ double m2sim_minimum_courant_time(m2sim *m2)
 void initial_data(m2vol *V);
 void m2sim_enforce_boundary_condition(m2sim *m2)
 {
+  /* int n; */
+  /* int *L = m2->local_grid_size; */
+  /* int *G = m2->domain_resolution; */
+  /* int *I; */
+  /* m2vol *V; */
+  /* double theta; */
+  /* for (n=0; n<L[0]; ++n) { */
+  /*   V = m2->volumes + n; */
+  /*   I = V->global_index; */
+
+  /*   if (I[1] == 0) { */
+  /*     theta = m2vol_coordinate_centroid(V, 2); */
+  /*     V->prim.v1 = 0; */
+  /*     V->prim.v2 = 0.0; */
+  /*     V->prim.v3 = 0.0; */
+  /*     V->prim.d = 1.0; */
+  /*     V->prim.p = 1.0; */
+  /*     V->Bflux1A = 0.0; */
+  /*     V->Bflux2A = 0.0; */
+  /*     V->Bflux3A = 0.0 * pow(sin(theta), 6) * V->area3; */
+  /*     m2sim_from_primitive(m2, */
+  /*                          &V->prim, NULL, NULL, */
+  /*                          V ->volume, */
+  /*                          V ->consA, */
+  /*                          &V->aux); */
+  /*   } */
+  /*   else if (I[1] == G[1] - 1) { */
+  /*     initial_data(V); */
+  /*     m2sim_from_primitive(m2, */
+  /*                          &V->prim, NULL, NULL, */
+  /*                          V ->volume, */
+  /*                          V ->consA, */
+  /*                          &V->aux); */
+  /*   } */
+  /* } */
+
   int n;
   int *L = m2->local_grid_size;
   int *G = m2->domain_resolution;
@@ -599,8 +635,8 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
-    if (I[1] == 0 || I[1] == G[1] - 1) {// ||
-      //	I[3] == 0 || I[3] == G[3] - 1) {
+    if (I[1] == 0 || I[1] == G[1] - 1 ||
+  	I[2] == 0 || I[2] == G[2] - 1) {
       initial_data(V);
       m2sim_from_primitive(m2,
   			   &V->prim, NULL, NULL,

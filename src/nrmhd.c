@@ -2,7 +2,7 @@
 #include "hydro.h"
 
 
-#define gamma_law_index (4./3.)
+#define gamma_law_index (5./3.)
 
 
 int nrmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
