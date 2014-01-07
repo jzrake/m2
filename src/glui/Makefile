@@ -25,12 +25,16 @@ EXE     = $(EXE_SRC:.cpp=.exe)
 SRC = $(wildcard *.cpp)
 OBJ = $(SRC:.cpp=.o)
 DEP = $(SRC:.cpp=.dep)
-
+LIB = libglui.a
 
 # build rules
 # --------------------------------------------------
 default : $(EXE)
-lib : $(OBJ)
+lib : $(LIB)
+
+$(LIB) : $(OBJ)
+	$(AR) $@ $?
+	$(RANLIB) $@
 
 example/%.o : example/%.cpp $(MAKEFILE_IN)
 	@$(CXX) -MM $< > $(<:.cpp=.dep) $(GLUT_I) -I$(PWD)
@@ -53,7 +57,7 @@ show :
 	@echo "DEP: $(DEP)"
 
 clean :
-	$(RM) $(OBJ) $(EXE_OBJ) $(DEP) $(EXE)
+	$(RM) $(OBJ) $(EXE_OBJ) $(DEP) $(EXE) $(LIB)
 
 .FORCE :
 

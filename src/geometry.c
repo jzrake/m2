@@ -127,8 +127,8 @@ void m2sim_index_to_position(m2sim *m2, double index[4], double x[4])
   int *N = m2->domain_resolution;
 
   x[0] = 0.0;
-  //x[1] = x0[1] + (x1[1] - x0[1]) / N[1] * (index[1] + 0.5);
-  x[1] = x0[1] * exp(log(x1[1]/x0[1]) / N[1] * (index[1] + 0.5));
+  x[1] = x0[1] + (x1[1] - x0[1]) / N[1] * (index[1] + 0.5);
+  //x[1] = x0[1] * exp(log(x1[1]/x0[1]) / N[1] * (index[1] + 0.5));
   x[2] = x0[2] + (x1[2] - x0[2]) / N[2] * (index[2] + 0.5);
   x[3] = x0[3] + (x1[3] - x0[3]) / N[3] * (index[3] + 0.5);
 }

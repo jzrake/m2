@@ -265,6 +265,7 @@ void reload_rgb_data()
     m2aux_get(&V->aux, DataMember, &y);
 
     if (LogScaling) {
+      if (y < 1e-6) y = 1e-6;
       y = log10(fabs(y));
     }
 
@@ -281,6 +282,19 @@ void reload_rgb_data()
   for (n=0; n<L[0]; ++n) {
     V = M2->volumes + n;
 
+    // x00[1] = V->x0[1];
+    // x00[2] = V->x0[2];
+    // x00[3] = V->x0[3];
+    // x01[1] = V->x1[1];
+    // x01[2] = V->x0[2];
+    // x01[3] = V->x0[3];
+    // x11[1] = V->x1[1];
+    // x11[2] = V->x1[2];
+    // x11[3] = V->x0[3];
+    // x10[1] = V->x0[1];
+    // x10[2] = V->x1[2];
+    // x10[3] = V->x0[3];
+
     x00[1] = V->x0[1];
     x00[2] = V->x0[2];
     x00[3] = V->x0[3];
@@ -288,11 +302,11 @@ void reload_rgb_data()
     x01[2] = V->x0[2];
     x01[3] = V->x0[3];
     x11[1] = V->x1[1];
-    x11[2] = V->x1[2];
-    x11[3] = V->x0[3];
+    x11[2] = V->x0[2];
+    x11[3] = V->x1[3];
     x10[1] = V->x0[1];
-    x10[2] = V->x1[2];
-    x10[3] = V->x0[3];
+    x10[2] = V->x0[2];
+    x10[3] = V->x1[3];
 
     m2_to_cartesian(x00, x00c, M2->geometry);
     m2_to_cartesian(x01, x01c, M2->geometry);

@@ -6,35 +6,32 @@
 
 void initial_data(m2vol *V)
 {
-  double x[4];
-  m2vol_coordinate_centroid_3d(V, x);
-  //  double r = sqrt(x[1]*x[1] + x[2]*x[2]);
-  double r = x[1];
-  //  double R = r * sin(x[2]); /* cylindrical radius */
-  //  if (r < 0.1) {
-  if (r < 0.25) {
-  //  if (r < 0.0) {
+  double R = m2vol_coordinate_centroid(V, 1);
+
+  if (R < 0.0) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
     V->prim.d  = 1.0;
-    V->prim.p  = 25.0;
-
-    V->Bflux1A =  0.00 * V->area1 * (1.0 - 2 * (x[2] > 0.5*M2_PI));
-    V->Bflux2A =  0.00 * V->area2;
-    V->Bflux3A =  0.00 * V->area3;
+    V->prim.p  = 1.0;
   }
   else {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 1.0;//0.125;
-    V->prim.p  = 25.0;//0.100;
-
-    V->Bflux1A =  0.00 * V->area1 * (1.0 - 2 * (x[2] > 0.5*M2_PI));
-    V->Bflux2A =  0.00 * V->area2;
-    V->Bflux3A =  0.00 * V->area3;
+    V->prim.d  = 0.1;
+    V->prim.p  = 0.125;
   }
+
+  /* V->prim.v1 = 0.0; */
+  /* V->prim.v2 = 0.0; */
+  /* V->prim.v3 = 0.0; */
+  /* V->prim.d  = 1.0; */
+  /* V->prim.p  = 1.0; */
+
+  V->Bflux1A =  0.0 * V->area1;
+  V->Bflux2A =  0.1 * V->area2 * 1.0/R;
+  V->Bflux3A =  0.0 * V->area3;
 }
 
 
@@ -55,7 +52,7 @@ void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 void m2sim_drive(m2sim *m2)
 {
   double dt;
-  int rk_order = 2;
+  int rk_order = 3;
 
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
@@ -100,7 +97,7 @@ int main(int argc, char **argv)
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 128, 128, 1);
+  m2sim_set_resolution(m2, 256, 1, 1);
   m2sim_set_guard_zones(m2, 0);
 
 
@@ -110,17 +107,17 @@ int main(int argc, char **argv)
     m2sim_set_extent1(m2, 1.0, 2*M2_PI, +0.5);
     m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   }
-  else if (1) {
+  else if (0) {
     m2sim_set_geometry(m2, M2_SPHERICAL);
     m2sim_set_extent0(m2, 0.1, 0    , 0.0    );
-    m2sim_set_extent1(m2, 1.0, M2_PI, 2*M2_PI);
+    m2sim_set_extent1(m2, 0.5, M2_PI, 2*M2_PI);
     m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   }
-  else if (0) {
+  else if (1) {
     m2sim_set_geometry(m2, M2_CARTESIAN);
     m2sim_set_extent0(m2, -0.5, -0.5, 0.0);
     m2sim_set_extent1(m2, +0.5, +0.5, 1.0);
-    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
+    m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_UNMAGNETIZED);
   }
   else if (0) {
     m2sim_set_geometry(m2, M2_CARTESIAN);
@@ -140,11 +137,11 @@ int main(int argc, char **argv)
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
 
 
-  if (1) {
+  if (0) {
     m2sim_visualize(m2, argc, argv);
   }
   else {
-    while (m2->status.time_simulation < 0.05) {
+    while (m2->status.time_simulation < 0.2) {
       m2sim_drive(m2);
     }
   }

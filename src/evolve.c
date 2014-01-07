@@ -2,6 +2,7 @@
 #include <math.h>
 #include "m2.h"
 
+#define ENABLE_PLM 1
 
 static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
 {
@@ -9,14 +10,17 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   do {									\
     switch (axis) {							\
     case 1:								\
-      PL.mem = VL->prim.mem + VL->grad1[ind] * (VL->x1[1] - xL);	\
-      PR.mem = VR->prim.mem + VR->grad1[ind] * (VR->x0[1] - xR);	\
+      PL.mem = VL->prim.mem + VL->grad1[ind] * 0.5; 			\
+      PR.mem = VR->prim.mem - VR->grad1[ind] * 0.5;			\
+      break;								\
     case 2:								\
       PL.mem = VL->prim.mem + VL->grad2[ind] * (VL->x1[2] - xL);	\
       PR.mem = VR->prim.mem + VR->grad2[ind] * (VR->x0[2] - xR);	\
+      break;								\
     case 3:								\
       PL.mem = VL->prim.mem + VL->grad3[ind] * (VL->x1[3] - xL);	\
       PR.mem = VR->prim.mem + VR->grad3[ind] * (VR->x0[3] - xR);	\
+      break;								\
     }									\
   } while (0)								\
 
@@ -77,10 +81,11 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   for (q=0; q<8; ++q) {
     F[q] = (ap*FL[q] - am*FR[q] + ap*am*(UR[q] - UL[q])) / (ap - am);
   }
+
 #undef INTERP_PRIM
 }
 
-static double plm_gradient(double *fs, double *xs)
+static double plm_gradient(double *xs, double *fs)
 {
 #define minval3(a,b,c) ((a<b) ? ((a<c) ? a : c) : ((b<c) ? b : c))
 #define sign(x) ((x > 0.0) - (x < 0.0))
@@ -101,6 +106,11 @@ static double plm_gradient(double *fs, double *xs)
   double sa = sign(a), sb = sign(b), sc = sign(c);
   double fa = fabs(a), fb = fabs(b), fc = fabs(c);
   double g = 0.25 * fabs(sa + sb) * (sa + sc) * minval3(fa, fb, fc);
+
+  if (g != g) {
+    MSGF(FATAL, "got NAN gradient: [%f %f %f] [%f %f %f]",
+	 xs[0], xs[1], xs[2], fs[0], fs[1], fs[2]);
+  }
 
   return g;
 #undef minval3
@@ -195,11 +205,6 @@ void m2sim_calculate_emf(m2sim *m2)
 				-V2->flux1[B22]*V0->line3
 				+V0->flux2[B11]*V0->line3
 				+V1->flux2[B11]*V0->line3);
-
-	/* if (V0->global_index[2] == 0) { */
-	/*   printf("on the North pole: theta-EMF=%f phi-EMF=%f\n", */
-	/* 	 V0->emf2, V0->emf3); */
-	/* } */
       }
     }
   }
@@ -231,9 +236,9 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[0] = M2_VOL(i-1, j, k);
 	V[1] = M2_VOL(i+0, j, k);
 	V[2] = M2_VOL(i+1, j, k);
-	if (V[0] && V[2]) {
+	if (V[0] && V[2] && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
-	    x[n] = m2vol_coordinate_centroid(V[n], 1);
+	    x[n] = n;//m2vol_coordinate_centroid(V[n], 1);
 	  }
 	  INTERP_PRIM(v1, 0, grad1);
 	  INTERP_PRIM(v2, 1, grad1);
@@ -257,7 +262,7 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[0] = M2_VOL(i, j-1, k);
 	V[1] = M2_VOL(i, j+0, k);
 	V[2] = M2_VOL(i, j+1, k);
-	if (V[0] && V[2]) {
+	if (V[0] && V[2] && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 2);
 	  }
@@ -283,7 +288,7 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[0] = M2_VOL(i, j, k-1);
 	V[1] = M2_VOL(i, j, k+0);
 	V[2] = M2_VOL(i, j, k+1);
-	if (V[0] && V[2]) {
+	if (V[0] && V[2] && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 3);
 	  }
@@ -314,7 +319,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
-  char method = '1';
+  char method = '3';
 
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
@@ -340,6 +345,22 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 	  V0->Bflux3A += dBphi;
 	}
 	if ((m2->physics & M2_MAGNETIZED) && method == '2') {
+	  /* special case of 1d simulation with symmetry along y and z, B-field
+	     along z */
+	  double dBz = 0.0;
+
+	  V0 = M2_VOL(i+0, j+0, k);
+	  V1 = M2_VOL(i-1, j+0, k);
+
+	  if (V0) dBz -= dt * V0->flux1[B33] * V0->area1;
+	  if (V1) dBz += dt * V1->flux1[B33] * V1->area1;
+
+	  dBz /= V0->volume;
+	  dBz *= V0->area3;
+
+	  V0->Bflux3A += dBz;
+	}
+	if ((m2->physics & M2_MAGNETIZED) && method == '3') {
 
 	  /* --------------- */
 	  /* x-directed face */
@@ -575,41 +596,11 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
-  double theta;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
-
-    if (I[1] == 0) {
-      theta = m2vol_coordinate_centroid(V, 2);
-      V->prim.v1 = 10;
-      V->prim.v2 = 0.0;
-      V->prim.v3 = 0.0;
-      V->prim.d = 1.0;
-      V->prim.p = 1.0;
-      V->Bflux1A = 0.0;
-      V->Bflux2A = 0.0;
-      V->Bflux3A = 0.0 * pow(sin(theta), 6) * V->area3;
-      m2sim_from_primitive(m2,
-  			   &V->prim, NULL, NULL,
-  			   V ->volume,
-  			   V ->consA,
-  			   &V->aux);
-    }
-    else if (I[1] == G[1] - 1) {
-      initial_data(V);
-      m2sim_from_primitive(m2,
-  			   &V->prim, NULL, NULL,
-  			   V ->volume,
-  			   V ->consA,
-  			   &V->aux);
-    }
-    if (I[1] < 0 ||
-  	I[2] < 0 ||
-  	I[3] < 0 ||
-  	I[1] >= G[1] ||
-  	I[2] >= G[2] ||
-  	I[3] >= G[3]) {
+    if (I[1] == 0 || I[1] == G[1] - 1) {// ||
+      //	I[3] == 0 || I[3] == G[3] - 1) {
       initial_data(V);
       m2sim_from_primitive(m2,
   			   &V->prim, NULL, NULL,

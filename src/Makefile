@@ -24,6 +24,7 @@ SRC1 = $(wildcard *.c)
 SRC2 = $(wildcard *.cpp)
 OBJ = $(SRC1:.c=.o) $(SRC2:.cpp=.o)
 DEP = $(SRC1:.c=.dep) $(SRC2:.cpp=.dep)
+GLUI_L = glui/libglui.a
 
 
 # build rules
@@ -38,8 +39,9 @@ vis.o : vis.cpp m2-cfg.h $(MAKEFILE_IN)
 	@$(CC) -MM $< > $(<:.c=.dep)
 	$(CC) $(CFLAGS) $< -c
 
-m2 : $(OBJ) build_glui
-	$(CXX) $(CFLAGS) $(OBJ) $(CLIBS) $(GLUT_L) $(wildcard glui/*.o) -o $@
+m2 : $(OBJ) $(GLUI_L)
+	$(MAKE) -C glui lib
+	$(CXX) $(CFLAGS) $(OBJ) $(CLIBS) $(GLUT_L) $(GLUI_L) -o $@
 
 m2-cfg.h : .FORCE
 	@echo "/* m2 config header file */" > $(TMP_H)
@@ -62,10 +64,10 @@ clean :
 	$(MAKE) -C glui clean
 	$(RM) $(OBJ) $(DEP) $(EXE)
 
-build_glui :
+$(GLUI_L) : .FORCE
 	$(MAKE) -C glui lib
 
 .FORCE :
-.PHONY : show clean build_glui
+.PHONY : show clean
 
 -include *.dep
