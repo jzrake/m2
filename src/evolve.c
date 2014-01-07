@@ -89,7 +89,7 @@ static double plm_gradient(double *xs, double *fs)
 {
 #define minval3(a,b,c) ((a<b) ? ((a<c) ? a : c) : ((b<c) ? b : c))
 #define sign(x) ((x > 0.0) - (x < 0.0))
-  double plm = 2.0;
+  double plm = 1.25;
 
   double xL = xs[0];
   double x0 = xs[1];
@@ -309,6 +309,25 @@ void m2sim_calculate_gradient(m2sim *m2)
       }
     }
   }
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
+
+	V[0] = M2_VOL(i, j+0, k);
+	V[1] = M2_VOL(i, j+1, k);
+	if (V[0]->global_index[2] == 0) {
+	  memcpy(V[0]->grad2, V[1]->grad2, 8 * sizeof(double));
+	}
+
+	V[0] = M2_VOL(i, j-0, k);
+	V[1] = M2_VOL(i, j-1, k);
+	if (V[0]->global_index[2] == m2->domain_resolution[2] - 1) {
+	  memcpy(V[0]->grad2, V[1]->grad2, 8 * sizeof(double));
+	}
+      }
+    }
+  }
 #undef INTERP_PRIM
 }
 
@@ -319,7 +338,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
-  char method = '3';
+  char method = '1';
 
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
@@ -591,58 +610,69 @@ double m2sim_minimum_courant_time(m2sim *m2)
 void initial_data(m2vol *V);
 void m2sim_enforce_boundary_condition(m2sim *m2)
 {
-  /* int n; */
-  /* int *L = m2->local_grid_size; */
-  /* int *G = m2->domain_resolution; */
-  /* int *I; */
-  /* m2vol *V; */
-  /* double theta; */
-  /* for (n=0; n<L[0]; ++n) { */
-  /*   V = m2->volumes + n; */
-  /*   I = V->global_index; */
-
-  /*   if (I[1] == 0) { */
-  /*     theta = m2vol_coordinate_centroid(V, 2); */
-  /*     V->prim.v1 = 0; */
-  /*     V->prim.v2 = 0.0; */
-  /*     V->prim.v3 = 0.0; */
-  /*     V->prim.d = 1.0; */
-  /*     V->prim.p = 1.0; */
-  /*     V->Bflux1A = 0.0; */
-  /*     V->Bflux2A = 0.0; */
-  /*     V->Bflux3A = 0.0 * pow(sin(theta), 6) * V->area3; */
-  /*     m2sim_from_primitive(m2, */
-  /*                          &V->prim, NULL, NULL, */
-  /*                          V ->volume, */
-  /*                          V ->consA, */
-  /*                          &V->aux); */
-  /*   } */
-  /*   else if (I[1] == G[1] - 1) { */
-  /*     initial_data(V); */
-  /*     m2sim_from_primitive(m2, */
-  /*                          &V->prim, NULL, NULL, */
-  /*                          V ->volume, */
-  /*                          V ->consA, */
-  /*                          &V->aux); */
-  /*   } */
-  /* } */
-
   int n;
   int *L = m2->local_grid_size;
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
+  double theta;
+  double a = 0.2;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
-    if (I[1] == 0 || I[1] == G[1] - 1 ||
-  	I[2] == 0 || I[2] == G[2] - 1) {
+
+    if (I[1] == 0) {
+      theta = m2vol_coordinate_centroid(V, 2);
+      V->prim.v1 = 20.0 * sqrt(a + (1 - a) * sin(theta) * sin(theta));
+      V->prim.v2 = 0.0;
+      V->prim.v3 = 0.0;
+      V->prim.d = 0.10;
+      V->prim.p = 0.01;
+      V->Bflux1A = 0.0;
+      V->Bflux2A = 0.0;
+      V->Bflux3A = 1.0 * sin(theta) * V->area3;
+      m2sim_from_primitive(m2,
+                           &V->prim, NULL, NULL,
+                           V ->volume,
+                           V ->consA,
+                           &V->aux);
+    }
+    else if (I[1] == G[1] - 1) {
       initial_data(V);
       m2sim_from_primitive(m2,
-  			   &V->prim, NULL, NULL,
-  			   V ->volume,
-  			   V ->consA,
-  			   &V->aux);
+                           &V->prim, NULL, NULL,
+                           V ->volume,
+                           V ->consA,
+                           &V->aux);
+    }
+    else if (I[2] == 0) {
+      if (V->consA[S22] < 0.0) {
+	V->consA[S22] *= -1.0;
+      }
+    }
+    else if (I[2] == G[2] - 1) {
+      if (V->consA[S22] > 0.0) {
+	V->consA[S22] *= -1.0;
+      }
     }
   }
+
+  /* int n; */
+  /* int *L = m2->local_grid_size; */
+  /* int *G = m2->domain_resolution; */
+  /* int *I; */
+  /* m2vol *V; */
+  /* for (n=0; n<L[0]; ++n) { */
+  /*   V = m2->volumes + n; */
+  /*   I = V->global_index; */
+  /*   if (I[1] == 0 || I[1] == G[1] - 1 || */
+  /* 	I[2] == 0 || I[2] == G[2] - 1) { */
+  /*     initial_data(V); */
+  /*     m2sim_from_primitive(m2, */
+  /* 			   &V->prim, NULL, NULL, */
+  /* 			   V ->volume, */
+  /* 			   V ->consA, */
+  /* 			   &V->aux); */
+  /*   } */
+  /* } */
 }
