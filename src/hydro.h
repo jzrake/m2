@@ -14,6 +14,7 @@ int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 int nrhyd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals);
+double nrhyd_measure(m2aux *aux, int flag);
 
 
 /* -----------------------------------------------------------------------------
@@ -26,6 +27,7 @@ int srhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 int srhyd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 int srhyd_eigenvalues(m2aux *aux, double n[4], double *evals);
+double srhyd_measure(m2aux *aux, int flag);
 
 
 /* -----------------------------------------------------------------------------
@@ -38,6 +40,7 @@ int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 int nrmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 int nrmhd_eigenvalues(m2aux *aux, double n[4], double *evals);
+double nrmhd_measure(m2aux *aux, int flag);
 
 
 #endif // M2_HYDRO_HEADER

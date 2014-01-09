@@ -31,6 +31,7 @@ static void create_menu();
 static void reload_rgb_data();
 static void color_map(double val, GLfloat rgb[3]);
 
+static double ZoomLevel = 1.0;
 static double TranslateZ = -2.0;
 static double RotationX = 0.0;
 static double RotationY = 0.0;
@@ -84,12 +85,12 @@ void GLUTDisplayFunc()
  
   /* reset and configure camera */
   glLoadIdentity();
-  glTranslated(0.0, 0.0, 0.0);
   glTranslated(0.0, 0.0, TranslateZ);
   //  glRotated(RotationZ, 0.0, 0.0, 1.0);
   glRotated(RotationX, 1.0, 0.0, 0.0);
   glRotated(RotationY, 0.0, 1.0, 0.0);
   glRotated(-90.0, 1.0, 0.0, 0.0);
+  glScaled(ZoomLevel, ZoomLevel, ZoomLevel);
  
   /* actually draw stuff */
   glEnable(GL_DEPTH_TEST);
@@ -146,8 +147,8 @@ void GLUTKeyboardFunc(unsigned char key, int x, int y)
 {
   switch (key) {
   case ESCAPE_KEY: exit(0);
-  case '-': TranslateZ *= 1.1; break;
-  case '=': TranslateZ /= 1.1; break;
+  case '-': ZoomLevel /= 1.1; break;
+  case '=': ZoomLevel *= 1.1; break;
   case 's': m2sim_drive(M2); reload_rgb_data(); break;
   case 'p': printf("data range: [%4.3e %4.3e]\n", DataRange[0], DataRange[1]); break;
   }
@@ -262,7 +263,7 @@ void reload_rgb_data()
   for (n=0; n<L[0]; ++n) {
     V = M2->volumes + n;
 
-    m2aux_get(&V->aux, DataMember, &y);
+    y = m2aux_get(&V->aux, DataMember);
 
     if (LogScaling) {
       if (y < 1e-6) y = 1e-6;
@@ -326,7 +327,7 @@ void reload_rgb_data()
     VertexData[4*3*n + 3*3 + 1] = x10c[2];
     VertexData[4*3*n + 3*3 + 2] = x10c[3];
 
-    m2aux_get(&V->aux, DataMember, &y);
+    y = m2aux_get(&V->aux, DataMember);
 
     if (LogScaling) {
       y = log10(fabs(y));

@@ -27,9 +27,13 @@ enum m2flag {
   M2_MAGNETIC_FOUR_VECTOR2,
   M2_MAGNETIC_FOUR_VECTOR3,
   M2_COMOVING_MASS_DENSITY,
+  M2_KINETIC_ENERGY_DENSITY,
+  M2_INTERNAL_ENERGY_DENSITY,
   M2_GAS_PRESSURE,
   M2_MAGNETIC_PRESSURE,
   M2_SIGMA,
+  M2_SOUND_SPEED,
+  M2_MACH_NUMBER,
 
   M2_NONRELATIVISTIC=0,
   M2_UNMAGNETIZED=0,
@@ -136,6 +140,7 @@ void m2sim_set_physics(m2sim *m2, int modes);
 void m2sim_initialize(m2sim *m2);
 void m2sim_map(m2sim *m2, m2vol_operator f);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
+void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4]);
 void m2sim_calculate_gradient(m2sim *m2);
 void m2sim_calculate_conserved(m2sim *m2);
 void m2sim_calculate_flux(m2sim *m2);
@@ -161,7 +166,7 @@ int m2sim_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
-
+double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V));
 void m2sim_drive(m2sim *m2);
 void m2sim_visualize(m2sim *m2, int argc, char **argv);
 
@@ -170,7 +175,9 @@ int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);
 int m2aux_fluxes(m2aux *aux, double n[4], double *F);
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 				       double *U);
-int m2aux_get(m2aux *aux, int member, double *value);
+double m2aux_get(m2aux *aux, int member);
+double m2aux_measure(m2aux *aux, int member);
+
 
 
 

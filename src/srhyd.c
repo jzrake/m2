@@ -192,3 +192,8 @@ int srhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
   evals[7] = (vn*(1-cs2) + sqrt(cs2*(1-vv)*(1-vv*cs2-vn2*(1-cs2))))/(1-vv*cs2);
   return 0;
 }
+
+double srhyd_measure(m2aux *aux, int flag)
+{
+  return 0.0;
+}

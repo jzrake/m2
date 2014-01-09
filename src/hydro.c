@@ -44,6 +44,10 @@ int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
   SYSTEM_CHOICE(aux->m2, eigenvalues(aux, n, evals));
 }
+double m2aux_measure(m2aux *aux, int flag)
+{
+  SYSTEM_CHOICE(aux->m2, measure(aux, flag));
+}
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 				       double *U)
 {

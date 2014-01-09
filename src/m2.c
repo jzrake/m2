@@ -229,22 +229,55 @@ int m2sim_memory_usage(m2sim *m2)
 {
   return m2->local_grid_size[0] * sizeof(m2vol) / (1<<20);
 }
-int m2aux_get(m2aux *aux, int member, double *value)
+double m2aux_get(m2aux *aux, int member)
 {
   switch (member) {
-  case M2_VELOCITY_FOUR_VECTOR0: *value = aux->velocity_four_vector[0]; break;
-  case M2_VELOCITY_FOUR_VECTOR1: *value = aux->velocity_four_vector[1]; break;
-  case M2_VELOCITY_FOUR_VECTOR2: *value = aux->velocity_four_vector[2]; break;
-  case M2_VELOCITY_FOUR_VECTOR3: *value = aux->velocity_four_vector[3]; break;
-  case M2_MAGNETIC_FOUR_VECTOR0: *value = aux->magnetic_four_vector[0]; break;
-  case M2_MAGNETIC_FOUR_VECTOR1: *value = aux->magnetic_four_vector[1]; break;
-  case M2_MAGNETIC_FOUR_VECTOR2: *value = aux->magnetic_four_vector[2]; break;
-  case M2_MAGNETIC_FOUR_VECTOR3: *value = aux->magnetic_four_vector[3]; break;
-  case M2_COMOVING_MASS_DENSITY: *value = aux->comoving_mass_density; break;
-  case M2_GAS_PRESSURE: *value = aux->gas_pressure; break;
-  case M2_MAGNETIC_PRESSURE: *value = aux->magnetic_pressure; break;
-  case M2_SIGMA: *value = aux->magnetic_pressure/aux->gas_pressure; break;
-  default: MSG(FATAL, "no such data member"); break;
+  case M2_VELOCITY_FOUR_VECTOR0: return aux->velocity_four_vector[0];
+  case M2_VELOCITY_FOUR_VECTOR1: return aux->velocity_four_vector[1];
+  case M2_VELOCITY_FOUR_VECTOR2: return aux->velocity_four_vector[2];
+  case M2_VELOCITY_FOUR_VECTOR3: return aux->velocity_four_vector[3];
+  case M2_MAGNETIC_FOUR_VECTOR0: return aux->magnetic_four_vector[0];
+  case M2_MAGNETIC_FOUR_VECTOR1: return aux->magnetic_four_vector[1];
+  case M2_MAGNETIC_FOUR_VECTOR2: return aux->magnetic_four_vector[2];
+  case M2_MAGNETIC_FOUR_VECTOR3: return aux->magnetic_four_vector[3];
+  case M2_COMOVING_MASS_DENSITY: return aux->comoving_mass_density;
+  case M2_GAS_PRESSURE: return aux->gas_pressure;
+  case M2_MAGNETIC_PRESSURE: return aux->magnetic_pressure;
+  default: return m2aux_measure(aux, member);
   }
-  return 0;
+}
+double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
+{
+  m2vol *V;
+  int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
+  int n;
+  double y = 0.0;
+  for (n=0; n<L[0]; ++n) {
+    V = m2->volumes + n;
+    if (V->global_index[1] < 0 || (V->global_index[1] >= G[1] && G[1] > 1) ||
+	V->global_index[2] < 0 || (V->global_index[2] >= G[2] && G[2] > 1) ||
+	V->global_index[3] < 0 || (V->global_index[3] >= G[3] && G[3] > 1)) {
+      continue;
+    }
+    else if (cut_cb) {
+      if (cut_cb(V) == 0) {
+	continue;
+      }
+    }
+    y += m2aux_get(&V->aux, member) * V->volume;
+  }
+  return y;
+}
+void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
+{
+  int *G = m2->domain_resolution;
+  int i = global_index[1];
+  int j = global_index[2];
+  int k = global_index[3];
+  int ng = m2->number_guard_zones;
+  I[0] = global_index[0];
+  I[1] = i + ng * (G[1] > 1);
+  I[2] = j + ng * (G[2] > 1);
+  I[3] = k + ng * (G[3] > 1);
 }

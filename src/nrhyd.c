@@ -117,3 +117,8 @@ int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
   evals[7] = vn + cs;
   return 0;
 }
+
+double nrhyd_measure(m2aux *aux, int flag)
+{
+  return 0.0;
+}

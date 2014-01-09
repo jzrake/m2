@@ -615,22 +615,23 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
-  double theta;
-  double a = 0.2;
+  double r, t;
+  double a = 1.0;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
 
     if (I[1] == 0) {
-      theta = m2vol_coordinate_centroid(V, 2);
-      V->prim.v1 = 20.0 * sqrt(a + (1 - a) * sin(theta) * sin(theta));
+      r = m2vol_coordinate_centroid(V, 1);
+      t = m2vol_coordinate_centroid(V, 2);
+      V->prim.v1 = 1.0 * sqrt(a + (1 - a) * sin(t) * sin(t));
       V->prim.v2 = 0.0;
       V->prim.v3 = 0.0;
-      V->prim.d = 0.10;
+      V->prim.d = 1.00;
       V->prim.p = 0.01;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
-      V->Bflux3A = 1.0 * sin(theta) * V->area3;
+      V->Bflux3A = sqrt(0.1) * sin(t) * V->area3;
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,

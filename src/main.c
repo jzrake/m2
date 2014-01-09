@@ -4,6 +4,21 @@
 #include "m2.h"
 
 
+void m2sim_write_equatorial_slice_1d(m2sim *m2, char *fname);
+void m2sim_write_log_entry(m2sim *m2, char *fname, int (*cut)(m2vol *V));
+
+#define FNAME_VOLUME_INTEGRALS_I "volume-integrals-in.dat"
+#define FNAME_VOLUME_INTEGRALS_O "volume-integrals-out.dat"
+
+static int inside_cavity_cut(m2vol *V)
+{
+  return V->x1[1] < 1.0;
+}
+static int outside_cavity_cut(m2vol *V)
+{
+  return V->x1[1] >= 1.0;
+}
+
 void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
@@ -27,19 +42,19 @@ void initial_data(m2vol *V)
   /*   V->prim.p  = 1.0; */
   /* } */
 
-  if (R < 0.5) {
+  if (R < 1.0) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
     V->prim.d  = 1.0;
-    V->prim.p  = 0.1;
+    V->prim.p  = 0.01;
   }
   else {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 100.0;
-    V->prim.p  = 0.1;
+    V->prim.d  = 1000.0;
+    V->prim.p  = 0.01;
   }
 
   V->Bflux1A = 0.0 * V->area1;
@@ -69,6 +84,12 @@ void m2sim_drive(m2sim *m2)
 
   clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
+
+
+  if (m2->status.iteration_number % 100 == 0) {
+    m2sim_write_log_entry(m2, FNAME_VOLUME_INTEGRALS_I, inside_cavity_cut);
+    m2sim_write_log_entry(m2, FNAME_VOLUME_INTEGRALS_O, outside_cavity_cut);
+  }
 
   dt = 0.5 * m2sim_minimum_courant_time(m2);
 
@@ -105,12 +126,89 @@ void m2sim_drive(m2sim *m2)
 }
 
 
+void m2sim_write_equatorial_slice_1d(m2sim *m2, char *fname)
+{
+  FILE *outfile = fopen(fname, "w");
+  m2vol *V;
+  int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
+  int i, j = G[2] / 2, k = 0;
+  printf("[write equatorial slice 1d: %s]\n", fname);
+  fprintf(outfile, "# r d p u1 u2 u3 b1 b2 b3 sigma mach\n");
+  for (i=0; i<L[1]; ++i) {
+    V = M2_VOL(i, j, k);
+    fprintf(outfile,
+	    "%+8.6e %+8.6e %+8.6e %+8.6e "
+	    "%+8.6e %+8.6e %+8.6e %+8.6e "
+	    "%+8.6e %+8.6e %+8.6e\n",
+	    m2vol_coordinate_centroid(V, 1),
+	    m2aux_get(&V->aux, M2_COMOVING_MASS_DENSITY),
+	    m2aux_get(&V->aux, M2_GAS_PRESSURE),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR1),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR2),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR3),
+	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR1),
+	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR2),
+	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR3),
+	    m2aux_get(&V->aux, M2_SIGMA),
+	    m2aux_get(&V->aux, M2_MACH_NUMBER));
+  }
+  fclose(outfile);
+}
+
+
+void m2sim_write_log_entry(m2sim *m2, char *fname, int (*cut)(m2vol *V))
+{
+  FILE *outfile = fopen(fname, "a");
+  if (outfile == NULL) {
+    MSGF(FATAL, "open file '%s' failed", fname);
+  }
+  fprintf(outfile, "%+8.6e %+8.6e %+8.6e %+8.6e %+8.6e\n",
+  	  m2->status.time_simulation,
+  	  m2sim_volume_integral(m2, M2_COMOVING_MASS_DENSITY, cut),
+  	  m2sim_volume_integral(m2, M2_KINETIC_ENERGY_DENSITY, cut),
+  	  m2sim_volume_integral(m2, M2_INTERNAL_ENERGY_DENSITY, cut),
+  	  m2sim_volume_integral(m2, M2_MAGNETIC_PRESSURE, cut));
+  fclose(outfile);
+}
+
+
+void m2sim_write_volume_integrals(m2sim *m2, char *fname)
+{
+  FILE *outfile = fopen(fname, "a");
+  m2vol *V;
+  int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
+  int i, j = G[2] / 2, k = 0;
+  
+  for (i=0; i<L[1]; ++i) {
+    V = M2_VOL(i, j, k);
+    fprintf(outfile,
+	    "%+8.6e %+8.6e %+8.6e %+8.6e "
+	    "%+8.6e %+8.6e %+8.6e %+8.6e "
+	    "%+8.6e %+8.6e %+8.6e\n",
+	    m2vol_coordinate_centroid(V, 1),
+	    m2aux_get(&V->aux, M2_COMOVING_MASS_DENSITY),
+	    m2aux_get(&V->aux, M2_GAS_PRESSURE),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR1),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR2),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR3),
+	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR1),
+	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR2),
+	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR3),
+	    m2aux_get(&V->aux, M2_SIGMA),
+	    m2aux_get(&V->aux, M2_MACH_NUMBER));
+  }
+  fclose(outfile);
+}
+
+
 int main(int argc, char **argv)
 {
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 64, 64, 1);
+  m2sim_set_resolution(m2, 48, 64, 1);
   m2sim_set_guard_zones(m2, 0);
 
 
@@ -123,7 +221,7 @@ int main(int argc, char **argv)
   else if (1) {
     m2sim_set_geometry(m2, M2_SPHERICAL);
     m2sim_set_extent0(m2, 0.1, 0    , 0.0    );
-    m2sim_set_extent1(m2, 4.0, M2_PI, 2*M2_PI);
+    m2sim_set_extent1(m2, 1e1, M2_PI, 2*M2_PI);
     m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   }
   else if (0) {
@@ -148,13 +246,16 @@ int main(int argc, char **argv)
 
   printf("[m2]: astrophysical MHD code\n");
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));
+  m2sim_print(m2);
 
+  remove(FNAME_VOLUME_INTEGRALS_I);
+  remove(FNAME_VOLUME_INTEGRALS_O);
 
   if (1) {
     m2sim_visualize(m2, argc, argv);
   }
   else {
-    while (m2->status.time_simulation < 0.2) {
+    while (m2->status.time_simulation < 1000.0) {
       m2sim_drive(m2);
     }
   }
@@ -166,3 +267,5 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
+

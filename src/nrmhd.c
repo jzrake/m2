@@ -143,3 +143,27 @@ int nrmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   evals[7] = vn + sqrt(cF2);
   return 0;
 }
+
+
+double nrmhd_measure(m2aux *aux, int flag)
+{
+  double v1 = aux->velocity_four_vector[1];
+  double v2 = aux->velocity_four_vector[2];
+  double v3 = aux->velocity_four_vector[3];
+  double d0 = aux->comoving_mass_density;
+  double pg = aux->gas_pressure;
+  double pb = aux->magnetic_pressure;
+  double vv = v1*v1 + v2*v2 + v3*v3;
+  double ug = pg / (gamma_law_index - 1.0);
+  double eg = 0.5 * d0 * vv + ug; /* gas energy density */
+  switch (flag) {
+  case M2_SIGMA: return pb / eg;
+  case M2_SOUND_SPEED: return sqrt(gamma_law_index * pg / d0);
+  case M2_MACH_NUMBER: return sqrt(gamma_law_index * pg / d0 / vv);
+  case M2_INTERNAL_ENERGY_DENSITY: return ug;
+  case M2_KINETIC_ENERGY_DENSITY: return eg - ug;
+  default:
+    MSG(FATAL, "unknown measure flag");
+    return 0.0;
+  }
+}
