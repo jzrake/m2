@@ -26,6 +26,15 @@ m2sim *m2sim_new()
   m2->geometry = M2_CARTESIAN;
   m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
   m2->volumes = NULL;
+  m2->rk_order = 2;
+  m2->ct_scheme = M2_CT_FULL3D;
+
+  /* callback functions */
+  m2->analysis = NULL;
+  m2->boundary_conditions = NULL;
+  m2->initial_data = NULL;
+
+  /* status initializer */
   m2->status.time_simulation = 0.0;
   m2->status.iteration_number = 0;
   return m2;
@@ -64,6 +73,26 @@ void m2sim_set_geometry(m2sim *m2, int geometry)
 void m2sim_set_physics(m2sim *m2, int modes)
 {
   m2->physics = modes;
+}
+void m2sim_set_ct_scheme(m2sim *m2, int mode)
+{
+  m2->ct_scheme = mode;
+}
+void m2sim_set_rk_order(m2sim *m2, int order)
+{
+  m2->rk_order = order;
+}
+void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis)
+{
+  m2->analysis = analysis;
+}
+void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc)
+{
+  m2->boundary_conditions = bc;
+}
+void m2sim_set_initial_data(m2sim *m2, m2vol_operator id)
+{
+  m2->initial_data = id;
 }
 void m2sim_initialize(m2sim *m2)
 {
@@ -196,17 +225,6 @@ void m2sim_map(m2sim *m2, m2vol_operator f)
     }
   }
 }
-void m2sim_calculate_conserved(m2sim *m2)
-{
-  int *L = m2->local_grid_size;
-  int n;
-  m2vol *V;
-  for (n=0; n<L[0]; ++n) {
-    V = m2->volumes + n;
-    m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-			 V->consA, &V->aux);
-  }
-}
 double m2vol_minimum_dimension(m2vol *V)
 {
   double l1 = V->m2->domain_resolution[1] > 1 ? V->line1 : DBL_MAX;
@@ -280,4 +298,22 @@ void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
   I[1] = i + ng * (G[1] > 1);
   I[2] = j + ng * (G[2] > 1);
   I[3] = k + ng * (G[3] > 1);
+}
+void m2sim_run_analysis(m2sim *m2)
+{
+  if (m2->analysis) {
+    m2->analysis(m2);
+  }
+  else {
+    /* it's OK, analysis function isn't required */
+  }
+}
+void m2sim_run_initial_data(m2sim *m2)
+{
+  if (m2->initial_data) {
+    m2sim_map(m2, m2->initial_data);
+  }
+  else {
+    MSG(FATAL, "no initial data function supplied");
+  }
 }

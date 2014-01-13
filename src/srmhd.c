@@ -26,8 +26,8 @@ int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
   double bb = -b0*b0 + b1*b1 + b2*b2 + b3*b3;
   double d0 = P->d;
   double pg = P->p;
-  double pb = 0.5 * bb;
   double ug = pg / (gamma_law_index - 1.0);
+  double pb = 0.5 * bb;
   double ub = 0.5 * bb;
   double H0 = d0 + (ug + ub) + (pg + pb);
 
@@ -82,7 +82,11 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   srmhd_c2p_set_gamma(gamma_law_index);
   srmhd_c2p_new_state(Uin);
   srmhd_c2p_estimate_from_cons();
-  srmhd_c2p_solve_anton2dzw(Pin);
+  int error = srmhd_c2p_solve_anton2dzw(Pin);
+
+  if (error != SRMHD_C2P_SUCCESS) {
+    MSGF(FATAL, "%s", srmhd_c2p_get_error(error));
+  }
 
   double v1 = Pin[2];
   double v2 = Pin[3];
@@ -98,8 +102,8 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double bb = -b0*b0 + b1*b1 + b2*b2 + b3*b3;
   double d0 = Pin[0];
   double pg = Pin[1];
-  double pb = 0.5 * bb;
   double ug = pg / (gamma_law_index - 1.0);
+  double pb = 0.5 * bb;
   double ub = 0.5 * bb;
   double H0 = d0 + (ug + ub) + (pg + pb);
 
@@ -125,6 +129,9 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->v1 = v1;
     P->v2 = v2;
     P->v3 = v3;
+    P->B1 = B1;
+    P->B2 = B2;
+    P->B3 = B3;
     P->d = d0;
     P->p = pg;
   }
@@ -188,14 +195,14 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     ap =  1.0;
     am = -1.0;
   }
-  evals[0] = am;
+  evals[0] = -1.0;//am;
   evals[1] = vn;
   evals[2] = vn;
   evals[3] = vn;
   evals[4] = vn;
   evals[5] = vn;
   evals[6] = vn;
-  evals[7] = ap;
+  evals[7] = 1.0;//ap;
 
   return 0;
 }

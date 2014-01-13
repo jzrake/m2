@@ -82,6 +82,9 @@ int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->v1 = v1;
     P->v2 = v2;
     P->v3 = v3;
+    P->B1 = 0.0;
+    P->B2 = 0.0;
+    P->B3 = 0.0;
     P->d = D0;
     P->p = pg;
   }

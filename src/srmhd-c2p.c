@@ -328,24 +328,24 @@ char *srmhd_c2p_get_error(int error)
 {
   switch (error) {
   case SRMHD_C2P_SUCCESS:
-    return "Successful inversion from conserved to primitive.";
+    return "successful inversion from conserved to primitive";
   case SRMHD_C2P_CONS_CONTAINS_NAN:
-    return "Input conserved state contained nan's.";
+    return "input conserved state contained nan's";
   case SRMHD_C2P_CONS_NEGATIVE_DENSITY:
-    return "Input conserved state has negative density.";
+    return "input conserved state has negative density";
   case SRMHD_C2P_CONS_NEGATIVE_ENERGY:
-    return "Input conserved state has negative energy.";
+    return "input conserved state has negative energy";
   case SRMHD_C2P_PRIM_CONTAINS_NAN:
-    return "Derived primitive state contains nan's.";
+    return "derived primitive state contains nan's";
   case SRMHD_C2P_PRIM_NEGATIVE_PRESSURE:
-    return "Derived primitive state has negative pressure.";
+    return "derived primitive state has negative pressure";
   case SRMHD_C2P_PRIM_NEGATIVE_RESTMASS:
-    return "Derived primitive state contains negative density.";
+    return "derived primitive state contains negative density";
   case SRMHD_C2P_PRIM_SUPERLUMINAL:
-    return "Derived primitive state contains superluminal velocity.";
+    return "derived primitive state contains superluminal velocity";
   case SRMHD_C2P_MAXITER:
-    return "Rootfinder hit maximum iterations.";
+    return "rootfinder hit maximum iterations";
   default:
-    return "Unkown error.";
+    return "unkown error";
   }
 }

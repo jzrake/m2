@@ -154,6 +154,9 @@ int srhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->v1 = u1 / u0;
     P->v2 = u2 / u0;
     P->v3 = u3 / u0;
+    P->B1 = 0.0;
+    P->B2 = 0.0;
+    P->B3 = 0.0;
     P->d = d;
     P->p = p;
   }

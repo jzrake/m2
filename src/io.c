@@ -152,3 +152,31 @@ void m2sim_write_ascii_2d(m2sim *m2, char *fname)
   }
   fclose(outfile);
 }
+void m2_print_state(m2prim *P, m2aux *aux, double *U)
+{
+  if (P) {
+    printf("d  = %+8.6e\n", P->d);
+    printf("p  = %+8.6e\n", P->p);
+    printf("v1 = %+8.6e\n", P->v1);
+    printf("v2 = %+8.6e\n", P->v2);
+    printf("v3 = %+8.6e\n", P->v3);
+    printf("B1 = %+8.6e\n", P->B1);
+    printf("B2 = %+8.6e\n", P->B2);
+    printf("B3 = %+8.6e\n", P->B3);
+  }
+  if (aux) {
+    double *u = aux->velocity_four_vector;
+    double *b = aux->magnetic_four_vector;
+    double *S = aux->momentum_density;
+    printf("u = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", u[0], u[1], u[2], u[3]);
+    printf("b = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", b[0], b[1], b[2], b[3]);
+    printf("S = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", S[0], S[1], S[2], S[3]);
+  }
+  if (U) {
+    printf("DDD = %+8.6e\n", U[DDD]);
+    printf("TAU = %+8.6e\n", U[TAU]);
+    printf("S11 = %+8.6e\n", U[S11]);
+    printf("S22 = %+8.6e\n", U[S22]);
+    printf("S33 = %+8.6e\n", U[S33]);
+  }
+}

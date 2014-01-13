@@ -99,6 +99,9 @@ int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->v1 = v1;
     P->v2 = v2;
     P->v3 = v3;
+    P->B1 = B[1];
+    P->B2 = B[2];
+    P->B3 = B[3];
     P->d = D0;
     P->p = pg;
   }

@@ -39,6 +39,10 @@ enum m2flag {
   M2_UNMAGNETIZED=0,
   M2_RELATIVISTIC=(1<<1),
   M2_MAGNETIZED=(1<<2),
+
+  M2_CT_OUTOFPAGE3,
+  M2_CT_TRANSVERSE1B3,
+  M2_CT_FULL3D,
 } ;
 
 /* indices into cons[AB] and flux[123] arrays */
@@ -50,6 +54,7 @@ typedef struct m2aux m2aux;
 typedef struct m2prim m2prim;
 typedef struct m2sim_status m2sim_status;
 typedef void (*m2vol_operator)(m2vol *vol);
+typedef void (*m2sim_operator)(m2sim *m2);
 
 struct m2prim
 {
@@ -115,11 +120,18 @@ struct m2sim
   int number_guard_zones;
   int geometry;
   int physics;
+  int ct_scheme;
+  int rk_order;
   m2sim_status status;
+  m2sim_operator analysis;
+  m2sim_operator boundary_conditions;
+  m2vol_operator initial_data;
   m2vol *volumes;
 } ;
 
 
+void m2_self_test();
+void m2_print_state(m2prim *P, m2aux *aux, double *U);
 double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
@@ -137,6 +149,11 @@ void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_extent1(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_geometry(m2sim *m2, int geometry);
 void m2sim_set_physics(m2sim *m2, int modes);
+void m2sim_set_ct_scheme(m2sim *m2, int mode);
+void m2sim_set_rk_order(m2sim *m2, int order);
+void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis);
+void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc);
+void m2sim_set_initial_data(m2sim *m2, m2vol_operator id);
 void m2sim_initialize(m2sim *m2);
 void m2sim_map(m2sim *m2, m2vol_operator f);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
@@ -156,13 +173,16 @@ void m2sim_save_checkpoint(m2sim *m2, char *fname);
 void m2sim_load_checkpoint(m2sim *m2, char *fname);
 void m2sim_write_ascii_1d(m2sim *m2, char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, char *fname);
+void m2sim_run_analysis(m2sim *m2);
+void m2sim_run_initial_data(m2sim *m2);
 int m2sim_memory_usage(m2sim *m2);
 
 int m2sim_from_conserved_all(m2sim *m2);
-int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
-			 double *U, m2aux *aux);
+int m2sim_from_primitive_all(m2sim *m2);
 int m2sim_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 			 m2aux *aux, m2prim *P);
+int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
+			 double *U, m2aux *aux);
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
