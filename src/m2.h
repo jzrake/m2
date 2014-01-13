@@ -255,4 +255,4 @@ double m2aux_measure(m2aux *aux, int member);
 #define ASSERTEQF(E,v)printf(ASSERT_F,__FUNCTION__,#E,#v,E);	\
   assert(fabs(E-v) < 1e-14||NOHUP);
 
-#endif // M2_HEADER
+#endif /* M2_HEADER */

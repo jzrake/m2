@@ -6,8 +6,7 @@
   do {									\
     if (0) { }								\
     else if (m2->physics == (M2_RELATIVISTIC | M2_MAGNETIZED)) {	\
-      MSG(FATAL, "srmhd not yet implemented");				\
-      return -1;							\
+      return srmhd_##E;							\
     }									\
     else if (m2->physics == (M2_RELATIVISTIC | M2_UNMAGNETIZED)) {	\
       return srhyd_##E;							\

@@ -631,7 +631,8 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
       V->prim.p = 0.01;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
-      V->Bflux3A = sqrt(0.1) * sin(t) * V->area3;
+      V->Bflux3A = sqrt(0.1) * sin(t) * exp(-r*r*cos(t)*cos(t)/0.01) * V->area3;
+      //      initial_data(V);
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,

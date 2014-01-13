@@ -43,4 +43,17 @@ int nrmhd_eigenvalues(m2aux *aux, double n[4], double *evals);
 double nrmhd_measure(m2aux *aux, int flag);
 
 
-#endif // M2_HYDRO_HEADER
+/* -----------------------------------------------------------------------------
+ * SRMHD functions
+ * ---------------------------------------------------------------------------*/
+int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
+			 double *U, m2aux *aux);
+int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
+			 m2aux *aux, m2prim *P);
+int srmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
+			 m2prim *P, double *U);
+int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals);
+double srmhd_measure(m2aux *aux, int flag);
+
+
+#endif /* M2_HYDRO_HEADER */

@@ -22,6 +22,7 @@ static int outside_cavity_cut(m2vol *V)
 void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
+  double t = m2vol_coordinate_centroid(V, 2);
 
   /* double x = m2vol_coordinate_centroid(V, 1); */
   /* double y = m2vol_coordinate_centroid(V, 2); */
@@ -48,6 +49,10 @@ void initial_data(m2vol *V)
     V->prim.v3 = 0.0;
     V->prim.d  = 1.0;
     V->prim.p  = 0.01;
+
+    V->Bflux1A = 0.0 * V->area1;
+    V->Bflux2A = 0.0 * V->area2;
+    V->Bflux3A = sqrt(4) * sin(t) * exp(-R*R*cos(t)*cos(t)/0.01) * V->area3;
   }
   else {
     V->prim.v1 = 0.0;
@@ -55,11 +60,11 @@ void initial_data(m2vol *V)
     V->prim.v3 = 0.0;
     V->prim.d  = 1000.0;
     V->prim.p  = 0.01;
-  }
 
-  V->Bflux1A = 0.0 * V->area1;
-  V->Bflux2A = 0.0 * V->area2;
-  V->Bflux3A = 0.0 * V->area3;
+    V->Bflux1A = 0.0 * V->area1;
+    V->Bflux2A = 0.0 * V->area2;
+    V->Bflux3A = 0.0 * V->area3;
+  }
 }
 
 
@@ -173,42 +178,12 @@ void m2sim_write_log_entry(m2sim *m2, char *fname, int (*cut)(m2vol *V))
 }
 
 
-void m2sim_write_volume_integrals(m2sim *m2, char *fname)
-{
-  FILE *outfile = fopen(fname, "a");
-  m2vol *V;
-  int *L = m2->local_grid_size;
-  int *G = m2->domain_resolution;
-  int i, j = G[2] / 2, k = 0;
-  
-  for (i=0; i<L[1]; ++i) {
-    V = M2_VOL(i, j, k);
-    fprintf(outfile,
-	    "%+8.6e %+8.6e %+8.6e %+8.6e "
-	    "%+8.6e %+8.6e %+8.6e %+8.6e "
-	    "%+8.6e %+8.6e %+8.6e\n",
-	    m2vol_coordinate_centroid(V, 1),
-	    m2aux_get(&V->aux, M2_COMOVING_MASS_DENSITY),
-	    m2aux_get(&V->aux, M2_GAS_PRESSURE),
-	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR1),
-	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR2),
-	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR3),
-	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR1),
-	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR2),
-	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR3),
-	    m2aux_get(&V->aux, M2_SIGMA),
-	    m2aux_get(&V->aux, M2_MACH_NUMBER));
-  }
-  fclose(outfile);
-}
-
-
 int main(int argc, char **argv)
 {
   m2sim *m2 = m2sim_new();
 
 
-  m2sim_set_resolution(m2, 48, 64, 1);
+  m2sim_set_resolution(m2, 96, 64, 1);
   m2sim_set_guard_zones(m2, 0);
 
 
@@ -242,7 +217,6 @@ int main(int argc, char **argv)
   m2sim_map(m2, initial_data);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_calculate_conserved(m2);
-
 
   printf("[m2]: astrophysical MHD code\n");
   printf("[m2]: memory usage %d MB]\n", m2sim_memory_usage(m2));

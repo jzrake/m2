@@ -16,7 +16,7 @@ HAVE_GLUT = 0
 DEBUG_FILE = NULL
 
 # ----------------------------------------------------------
-# GLUT includes and library,
+# GLUT includes and library
 # ----------------------------------------------------------
 #
 # OSX 10.8
