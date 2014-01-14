@@ -1,5 +1,10 @@
 *.dep
 *.o
-*.exe
-
 /Makefile.in
+/example/example1
+/example/example2
+/example/example3
+/example/example4
+/example/example5
+/example/example6
+

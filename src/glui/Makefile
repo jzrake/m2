@@ -1,14 +1,18 @@
 
 # if there is no Makefile.in then use the template
 # --------------------------------------------------
-ifeq ($(shell test -e Makefile.in && echo 1), 1)
+ifneq ($(strip $(MAKEFILE_IN)),)
+# use value of MAKEFILE_IN if provided on the command line
+else ifeq ($(shell test -e Makefile.in && echo 1), 1)
 MAKEFILE_IN = Makefile.in
 else
-MAKEFILE_IN =  Makefile.in.template
+MAKEFILE_IN = Makefile.in.template
 endif
 include $(MAKEFILE_IN)
 
 
+# git versioning
+# --------------------------------------------------
 GIT_SHA := $(shell git rev-parse HEAD | cut -c 1-10)
 TMP_H := $(shell mktemp -u make.XXXXXX)
 
@@ -17,7 +21,7 @@ TMP_H := $(shell mktemp -u make.XXXXXX)
 # --------------------------------------------------
 EXE_SRC = $(wildcard example/*.cpp)
 EXE_OBJ = $(EXE_SRC:.cpp=.o)
-EXE     = $(EXE_SRC:.cpp=.exe)
+EXE     = $(EXE_SRC:.cpp=)
 
 
 # object code required for executables
@@ -26,6 +30,7 @@ SRC = $(wildcard *.cpp)
 OBJ = $(SRC:.cpp=.o)
 DEP = $(SRC:.cpp=.dep)
 LIB = libglui.a
+
 
 # build rules
 # --------------------------------------------------
@@ -44,7 +49,7 @@ example/%.o : example/%.cpp $(MAKEFILE_IN)
 	@$(CXX) -MM $< > $(<:.cpp=.dep) $(GLUT_I)
 	$(CXX) $(CFLAGS) $< -c $(GLUT_I)
 
-%.exe : %.o $(OBJ)
+$(EXE) : % : %.o $(OBJ)
 	$(CXX) $(CFLAGS) $^ $(CLIBS) $(GLUT_L) -o $@
 
 show :
@@ -58,7 +63,5 @@ show :
 
 clean :
 	$(RM) $(OBJ) $(EXE_OBJ) $(DEP) $(EXE) $(LIB)
-
-.FORCE :
 
 -include *.dep
