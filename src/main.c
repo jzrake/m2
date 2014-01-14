@@ -3,21 +3,21 @@
 #include "m2.h"
 
 
-void initialize_proble_mmwn(m2sim *m2);
+void initialize_problem_mwn(m2sim *m2);
 void initialize_problem_shocktube(m2sim *m2);
 
 
 int main(int argc, char **argv)
 {
-  if (0) {
+  if (argc > 1) {
     m2_self_test();
     return 0;
   }
 
   m2sim *m2 = m2sim_new();
 
-  //initialize_problem_mwn(m2);
-  initialize_problem_shocktube(m2);
+  initialize_problem_mwn(m2);
+  //initialize_problem_shocktube(m2);
 
   m2sim_initialize(m2);
   m2sim_run_initial_data(m2);
@@ -28,11 +28,11 @@ int main(int argc, char **argv)
   printf("[m2]: memory usage %d MB\n", m2sim_memory_usage(m2));
   m2sim_print(m2);
 
-  if (0) {
+  if (1) {
     m2sim_visualize(m2, argc, argv);
   }
   else {
-    while (m2->status.time_simulation < 0.2) {
+    while (m2->status.time_simulation < 0.1) {
       m2sim_drive(m2);
     }
   }

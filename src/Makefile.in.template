@@ -3,9 +3,10 @@
 # ----------------------------------------------------------
 CC = cc
 CXX = c++
-#CFLAGS = -Wall -O3
 CFLAGS = -Wall -O0 -g
-#CLIBS = -lm -ldl
+CLIBS = -lm
+AR = ar rcu
+RANLIB = ranlib
 
 
 # ----------------------------------------------------------
@@ -14,6 +15,7 @@ CFLAGS = -Wall -O0 -g
 HAVE_MPI = 0
 HAVE_GLUT = 0
 DEBUG_FILE = NULL
+
 
 # ----------------------------------------------------------
 # GLUT includes and library
@@ -24,8 +26,8 @@ DEBUG_FILE = NULL
 # GLUT_L = -framework GLUT -framework OpenGL
 
 # OSX 10.9
-GLUT_I = -I/opt/X11/include -Wno-deprecated-declarations
-GLUT_L = -framework GLUT -framework OpenGL
+# GLUT_I = -I/opt/X11/include -Wno-deprecated-declarations
+# GLUT_L = -framework GLUT -framework OpenGL
 
 # On Redhat 64:
 # GLUT_I =

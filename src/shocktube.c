@@ -20,8 +20,8 @@ static void initial_data(m2vol *V)
     V->prim.p  = 0.125;
   }
 
-  V->Bflux1A = 0.0 * V->area1;
-  V->Bflux2A = 0.0 * V->area2;
+  V->Bflux1A = 1.0 * V->area1;
+  V->Bflux2A = 1.0 * V->area2;
   V->Bflux3A = 0.0 * V->area3;
 }
 
@@ -53,7 +53,7 @@ void initialize_problem_shocktube(m2sim *m2)
   m2sim_set_extent0(m2, 0.0, 0.0, 0.0);
   m2sim_set_extent1(m2, 1.0, 1.0, 1.0);
   m2sim_set_geometry(m2, M2_CARTESIAN);
-  m2sim_set_physics(m2, M2_RELATIVISTIC | M2_UNMAGNETIZED);
+  m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_FULL3D);
   m2sim_set_analysis(m2, NULL);
   m2sim_set_boundary_conditions(m2, boundary_conditions);

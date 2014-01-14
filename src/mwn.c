@@ -13,7 +13,7 @@ static void initial_data(m2vol *V)
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
     V->prim.d  = 1.0;
-    V->prim.p  = 0.001;
+    V->prim.p  = 0.01;
 
     V->Bflux1A = 0.0 * V->area1;
     V->Bflux2A = 0.0 * V->area2;
@@ -24,7 +24,7 @@ static void initial_data(m2vol *V)
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
     V->prim.d  = 1000.0;
-    V->prim.p  = 0.001;
+    V->prim.p  = 0.01;
 
     V->Bflux1A = 0.0 * V->area1;
     V->Bflux2A = 0.0 * V->area2;
@@ -48,11 +48,11 @@ static void boundary_conditions(m2sim *m2)
     if (I[1] == 0) {
       r = m2vol_coordinate_centroid(V, 1);
       t = m2vol_coordinate_centroid(V, 2);
-      V->prim.v1 = 1.0 * sqrt(a + (1 - a) * sin(t) * sin(t));
+      V->prim.v1 = 0.9 * sqrt(a + (1 - a) * sin(t) * sin(t));
       V->prim.v2 = 0.0;
       V->prim.v3 = 0.0;
       V->prim.d = 1.00;
-      V->prim.p = 0.001;
+      V->prim.p = 0.01;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
       V->Bflux3A = sqrt(0.1) * sin(t) * V->area3;
@@ -179,7 +179,7 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_extent0(m2, 0.1, 0.0  , 0.0    );
   m2sim_set_extent1(m2, 1e1, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
-  m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
+  m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
   m2sim_set_analysis(m2, analysis);
   m2sim_set_boundary_conditions(m2, boundary_conditions);

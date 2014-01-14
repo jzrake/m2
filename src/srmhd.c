@@ -84,8 +84,24 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   srmhd_c2p_estimate_from_cons();
   int error = srmhd_c2p_solve_anton2dzw(Pin);
 
-  if (error != SRMHD_C2P_SUCCESS) {
-    MSGF(FATAL, "%s", srmhd_c2p_get_error(error));
+  if (error == SRMHD_C2P_PRIM_NEGATIVE_PRESSURE) {
+    m2prim Pfix;
+    MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
+    Pin[1]  = Pin[0] * 0.001; /* fix p/rho = 0.1% */
+    Pfix.d  = Pin[0];
+    Pfix.p  = Pin[1];
+    Pfix.v1 = Pin[2];
+    Pfix.v2 = Pin[3];
+    Pfix.v3 = Pin[4];
+    Pfix.B1 = Pin[5];
+    Pfix.B2 = Pin[6];
+    Pfix.B3 = Pin[7];
+    /* modify input conserved state to agree with pressure fix */
+    srmhd_from_primitive(m2, &Pfix, B, X, dV, U, NULL);
+  }
+  else if (error != SRMHD_C2P_SUCCESS) {
+    MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
+    return 1;
   }
 
   double v1 = Pin[2];
@@ -183,7 +199,6 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   const double A1 = -4*K*V3 - L*vn*2     - 2*b0*bn;
   const double A0 =    K*V4 + L*V2       +   bn*bn;
 
-
   double roots[4];
   int nr;
 
@@ -212,8 +227,8 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   }
   else {
     m2_print_state(NULL, aux, NULL);
-    printf("A = [%+8.6e %+8.6e %+8.6e %+8.6e %+8.6e]\n", A4, A3, A2, A1, A0);
-    MSG(FATAL, "magnetosonic polynomial N4=0 has no roots");
+    printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n", A0, A1, A2, A3, A4);
+    MSGF(FATAL, "magnetosonic polynomial N4=0 has %d real roots", nr);
   }
 
   return 0;

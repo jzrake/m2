@@ -646,7 +646,7 @@ void m2sim_drive(m2sim *m2)
   m2sim_run_analysis(m2);
   m2sim_cache_conserved(m2);
 
-  dt = 0.5 * m2sim_minimum_courant_time(m2);
+  dt = 0.4 * m2sim_minimum_courant_time(m2);
 
   start_cycle = clock();
   switch (rk_order) {

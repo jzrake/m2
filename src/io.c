@@ -152,6 +152,7 @@ void m2sim_write_ascii_2d(m2sim *m2, char *fname)
   }
   fclose(outfile);
 }
+
 void m2_print_state(m2prim *P, m2aux *aux, double *U)
 {
   if (P) {
@@ -168,6 +169,8 @@ void m2_print_state(m2prim *P, m2aux *aux, double *U)
     double *u = aux->velocity_four_vector;
     double *b = aux->magnetic_four_vector;
     double *S = aux->momentum_density;
+    printf("d = %+8.6e\n", aux->comoving_mass_density);
+    printf("p = %+8.6e\n", aux->gas_pressure);
     printf("u = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", u[0], u[1], u[2], u[3]);
     printf("b = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", b[0], b[1], b[2], b[3]);
     printf("S = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", S[0], S[1], S[2], S[3]);

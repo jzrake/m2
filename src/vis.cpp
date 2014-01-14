@@ -1,11 +1,13 @@
+extern "C" {
+#include "m2.h" 
+}
+#if (M2_HAVE_GLUT)
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <GL/glut.h>
 #define ESCAPE_KEY 27
-extern "C" {
-#include "m2.h" 
-}
  
 
 /* ------------------------------------------ */
@@ -444,3 +446,10 @@ void color_map(double val, GLfloat rgb[3])
   rgb[1] = ggg;
   rgb[2] = bbb;
 }
+
+#else
+void m2sim_visualize(m2sim *m2, int argc, char **argv)
+{
+
+}
+#endif /* M2_HAVE_GLUT */

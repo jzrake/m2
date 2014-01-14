@@ -73,7 +73,6 @@ int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     T0 = (Ek + Eb) * 1.01;
     U[TAU] = T0 * dV;
     return nrmhd_from_conserved(m2, U, B, X, dV, aux, P);
-    //    return 1;
   }
 
   if (aux) {

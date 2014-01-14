@@ -1,6 +1,8 @@
 #include <math.h>
 #include "m2.h"
 #include "hydro.h"
+#include "polynomials.h"
+
 
 void test_srmhd_c2p()
 {
@@ -82,8 +84,46 @@ void test_srmhd_waves()
   printf("fast magnetosonic: %+8.6e %+8.6e\n", evals2[0], evals2[7]);
 }
 
+void test_quartic()
+{
+  double roots[4];
+  double A1[5] = {+1, -1, +1, -2, +1};
+  double A2[5] = {+11166.1589491647,
+		  -49480.3771267108,
+		  +82221.6612223221,
+		  -60722.5167663058,
+		  +16816.5669665401}; 
+  int n, nr;
+  double y, *A;
+
+  A = A1;
+  nr = solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
+  printf("there are %d roots:\n", nr);
+  for (n=0; n<nr; ++n) {
+    y = (A[4]*pow(roots[n], 4) +
+	 A[3]*pow(roots[n], 3) +
+	 A[2]*pow(roots[n], 2) +
+	 A[1]*pow(roots[n], 1) +
+	 A[0]*pow(roots[n], 0));
+    printf("r%d = %f, y(r%d) = %f\n", n, roots[n], n, y);
+  }
+
+  A = A2;
+  nr = solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
+  printf("there are %d roots:\n", nr);
+  for (n=0; n<nr; ++n) {
+    y = (A[4]*pow(roots[n], 4) +
+	 A[3]*pow(roots[n], 3) +
+	 A[2]*pow(roots[n], 2) +
+	 A[1]*pow(roots[n], 1) +
+	 A[0]*pow(roots[n], 0));
+    printf("r%d = %f, y(r%d) = %f\n", n, roots[n], n, y);
+  }
+}
+
 void m2_self_test()
 {
   test_srmhd_c2p();
   test_srmhd_waves();
+  test_quartic();
 }
