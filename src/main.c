@@ -9,7 +9,7 @@ void initialize_problem_shocktube(m2sim *m2);
 
 int main(int argc, char **argv)
 {
-  if (1) {
+  if (0) {
     m2_self_test();
     return 0;
   }
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     m2sim_visualize(m2, argc, argv);
   }
   else {
-    while (m2->status.time_simulation < 0.1) {
+    while (m2->status.time_simulation < 0.2) {
       m2sim_drive(m2);
     }
   }

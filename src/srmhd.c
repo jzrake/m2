@@ -189,18 +189,32 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 
   nr = solve_quartic_equation(A4, A3, A2, A1, A0, roots);
 
-  if (nr != 4) {
-    MSG(FATAL, "magnetosonic polynomial N4=0 has only 2 roots");
+  if (nr == 4) {
+    evals[0] = roots[0];
+    evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
+    evals[2] = roots[1];
+    evals[3] = vn;
+    evals[4] = vn;
+    evals[5] = roots[2];
+    evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
+    evals[7] = roots[3];
   }
-
-  evals[0] = roots[0];
-  evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
-  evals[2] = roots[1];
-  evals[3] = vn;
-  evals[4] = vn;
-  evals[5] = roots[2];
-  evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
-  evals[7] = roots[3];
+  else if (nr == 2) {
+    /* probably the slow wave has same speed as the entropy wave */
+    evals[0] = roots[0];
+    evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
+    evals[2] = vn;
+    evals[3] = vn;
+    evals[4] = vn;
+    evals[5] = vn;
+    evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
+    evals[7] = roots[1];
+  }
+  else {
+    m2_print_state(NULL, aux, NULL);
+    printf("A = [%+8.6e %+8.6e %+8.6e %+8.6e %+8.6e]\n", A4, A3, A2, A1, A0);
+    MSG(FATAL, "magnetosonic polynomial N4=0 has no roots");
+  }
 
   return 0;
 }
