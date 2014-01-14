@@ -122,6 +122,8 @@ struct m2sim
   int physics;
   int ct_scheme;
   int rk_order;
+  double plm_parameter;
+  double cfl_parameter;
   m2sim_status status;
   m2sim_operator analysis;
   m2sim_operator boundary_conditions;

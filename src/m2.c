@@ -23,11 +23,15 @@ m2sim *m2sim_new()
   m2->local_grid_size[2] = 0;
   m2->local_grid_size[3] = 0;
   m2->number_guard_zones = 2;
+  m2->volumes = NULL;
+
+  /* solver and physics configuration */
   m2->geometry = M2_CARTESIAN;
   m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
-  m2->volumes = NULL;
-  m2->rk_order = 2;
   m2->ct_scheme = M2_CT_FULL3D;
+  m2->rk_order = 2;
+  m2->plm_parameter = 1.5;
+  m2->cfl_parameter = 0.4;
 
   /* callback functions */
   m2->analysis = NULL;

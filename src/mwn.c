@@ -8,7 +8,7 @@
 static void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
-  if (R < 1.0) {
+  if (R < 10.0) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
@@ -55,7 +55,7 @@ static void boundary_conditions(m2sim *m2)
       V->prim.p = 0.01;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
-      V->Bflux3A = sqrt(0.1) * sin(t) * V->area3;
+      V->Bflux3A = 1.0 * sin(t) * V->area3;
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,
@@ -110,11 +110,11 @@ static void boundary_conditions_gradient(m2sim *m2)
 
 static int inside_cavity_cut(m2vol *V)
 {
-  return V->x1[1] < 1.0;
+  return V->x1[1] < 10.0;
 }
 static int outside_cavity_cut(m2vol *V)
 {
-  return V->x1[1] >= 1.0;
+  return V->x1[1] >= 10.0;
 }
 static void write_log_entry(m2sim *m2, char *fname, int (*cut)(m2vol *V))
 {
@@ -166,9 +166,9 @@ static void analysis(m2sim *m2)
     write_log_entry(m2, FNAME_VOLUME_INTEGRALS_I, inside_cavity_cut);
     write_log_entry(m2, FNAME_VOLUME_INTEGRALS_O, outside_cavity_cut);
   }
-  if (m2->status.iteration_number % 10000 == 0) {
+  if (m2->status.iteration_number % 1000 == 0) {
     snprintf(slice_fname, sizeof(slice_fname),
-	     "equatorial_slice.%06d.dat", m2->status.iteration_number);
+	     "equatorial_slice.%04d.dat", m2->status.iteration_number/1000);
     write_equatorial_slice_1d(m2, slice_fname);
   }
 }
@@ -177,7 +177,7 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_resolution(m2, 96, 64, 1);
   m2sim_set_guard_zones(m2, 0);
   m2sim_set_extent0(m2, 0.1, 0.0  , 0.0    );
-  m2sim_set_extent1(m2, 1e1, M2_PI, 2*M2_PI);
+  m2sim_set_extent1(m2, 1e2, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
@@ -185,6 +185,9 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
   m2sim_set_initial_data(m2, initial_data);
+
+  m2->plm_parameter = 1.00;
+  m2->cfl_parameter = 0.25;
 
   remove(FNAME_VOLUME_INTEGRALS_I);
   remove(FNAME_VOLUME_INTEGRALS_O);

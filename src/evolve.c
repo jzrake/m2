@@ -85,11 +85,10 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
 #undef INTERP_PRIM
 }
 
-static double plm_gradient(double *xs, double *fs)
+static double plm_gradient(double *xs, double *fs, double plm)
 {
 #define minval3(a,b,c) ((a<b) ? ((a<c) ? a : c) : ((b<c) ? b : c))
 #define sign(x) ((x > 0.0) - (x < 0.0))
-  double plm = 1.75;
 
   double xL = xs[0];
   double x0 = xs[1];
@@ -217,7 +216,7 @@ void m2sim_calculate_gradient(m2sim *m2)
   for (n=0; n<3; ++n) {				\
     y[n] = V[n]->prim.mem;			\
   }						\
-  V[1]->grad[ind] = plm_gradient(x, y)
+  V[1]->grad[ind] = plm_gradient(x, y, m2->plm_parameter)
 
   int i, j, k, q, n;
   int *L = m2->local_grid_size;
@@ -646,7 +645,7 @@ void m2sim_drive(m2sim *m2)
   m2sim_run_analysis(m2);
   m2sim_cache_conserved(m2);
 
-  dt = 0.4 * m2sim_minimum_courant_time(m2);
+  dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
 
   start_cycle = clock();
   switch (rk_order) {
