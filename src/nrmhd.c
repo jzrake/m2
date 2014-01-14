@@ -161,7 +161,7 @@ double nrmhd_measure(m2aux *aux, int flag)
   switch (flag) {
   case M2_SIGMA: return pb / eg;
   case M2_SOUND_SPEED: return sqrt(gamma_law_index * pg / d0);
-  case M2_MACH_NUMBER: return sqrt(gamma_law_index * pg / d0 / vv);
+  case M2_MACH_NUMBER: return sqrt(vv) / sqrt(gamma_law_index * pg / d0);
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
   case M2_KINETIC_ENERGY_DENSITY: return eg - ug;
   default:

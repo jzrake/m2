@@ -226,9 +226,18 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     evals[7] = roots[1];
   }
   else {
-    m2_print_state(NULL, aux, NULL);
-    printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n", A0, A1, A2, A3, A4);
-    MSGF(FATAL, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    /* m2_print_state(NULL, aux, NULL); */
+    /* printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n", */
+    /* 	   A0, A1, A2, A3, A4); */
+    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    evals[0] = -1.0;
+    evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
+    evals[2] = vn;
+    evals[3] = vn;
+    evals[4] = vn;
+    evals[5] = vn;
+    evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
+    evals[7] = +1.0;
   }
 
   return 0;
@@ -244,14 +253,19 @@ double srmhd_measure(m2aux *aux, int flag)
   double pg = aux->gas_pressure;
   double pb = aux->magnetic_pressure;
   double vv = v1*v1 + v2*v2 + v3*v3;
+  double v0 = sqrt(vv);
   double ug = pg / (gamma_law_index - 1.0);
-  double eg = 0.5 * d0 * vv + ug; /* gas energy density */
+  double Hg = d0 + ug + pg; /* gas enthalpy density */
+  double eg = Hg*u0*u0 - pg - u0*d0; /* gas energy density */
+  double ek = d0*u0*(u0 - 1.0);
+  double cs = sqrt(gamma_law_index * pg / d0);
+
   switch (flag) {
   case M2_SIGMA: return pb / eg;
   case M2_SOUND_SPEED: return sqrt(gamma_law_index * pg / d0);
-  case M2_MACH_NUMBER: return sqrt(gamma_law_index * pg / d0 / vv);
+  case M2_MACH_NUMBER: return (v0/sqrt(1.0 - v0*v0)) / (cs/sqrt(1.0 - cs*cs));
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
-  case M2_KINETIC_ENERGY_DENSITY: return eg - ug;
+  case M2_KINETIC_ENERGY_DENSITY: return ek;
   default:
     MSG(FATAL, "unknown measure flag");
     return 0.0;

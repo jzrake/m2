@@ -138,7 +138,7 @@ static void write_equatorial_slice_1d(m2sim *m2, char *fname)
   int *G = m2->domain_resolution;
   int i, j = G[2] / 2, k = 0;
   printf("[write equatorial slice 1d: %s]\n", fname);
-  fprintf(outfile, "# r d p u1 u2 u3 b1 b2 b3 sigma mach\n");
+  fprintf(outfile, "r d p u1 u2 u3 b1 b2 b3 sigma mach\n");
   for (i=0; i<L[1]; ++i) {
     V = M2_VOL(i, j, k);
     fprintf(outfile,
