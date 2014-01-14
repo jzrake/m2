@@ -125,6 +125,7 @@ struct m2sim
   m2sim_status status;
   m2sim_operator analysis;
   m2sim_operator boundary_conditions;
+  m2sim_operator boundary_conditions_gradient;
   m2vol_operator initial_data;
   m2vol *volumes;
 } ;
@@ -153,6 +154,7 @@ void m2sim_set_ct_scheme(m2sim *m2, int mode);
 void m2sim_set_rk_order(m2sim *m2, int order);
 void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis);
 void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc);
+void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg);
 void m2sim_set_initial_data(m2sim *m2, m2vol_operator id);
 void m2sim_initialize(m2sim *m2);
 void m2sim_map(m2sim *m2, m2vol_operator f);

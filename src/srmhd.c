@@ -3,7 +3,7 @@
 #include "srmhd-c2p.h"
 #include "polynomials.h"
 
-#define gamma_law_index (5./3.)
+#define gamma_law_index (4./3.)
 
 
 int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -23,7 +23,7 @@ int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
   double b1 = (P->B1 + b0 * u1) / u0;
   double b2 = (P->B2 + b0 * u2) / u0;
   double b3 = (P->B3 + b0 * u3) / u0;
-  double bb = -b0*b0 + b1*b1 + b2*b2 + b3*b3;
+  double bb = b1*b1 + b2*b2 + b3*b3 - b0*b0;
   double d0 = P->d;
   double pg = P->p;
   double ug = pg / (gamma_law_index - 1.0);
@@ -168,6 +168,7 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   const double ug = pg / (gamma_law_index - 1.0);
   const double Hg = d0 + ug + pg; /* gas enthalpy density */
   const double cs2 = gamma_law_index * pg / Hg; /* sound speed squared */
+  const double C = Hg + bb; /* constant in Alfven wave expression */
 
   const double W2 = u0*u0;
   const double W4 = W2*W2;
@@ -182,27 +183,24 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   const double A1 = -4*K*V3 - L*vn*2     - 2*b0*bn;
   const double A0 =    K*V4 + L*V2       +   bn*bn;
 
-  double ap, am, roots[4];
-  int nr, i;
+
+  double roots[4];
+  int nr;
 
   nr = solve_quartic_equation(A4, A3, A2, A1, A0, roots);
 
-  for (i=0; i<nr; ++i) {
-    if (roots[i] > ap) ap = roots[i];
-    if (roots[i] < am) am = roots[i];
+  if (nr != 4) {
+    MSG(FATAL, "magnetosonic polynomial N4=0 has only 2 roots");
   }
-  if (fabs(ap) > 1.0 || fabs(am) > 1.0) {
-    ap =  1.0;
-    am = -1.0;
-  }
-  evals[0] = -1.0;//am;
-  evals[1] = vn;
-  evals[2] = vn;
+
+  evals[0] = roots[0];
+  evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
+  evals[2] = roots[1];
   evals[3] = vn;
   evals[4] = vn;
-  evals[5] = vn;
-  evals[6] = vn;
-  evals[7] = 1.0;//ap;
+  evals[5] = roots[2];
+  evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
+  evals[7] = roots[3];
 
   return 0;
 }

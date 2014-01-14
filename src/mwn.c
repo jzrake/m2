@@ -1,10 +1,11 @@
 #include <math.h>
+#include <string.h>
 #include "m2.h"
 
 #define FNAME_VOLUME_INTEGRALS_I "volume-integrals-in.dat"
 #define FNAME_VOLUME_INTEGRALS_O "volume-integrals-out.dat"
 
-void mwn_initial_data(m2vol *V)
+static void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
   if (R < 1.0) {
@@ -31,7 +32,7 @@ void mwn_initial_data(m2vol *V)
   }
 }
 
-void mwn_boundary_conditions(m2sim *m2)
+static void boundary_conditions(m2sim *m2)
 {
   int n;
   int *L = m2->local_grid_size;
@@ -62,7 +63,7 @@ void mwn_boundary_conditions(m2sim *m2)
                            &V->aux);
     }
     else if (I[1] == G[1] - 1) {
-      mwn_initial_data(V);
+      initial_data(V);
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,
@@ -77,6 +78,31 @@ void mwn_boundary_conditions(m2sim *m2)
     else if (I[2] == G[2] - 1) {
       if (V->consA[S22] > 0.0) {
 	V->consA[S22] *= -1.0;
+      }
+    }
+  }
+}
+
+static void boundary_conditions_gradient(m2sim *m2)
+{
+  int *L = m2->local_grid_size;
+  int i, j, k;
+  m2vol *V[3];
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
+
+  	V[0] = M2_VOL(i, j+0, k);
+  	V[1] = M2_VOL(i, j+1, k);
+  	if (V[0]->global_index[2] == 0) {
+  	  memcpy(V[0]->grad2, V[1]->grad2, 8 * sizeof(double));
+  	}
+
+  	V[0] = M2_VOL(i, j-0, k);
+  	V[1] = M2_VOL(i, j-1, k);
+  	if (V[0]->global_index[2] == m2->domain_resolution[2] - 1) {
+  	  memcpy(V[0]->grad2, V[1]->grad2, 8 * sizeof(double));
+  	}
       }
     }
   }
@@ -133,7 +159,7 @@ static void write_equatorial_slice_1d(m2sim *m2, char *fname)
   }
   fclose(outfile);
 }
-void mwn_analysis(m2sim *m2)
+static void analysis(m2sim *m2)
 {
   char slice_fname[1024];
   if (m2->status.iteration_number % 100 == 0) {
@@ -146,18 +172,19 @@ void mwn_analysis(m2sim *m2)
     write_equatorial_slice_1d(m2, slice_fname);
   }
 }
-void mwn_initialize_problem(m2sim *m2)
+void initialize_problem_mwn(m2sim *m2)
 {
   m2sim_set_resolution(m2, 96, 64, 1);
   m2sim_set_guard_zones(m2, 0);
-  m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_extent0(m2, 0.1, 0.0  , 0.0    );
   m2sim_set_extent1(m2, 1e1, M2_PI, 2*M2_PI);
+  m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
-  m2sim_set_analysis(m2, mwn_analysis);
-  m2sim_set_boundary_conditions(m2, mwn_boundary_conditions);
-  m2sim_set_initial_data(m2, mwn_initial_data);
+  m2sim_set_analysis(m2, analysis);
+  m2sim_set_boundary_conditions(m2, boundary_conditions);
+  m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
+  m2sim_set_initial_data(m2, initial_data);
 
   remove(FNAME_VOLUME_INTEGRALS_I);
   remove(FNAME_VOLUME_INTEGRALS_O);

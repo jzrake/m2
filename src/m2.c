@@ -32,6 +32,7 @@ m2sim *m2sim_new()
   /* callback functions */
   m2->analysis = NULL;
   m2->boundary_conditions = NULL;
+  m2->boundary_conditions_gradient = NULL;
   m2->initial_data = NULL;
 
   /* status initializer */
@@ -89,6 +90,10 @@ void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis)
 void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc)
 {
   m2->boundary_conditions = bc;
+}
+void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg)
+{
+  m2->boundary_conditions_gradient = bcg;
 }
 void m2sim_set_initial_data(m2sim *m2, m2vol_operator id)
 {

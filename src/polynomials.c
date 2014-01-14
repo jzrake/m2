@@ -10,8 +10,16 @@
  */
 
 #include <math.h>
+#include <stdlib.h>
 #include "polynomials.h"
 
+static int compare(const void *x, const void *y)
+{
+  double xx = *(double*)x, yy = *(double*)y;
+  if (xx < yy) return -1;
+  if (xx > yy) return +1;
+  return 0;
+}
 
 int solve_quartic_equation(double d4, double d3,
 			   double d2, double d1, double d0,
@@ -89,6 +97,8 @@ int solve_quartic_equation(double d4, double d3,
     roots[i++] = r3;
     roots[i++] = r4;
   }
+
+  qsort(roots, nr12 + nr34, sizeof(double), compare);
 
   return nr12 + nr34;
 }
