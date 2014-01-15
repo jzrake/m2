@@ -211,7 +211,7 @@ double m2aux_measure(m2aux *aux, int member);
 /* ------------------------------------------------------------------
  * DEBUG MACROS AND UTILITY
  * --------------------------------------------------------------- */
-#define M2_PI 3.14159265358979
+#define M2_PI (4*atan(1))
 #define M2_STRING_LEN 256
 #define M2_STRING_SET(d,s) strncpy(d, s, 256); d[255] = '\0';
 

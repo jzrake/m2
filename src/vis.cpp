@@ -152,7 +152,8 @@ void GLUTKeyboardFunc(unsigned char key, int x, int y)
   case '-': ZoomLevel /= 1.1; break;
   case '=': ZoomLevel *= 1.1; break;
   case 's': m2sim_drive(M2); reload_rgb_data(); break;
-  case 'p': printf("data range: [%4.3e %4.3e]\n", DataRange[0], DataRange[1]); break;
+  case 'p': printf("data range: [%4.3e %4.3e]\n", DataRange[0], DataRange[1]);
+    break;
   }
 }
  

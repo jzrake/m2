@@ -445,22 +445,17 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 
 
 	V0 = M2_VOL(i+0, j+0, k+0);
-	V1 = M2_VOL(i+1, j+0, k+0);
-	V2 = M2_VOL(i+0, j+1, k+0);
-	V3 = M2_VOL(i+0, j+0, k+1);
+	V1 = M2_VOL(i-1, j+0, k+0);
+	V2 = M2_VOL(i+0, j-1, k+0);
+	V3 = M2_VOL(i+0, j+0, k-1);
 
 	for (q=0; q<5; ++q) {
-	  /* x-face */
-	  if (V0) V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
-	  if (V1) V1->consA[q] += dt * V0->area1 * V0->flux1[q];
-
-	  /* y-face */
-	  if (V0) V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
-	  if (V2) V2->consA[q] += dt * V0->area2 * V0->flux2[q];
-
-	  /* z-face */
-	  if (V0) V0->consA[q] -= dt * V0->area3 * V0->flux3[q];
-	  if (V3) V3->consA[q] += dt * V0->area3 * V0->flux3[q];
+	  V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
+	  V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
+	  V0->consA[q] -= dt * V0->area3 * V0->flux3[q];
+	  if (V1) V0->consA[q] += dt * V1->area1 * V1->flux1[q];
+	  if (V2) V0->consA[q] += dt * V2->area2 * V2->flux2[q];
+	  if (V3) V0->consA[q] += dt * V3->area3 * V3->flux3[q];
 	}
       }
     }

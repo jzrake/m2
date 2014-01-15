@@ -23,7 +23,7 @@ static void initial_data(m2vol *V)
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 1000.0 * (1.0/(R*R));
+    V->prim.d  = 10.0;
     V->prim.p  = 0.01;
 
     V->Bflux1A = 0.0 * V->area1;
@@ -39,9 +39,13 @@ static void boundary_conditions(m2sim *m2)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
+  double T = m2->status.time_simulation;
+  double f = tanh(T) * tanh(T); /* ramp factor */
   double r, t;
   double a = 1.0;
-  double g, g0 = 10.0;
+  double g;
+  double g0 = 1.0 + 10.0 * f;
+  double B0 = 0.0 + 10.0 * f;
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -50,7 +54,6 @@ static void boundary_conditions(m2sim *m2)
     if (I[1] == 0) {
       r = m2vol_coordinate_centroid(V, 1);
       t = m2vol_coordinate_centroid(V, 2);
-
       g = g0 * (a + (1 - a) * sin(t) * sin(t));
 
       V->prim.v1 = sqrt(1.0 - 1.0/(g*g));
@@ -60,7 +63,7 @@ static void boundary_conditions(m2sim *m2)
       V->prim.p = 0.01;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
-      V->Bflux3A = 12.0 * sin(t) * V->area3;
+      V->Bflux3A = B0 * sin(t) * V->area3;
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,
@@ -191,7 +194,7 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
   m2sim_set_initial_data(m2, initial_data);
 
-  m2->plm_parameter = 1.25;
+  m2->plm_parameter = 1.00;
   m2->cfl_parameter = 0.40;
 
   remove(FNAME_VOLUME_INTEGRALS_I);
