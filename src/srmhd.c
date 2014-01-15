@@ -86,7 +86,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 
   if (error == SRMHD_C2P_PRIM_NEGATIVE_PRESSURE) {
     m2prim Pfix;
-    MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
+    //    MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
     Pin[1]  = Pin[0] * 0.001; /* fix p/rho = 0.1% */
     Pfix.d  = Pin[0];
     Pfix.p  = Pin[1];
@@ -229,7 +229,7 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     /* m2_print_state(NULL, aux, NULL); */
     /* printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n", */
     /* 	   A0, A1, A2, A3, A4); */
-    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    //    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
     evals[0] = -1.0;
     evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
     evals[2] = vn;
@@ -246,9 +246,10 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 
 double srmhd_measure(m2aux *aux, int flag)
 {
-  double v1 = aux->velocity_four_vector[1];
-  double v2 = aux->velocity_four_vector[2];
-  double v3 = aux->velocity_four_vector[3];
+  double u0 = aux->velocity_four_vector[0];
+  double v1 = aux->velocity_four_vector[1] / u0;
+  double v2 = aux->velocity_four_vector[2] / u0;
+  double v3 = aux->velocity_four_vector[3] / u0;
   double d0 = aux->comoving_mass_density;
   double pg = aux->gas_pressure;
   double pb = aux->magnetic_pressure;

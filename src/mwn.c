@@ -8,7 +8,7 @@
 static void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
-  if (R < 10.0) {
+  if (R < 1.0) {
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
@@ -23,7 +23,7 @@ static void initial_data(m2vol *V)
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 1000.0;
+    V->prim.d  = 1000.0 * (1.0/(R*R));
     V->prim.p  = 0.01;
 
     V->Bflux1A = 0.0 * V->area1;
@@ -41,6 +41,8 @@ static void boundary_conditions(m2sim *m2)
   m2vol *V;
   double r, t;
   double a = 1.0;
+  double g, g0 = 10.0;
+
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     I = V->global_index;
@@ -48,14 +50,17 @@ static void boundary_conditions(m2sim *m2)
     if (I[1] == 0) {
       r = m2vol_coordinate_centroid(V, 1);
       t = m2vol_coordinate_centroid(V, 2);
-      V->prim.v1 = 0.9 * sqrt(a + (1 - a) * sin(t) * sin(t));
+
+      g = g0 * (a + (1 - a) * sin(t) * sin(t));
+
+      V->prim.v1 = sqrt(1.0 - 1.0/(g*g));
       V->prim.v2 = 0.0;
       V->prim.v3 = 0.0;
       V->prim.d = 1.00;
       V->prim.p = 0.01;
       V->Bflux1A = 0.0;
       V->Bflux2A = 0.0;
-      V->Bflux3A = 1.0 * sin(t) * V->area3;
+      V->Bflux3A = 12.0 * sin(t) * V->area3;
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,
@@ -110,11 +115,11 @@ static void boundary_conditions_gradient(m2sim *m2)
 
 static int inside_cavity_cut(m2vol *V)
 {
-  return V->x1[1] < 10.0;
+  return V->x1[1] < 1.0;
 }
 static int outside_cavity_cut(m2vol *V)
 {
-  return V->x1[1] >= 10.0;
+  return V->x1[1] >= 1.0;
 }
 static void write_log_entry(m2sim *m2, char *fname, int (*cut)(m2vol *V))
 {
@@ -174,10 +179,10 @@ static void analysis(m2sim *m2)
 }
 void initialize_problem_mwn(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 96, 64, 1);
+  m2sim_set_resolution(m2, 128, 96, 1);
   m2sim_set_guard_zones(m2, 0);
   m2sim_set_extent0(m2, 0.1, 0.0  , 0.0    );
-  m2sim_set_extent1(m2, 1e2, M2_PI, 2*M2_PI);
+  m2sim_set_extent1(m2, 5e1, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
@@ -186,8 +191,8 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
   m2sim_set_initial_data(m2, initial_data);
 
-  m2->plm_parameter = 1.00;
-  m2->cfl_parameter = 0.25;
+  m2->plm_parameter = 1.25;
+  m2->cfl_parameter = 0.40;
 
   remove(FNAME_VOLUME_INTEGRALS_I);
   remove(FNAME_VOLUME_INTEGRALS_O);
