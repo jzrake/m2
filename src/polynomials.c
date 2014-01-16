@@ -34,12 +34,11 @@ int solve_quartic_equation(double d4, double d3,
   double au2 = -a2;
   double au1 = (a1*a3 - 4.0*a0) ;
   double au0 = 4.0*a0*a2 - a1*a1 - a0*a3*a3;
-  double x1, x2, x3, roots3[3];
+  double x1, x3, roots3[3];
   double u1;
 
   nr = solve_cubic_equation(1.0, au2, au1, au0, roots3);
   x1 = roots3[0];
-  x2 = roots3[1];
   x3 = roots3[2];
 
   if (nr == 1) {

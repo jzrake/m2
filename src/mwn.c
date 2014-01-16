@@ -41,7 +41,7 @@ static void boundary_conditions(m2sim *m2)
   m2vol *V;
   double T = m2->status.time_simulation;
   double f = tanh(T) * tanh(T); /* ramp factor */
-  double r, t;
+  double t;
   double a = 1.0;
   double g;
   double g0 = 1.0 + 10.0 * f;
@@ -52,7 +52,6 @@ static void boundary_conditions(m2sim *m2)
     I = V->global_index;
 
     if (I[1] == 0) {
-      r = m2vol_coordinate_centroid(V, 1);
       t = m2vol_coordinate_centroid(V, 2);
       g = g0 * (a + (1 - a) * sin(t) * sin(t));
 

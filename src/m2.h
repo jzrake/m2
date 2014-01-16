@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "m2-cfg.h"
+#if (M2_HAVE_OMP)
+#include <omp.h>
+#endif
 
 #define M2_NONRELATIVISTIC 0
 #define M2_UNMAGNETIZED 0

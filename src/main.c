@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   printf("[m2]: memory usage %d MB\n", m2sim_memory_usage(m2));
   m2sim_print(m2);
 
-  if (1) {
+  if (0) {
     m2sim_visualize(m2, argc, argv);
   }
   else {

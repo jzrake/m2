@@ -556,7 +556,7 @@ int m2sim_from_conserved_all(m2sim *m2)
   m2vol *V;
   double B[4];
 #if (M2_HAVE_OMP)
-#pragma omp parallel for private(V,B,error) shared(L, m2) default(shared)
+  //#pragma omp parallel for private(V,B,error) shared(L, m2) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -661,16 +661,25 @@ void m2sim_drive(m2sim *m2)
 {
   double dt;
   int rk_order = m2->rk_order;
-
-  clock_t start_cycle = 0, stop_cycle = 0;
   double kzps; /* kilozones per second */
+
+#if (M2_HAVE_OMP)
+  double start_wtime, stop_wtime;
+#else
+  clock_t start_cycle, stop_cycle;
+#endif
 
   m2sim_run_analysis(m2);
   m2sim_cache_conserved(m2);
 
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
 
+#if (M2_HAVE_OMP)
+  start_wtime = omp_get_wtime();
+#else
   start_cycle = clock();
+#endif
+
   switch (rk_order) {
   case 1:
     m2sim_runge_kutta_substep(m2, dt, 1.0);
@@ -685,9 +694,15 @@ void m2sim_drive(m2sim *m2)
     m2sim_runge_kutta_substep(m2, dt, 2.0/3.0);
     break;
   }
+
+#if (M2_HAVE_OMP)
+  stop_wtime = omp_get_wtime();
+  kzps = 1e-3 * m2->local_grid_size[0] / (stop_wtime - start_wtime);
+#else
   stop_cycle = clock();
-  kzps = 1e-3 * m2->local_grid_size[0] /
-    (stop_cycle - start_cycle) * CLOCKS_PER_SEC;
+  kzps = 1e-3 * m2->local_grid_size[0] / (stop_cycle - start_cycle) *
+    CLOCKS_PER_SEC;
+#endif
 
   /* print status message */
   printf("%08d: t=%5.4f dt=%5.4e kzps=%4.3f\n",
