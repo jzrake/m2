@@ -6,24 +6,6 @@
 
 static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
 {
-#define INTERP_PRIM(mem, ind)						\
-  do {									\
-    switch (axis) {							\
-    case 1:								\
-      PL.mem = VL->prim.mem + VL->grad1[ind] * (VL->x1[1] - xL);	\
-      PR.mem = VR->prim.mem + VR->grad1[ind] * (VR->x0[1] - xR);	\
-      break;								\
-    case 2:								\
-      PL.mem = VL->prim.mem + VL->grad2[ind] * (VL->x1[2] - xL);	\
-      PR.mem = VR->prim.mem + VR->grad2[ind] * (VR->x0[2] - xR);	\
-      break;								\
-    case 3:								\
-      PL.mem = VL->prim.mem + VL->grad3[ind] * (VL->x1[3] - xL);	\
-      PR.mem = VR->prim.mem + VR->grad3[ind] * (VR->x0[3] - xR);	\
-      break;								\
-    }									\
-  } while (0)								\
-
   int q;
   double UL[8];
   double UR[8];
@@ -31,6 +13,8 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   double FR[8];
   double lamL[8];
   double lamR[8];
+  double yl[8], yr[8]; /* cell-centered left/right interpolation variables */
+  double yL[8], yR[8]; /* face-centered left/right interpolation variables */
   m2prim PL;
   m2prim PR;
   m2aux AL;
@@ -41,15 +25,26 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   double n[4] = { 0.0, 0.0, 0.0, 0.0 };
 
   n[axis] = 1.0;
+  m2vol_to_interpolated(VL, yl, 1);
+  m2vol_to_interpolated(VR, yr, 1);
 
-  INTERP_PRIM(v1, 0);
-  INTERP_PRIM(v2, 1);
-  INTERP_PRIM(v3, 2);
-  INTERP_PRIM(B1, 3);
-  INTERP_PRIM(B2, 4);
-  INTERP_PRIM(B3, 5);
-  INTERP_PRIM( d, 6);
-  INTERP_PRIM( p, 7);
+  switch (axis) {
+  case 1:
+    for (q=0; q<8; ++q) yL[q] = yl[q] + VL->grad1[q] * (VL->x1[1] - xL);
+    for (q=0; q<8; ++q) yR[q] = yr[q] + VR->grad1[q] * (VR->x0[1] - xR);
+    break;
+  case 2:
+    for (q=0; q<8; ++q) yL[q] = yl[q] + VL->grad2[q] * (VL->x1[2] - xL);
+    for (q=0; q<8; ++q) yR[q] = yr[q] + VR->grad2[q] * (VR->x0[2] - xR);
+    break;
+  case 3:
+    for (q=0; q<8; ++q) yL[q] = yl[q] + VL->grad3[q] * (VL->x1[3] - xL);
+    for (q=0; q<8; ++q) yR[q] = yr[q] + VR->grad3[q] * (VR->x0[3] - xR);
+    break;
+  }
+
+  m2sim_from_interpolated(VL->m2, yL, &PL);
+  m2sim_from_interpolated(VL->m2, yR, &PR);
 
   UL[B11] = PL.B1;
   UL[B22] = PL.B2;
@@ -81,8 +76,6 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   for (q=0; q<8; ++q) {
     F[q] = (ap*FL[q] - am*FR[q] + ap*am*(UR[q] - UL[q])) / (ap - am);
   }
-
-#undef INTERP_PRIM
 }
 
 static double plm_gradient(double *xs, double *fs, double plm)
@@ -218,19 +211,13 @@ void m2sim_calculate_emf(m2sim *m2)
 
 void m2sim_calculate_gradient(m2sim *m2)
 {
-#define INTERP_PRIM(mem, ind, grad)		\
-  for (n=0; n<3; ++n) {				\
-    y[n] = V[n]->prim.mem;			\
-  }						\
-  V[1]->grad[ind] = plm_gradient(x, y, m2->plm_parameter)
-
   int i, j, k, q, n;
   int *L = m2->local_grid_size;
   m2vol *V[3];
   double x[3];
-  double y[3];
+  double ys[24];
 #if (M2_HAVE_OMP)
-#pragma omp parallel for private(V,x,y,j,k,q,n) default(shared)
+#pragma omp parallel for private(V,x,ys,j,k,q,n) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
@@ -247,14 +234,12 @@ void m2sim_calculate_gradient(m2sim *m2)
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 1);
 	  }
-	  INTERP_PRIM(v1, 0, grad1);
-	  INTERP_PRIM(v2, 1, grad1);
-	  INTERP_PRIM(v3, 2, grad1);
-	  INTERP_PRIM(B1, 3, grad1);
-	  INTERP_PRIM(B2, 4, grad1);
-	  INTERP_PRIM(B3, 5, grad1);
-	  INTERP_PRIM( d, 6, grad1);
-	  INTERP_PRIM( p, 7, grad1);
+	  m2vol_to_interpolated(V[0], &ys[0], 3);
+	  m2vol_to_interpolated(V[1], &ys[1], 3);
+	  m2vol_to_interpolated(V[2], &ys[2], 3);
+	  for (q=0; q<8; ++q) {
+	    V[1]->grad1[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
+	  }
 	}
 	else {
 	  for (q=0; q<8; ++q) {
@@ -273,14 +258,12 @@ void m2sim_calculate_gradient(m2sim *m2)
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 2);
 	  }
-	  INTERP_PRIM(v1, 0, grad2);
-	  INTERP_PRIM(v2, 1, grad2);
-	  INTERP_PRIM(v3, 2, grad2);
-	  INTERP_PRIM(B1, 3, grad2);
-	  INTERP_PRIM(B2, 4, grad2);
-	  INTERP_PRIM(B3, 5, grad2);
-	  INTERP_PRIM( d, 6, grad2);
-	  INTERP_PRIM( p, 7, grad2);
+	  m2vol_to_interpolated(V[0], &ys[0], 3);
+	  m2vol_to_interpolated(V[1], &ys[1], 3);
+	  m2vol_to_interpolated(V[2], &ys[2], 3);
+	  for (q=0; q<8; ++q) {
+	    V[1]->grad2[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
+	  }
 	}
 	else {
 	  for (q=0; q<8; ++q) {
@@ -299,14 +282,12 @@ void m2sim_calculate_gradient(m2sim *m2)
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 3);
 	  }
-	  INTERP_PRIM(v1, 0, grad3);
-	  INTERP_PRIM(v2, 1, grad3);
-	  INTERP_PRIM(v3, 2, grad3);
-	  INTERP_PRIM(B1, 3, grad3);
-	  INTERP_PRIM(B2, 4, grad3);
-	  INTERP_PRIM(B3, 5, grad3);
-	  INTERP_PRIM( d, 6, grad3);
-	  INTERP_PRIM( p, 7, grad3);
+	  m2vol_to_interpolated(V[0], &ys[0], 3);
+	  m2vol_to_interpolated(V[1], &ys[1], 3);
+	  m2vol_to_interpolated(V[2], &ys[2], 3);
+	  for (q=0; q<8; ++q) {
+	    V[1]->grad3[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
+	  }
 	}
 	else {
 	  for (q=0; q<8; ++q) {
@@ -323,8 +304,6 @@ void m2sim_calculate_gradient(m2sim *m2)
   else {
     /* guard zones will just have zero gradient */
   }
-
-#undef INTERP_PRIM
 }
 
 

@@ -30,6 +30,7 @@ m2sim *m2sim_new()
   m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
   m2->ct_scheme = M2_CT_FULL3D;
   m2->rk_order = 2;
+  m2->simple_eigenvalues = 0;
   m2->plm_parameter = 1.5;
   m2->cfl_parameter = 0.4;
 
@@ -233,6 +234,28 @@ void m2sim_map(m2sim *m2, m2vol_operator f)
       }
     }
   }
+}
+void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
+{
+  P->v1 = y[0];
+  P->v2 = y[1];
+  P->v3 = y[2];
+  P->B1 = y[3];
+  P->B2 = y[4];
+  P->B3 = y[5];
+  P->d  = y[6];
+  P->p  = y[7];
+}
+void m2vol_to_interpolated(m2vol *V, double *y, int stride)
+{
+  y[0*stride] = V->prim.v1;
+  y[1*stride] = V->prim.v2;
+  y[2*stride] = V->prim.v3;
+  y[3*stride] = V->prim.B1;
+  y[4*stride] = V->prim.B2;
+  y[5*stride] = V->prim.B3;
+  y[6*stride] = V->prim.d;
+  y[7*stride] = V->prim.p;
 }
 double m2vol_minimum_dimension(m2vol *V)
 {

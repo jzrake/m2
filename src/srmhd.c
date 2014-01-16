@@ -171,6 +171,17 @@ int srmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 
 int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
+  if (aux->m2->simple_eigenvalues) {
+    evals[0] = -1.0;
+    evals[1] = 0.0;
+    evals[2] = 0.0;
+    evals[3] = 0.0;
+    evals[4] = 0.0;
+    evals[5] = 0.0;
+    evals[6] = 0.0;
+    evals[7] = +1.0;
+    return 0;
+  }
   const double n1 = n[1];
   const double n2 = n[2];
   const double n3 = n[3];
@@ -232,10 +243,10 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     evals[7] = roots[1];
   }
   else {
-    /* m2_print_state(NULL, aux, NULL); */
-    /* printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n", */
-    /* 	   A0, A1, A2, A3, A4); */
-    //    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    m2_print_state(NULL, aux, NULL);
+    printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n",
+    	   A0, A1, A2, A3, A4);
+    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
     evals[0] = -1.0;
     evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
     evals[2] = vn;

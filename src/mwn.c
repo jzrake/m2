@@ -196,6 +196,7 @@ void initialize_problem_mwn(m2sim *m2)
 
   m2->plm_parameter = 1.00;
   m2->cfl_parameter = 0.40;
+  m2->simple_eigenvalues = 1;
 
   remove(FNAME_VOLUME_INTEGRALS_I);
   remove(FNAME_VOLUME_INTEGRALS_O);

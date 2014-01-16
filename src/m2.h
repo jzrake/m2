@@ -5,19 +5,29 @@
 #include <stdlib.h>
 #include "m2-cfg.h"
 
+#define M2_NONRELATIVISTIC 0
+#define M2_UNMAGNETIZED 0
 
 /* ------------------------------------------------------------------
  * M2 PUBLIC API
  * --------------------------------------------------------------- */
 enum m2flag {
+  /* geometry */
   M2_CARTESIAN,
   M2_CYLINDRICAL,
   M2_SPHERICAL,
-  M2_CONSERVED,
-  M2_PRIMITIVE,
-  M2_AUXILIARY,
 
-  /* integer values for getting m2aux data members */
+  /* physics */
+  M2_RELATIVISTIC=(1<<1),
+  M2_MAGNETIZED=(1<<2),
+
+  /* may have many uses including interpolation variables */
+  M2_CONSERVED,
+  M2_AUXILIARY,
+  M2_PRIMITIVE,
+  M2_PRIMITIVE_AND_FOUR_VELOCITY,
+
+  /* m2aux data members and other measurements */
   M2_VELOCITY_FOUR_VECTOR0,
   M2_VELOCITY_FOUR_VECTOR1,
   M2_VELOCITY_FOUR_VECTOR2,
@@ -35,11 +45,7 @@ enum m2flag {
   M2_SOUND_SPEED,
   M2_MACH_NUMBER,
 
-  M2_NONRELATIVISTIC=0,
-  M2_UNMAGNETIZED=0,
-  M2_RELATIVISTIC=(1<<1),
-  M2_MAGNETIZED=(1<<2),
-
+  /* CT schemes */
   M2_CT_OUTOFPAGE3,
   M2_CT_TRANSVERSE1B3,
   M2_CT_FULL3D,
@@ -122,6 +128,7 @@ struct m2sim
   int physics;
   int ct_scheme;
   int rk_order;
+  int simple_eigenvalues; /* fix outer characteristics to plus/minus c */
   double plm_parameter;
   double cfl_parameter;
   m2sim_status status;
@@ -133,6 +140,7 @@ struct m2sim
 } ;
 
 
+
 void m2_self_test();
 void m2_print_state(m2prim *P, m2aux *aux, double *U);
 double m2_volume_measure(double x0[4], double x1[4], int geometry);
@@ -140,10 +148,15 @@ double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
 void m2_to_cartesian(double x[4], double xcart[4], int geometry);
 
+
+/* vol */
 double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);
 void m2vol_coordinate_centroid_3d(m2vol *V, double x[4]);
+void m2vol_to_interpolated(m2vol *V, double *y, int stride);
 
+
+/* sim */
 m2sim *m2sim_new();
 void m2sim_del(m2sim *m2);
 void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3);
@@ -179,8 +192,8 @@ void m2sim_write_ascii_1d(m2sim *m2, char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, char *fname);
 void m2sim_run_analysis(m2sim *m2);
 void m2sim_run_initial_data(m2sim *m2);
+void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P);
 int m2sim_memory_usage(m2sim *m2);
-
 int m2sim_from_conserved_all(m2sim *m2);
 int m2sim_from_primitive_all(m2sim *m2);
 int m2sim_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
@@ -194,6 +207,8 @@ double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V));
 void m2sim_drive(m2sim *m2);
 void m2sim_visualize(m2sim *m2, int argc, char **argv);
 
+
+/* aux */
 double m2aux_maximum_wavespeed(m2aux *aux);
 int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);
 int m2aux_fluxes(m2aux *aux, double n[4], double *F);
