@@ -58,4 +58,9 @@ void initialize_problem_shocktube(m2sim *m2)
   m2sim_set_analysis(m2, NULL);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);
+
+  m2->plm_parameter = 2.00;
+  m2->cfl_parameter = 0.40;
+  m2->simple_eigenvalues = 1;
+  m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
 }

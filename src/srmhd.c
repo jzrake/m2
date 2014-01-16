@@ -69,6 +69,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double B1 = B[1];
   double B2 = B[2];
   double B3 = B[3];
+  int error;
 
   Uin[0] = U[DDD] / dV;
   Uin[1] = U[TAU] / dV;
@@ -78,34 +79,19 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[5] = B1;
   Uin[6] = B2;
   Uin[7] = B3;
-  int error;
+
 #if (M2_HAVE_OMP)
 #pragma omp critical
 #endif
   {
-  srmhd_c2p_set_gamma(gamma_law_index);
-  srmhd_c2p_new_state(Uin);
-  srmhd_c2p_estimate_from_cons();
-  //int error = srmhd_c2p_solve_anton2dzw(Pin);
-  error = srmhd_c2p_solve_noble1dw(Pin);
+    srmhd_c2p_set_pressure_floor(1e-6);
+    srmhd_c2p_set_gamma(gamma_law_index);
+    srmhd_c2p_new_state(Uin);
+    srmhd_c2p_estimate_from_cons();
+    error = srmhd_c2p_solve_noble1dw(Pin);
   }
 
-  if (error == SRMHD_C2P_PRIM_NEGATIVE_PRESSURE) {
-    m2prim Pfix;
-    //    MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
-    Pin[1]  = Pin[0] * 0.001; /* fix p/rho = 0.1% */
-    Pfix.d  = Pin[0];
-    Pfix.p  = Pin[1];
-    Pfix.v1 = Pin[2];
-    Pfix.v2 = Pin[3];
-    Pfix.v3 = Pin[4];
-    Pfix.B1 = Pin[5];
-    Pfix.B2 = Pin[6];
-    Pfix.B3 = Pin[7];
-    /* modify input conserved state to agree with pressure fix */
-    srmhd_from_primitive(m2, &Pfix, B, X, dV, U, NULL);
-  }
-  else if (error != SRMHD_C2P_SUCCESS) {
+  if (error != SRMHD_C2P_SUCCESS) {
     MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
     return 1;
   }

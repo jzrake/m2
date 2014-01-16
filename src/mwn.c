@@ -197,6 +197,8 @@ void initialize_problem_mwn(m2sim *m2)
   m2->plm_parameter = 1.00;
   m2->cfl_parameter = 0.40;
   m2->simple_eigenvalues = 1;
+  m2->interpolation_fields = M2_PRIMITIVE;//_AND_FOUR_VELOCITY;
+  m2->coordinate_scaling1 = M2_LOGARITHMIC;
 
   remove(FNAME_VOLUME_INTEGRALS_I);
   remove(FNAME_VOLUME_INTEGRALS_O);

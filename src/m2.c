@@ -1,5 +1,6 @@
 #include <string.h>
 #include <float.h>
+#include <math.h>
 #include "m2.h"
 
 
@@ -26,11 +27,15 @@ m2sim *m2sim_new()
   m2->volumes = NULL;
 
   /* solver and physics configuration */
+  m2->coordinate_scaling1 = M2_LINEAR;
+  m2->coordinate_scaling2 = M2_LINEAR;
+  m2->coordinate_scaling3 = M2_LINEAR;
   m2->geometry = M2_CARTESIAN;
   m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
   m2->ct_scheme = M2_CT_FULL3D;
   m2->rk_order = 2;
   m2->simple_eigenvalues = 0;
+  m2->interpolation_fields = M2_PRIMITIVE;
   m2->plm_parameter = 1.5;
   m2->cfl_parameter = 0.4;
 
@@ -237,25 +242,62 @@ void m2sim_map(m2sim *m2, m2vol_operator f)
 }
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
 {
-  P->v1 = y[0];
-  P->v2 = y[1];
-  P->v3 = y[2];
-  P->B1 = y[3];
-  P->B2 = y[4];
-  P->B3 = y[5];
-  P->d  = y[6];
-  P->p  = y[7];
+  double u0;
+  switch (m2->interpolation_fields) {
+  case M2_PRIMITIVE:
+    P->v1 = y[0];
+    P->v2 = y[1];
+    P->v3 = y[2];
+    P->B1 = y[3];
+    P->B2 = y[4];
+    P->B3 = y[5];
+    P->d  = y[6];
+    P->p  = y[7];
+  case M2_PRIMITIVE_AND_FOUR_VELOCITY:
+    /* gamma * beta = {y[0], y[1], y[2]} */
+    u0 = sqrt(1.0 + y[0]*y[0] + y[1]*y[1] + y[2]*y[2]);
+    P->v1 = y[0] / u0;
+    P->v2 = y[1] / u0;
+    P->v3 = y[2] / u0;
+    P->B1 = y[3];
+    P->B2 = y[4];
+    P->B3 = y[5];
+    P->d  = y[6];
+    P->p  = y[7];
+    break;
+  default:
+    MSG(FATAL, "unknown interpolation fields");
+    break;
+  }
 }
 void m2vol_to_interpolated(m2vol *V, double *y, int stride)
 {
-  y[0*stride] = V->prim.v1;
-  y[1*stride] = V->prim.v2;
-  y[2*stride] = V->prim.v3;
-  y[3*stride] = V->prim.B1;
-  y[4*stride] = V->prim.B2;
-  y[5*stride] = V->prim.B3;
-  y[6*stride] = V->prim.d;
-  y[7*stride] = V->prim.p;
+  switch (V->m2->interpolation_fields) {
+  case M2_PRIMITIVE:
+    y[0*stride] = V->prim.v1;
+    y[1*stride] = V->prim.v2;
+    y[2*stride] = V->prim.v3;
+    y[3*stride] = V->prim.B1;
+    y[4*stride] = V->prim.B2;
+    y[5*stride] = V->prim.B3;
+    y[6*stride] = V->prim.d;
+    y[7*stride] = V->prim.p;
+    break;
+  case M2_PRIMITIVE_AND_FOUR_VELOCITY:
+    /* gamma * beta = {y[0], y[1], y[2]} */
+    y[0*stride] = V->aux.velocity_four_vector[1];
+    y[1*stride] = V->aux.velocity_four_vector[2];
+    y[2*stride] = V->aux.velocity_four_vector[3];
+    y[3*stride] = V->prim.B1;
+    y[4*stride] = V->prim.B2;
+    y[5*stride] = V->prim.B3;
+    y[6*stride] = V->prim.d;
+    y[7*stride] = V->prim.p;
+    break;
+  default:
+    MSG(FATAL, "unknown interpolation fields");
+    break;
+  }
 }
 double m2vol_minimum_dimension(m2vol *V)
 {

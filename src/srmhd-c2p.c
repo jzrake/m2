@@ -132,13 +132,10 @@ int srmhd_c2p_reconstruct_prim(double Z, double W, double *Pout)
   P[Bz ] =  Cons[Bz];
 
   if (P[pre] < PressureFloor && PressureFloor > 0.0) {
-    //    printf("setting pressure floor, p=%4.3e -> %2.1e\n",
-    //	   P[pre], PressureFloor);
+    /* printf("setting pressure floor, p=%4.3e -> %2.1e\n", */
+    /* 	   P[pre], PressureFloor); */
     P[pre] = PressureFloor;    
   }
-
-  int prim_error = srmhd_c2p_check_prim(P);
-  if (prim_error) return prim_error;
 
   // Don't actually modify the user's prim state until we're sure the state is
   // good.

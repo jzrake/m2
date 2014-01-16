@@ -125,10 +125,23 @@ void m2sim_index_to_position(m2sim *m2, double index[4], double x[4])
   double *x0 = m2->domain_extent_lower;
   double *x1 = m2->domain_extent_upper;
   int *N = m2->domain_resolution;
-
+  int d;
+  int scale[4] = { 0,
+		   m2->coordinate_scaling1,
+		   m2->coordinate_scaling2,
+		   m2->coordinate_scaling3 };
   x[0] = 0.0;
-  //x[1] = x0[1] + (x1[1] - x0[1]) / N[1] * (index[1] + 0.5);
-  x[1] = x0[1] * exp(log(x1[1]/x0[1]) / N[1] * (index[1] + 0.5));
-  x[2] = x0[2] + (x1[2] - x0[2]) / N[2] * (index[2] + 0.5);
-  x[3] = x0[3] + (x1[3] - x0[3]) / N[3] * (index[3] + 0.5);
+  for (d=1; d<=3; ++d) {
+    switch (scale[d]) {
+    case M2_LINEAR:
+      x[d] = x0[d] + (x1[d] - x0[d]) / N[d] * (index[d] + 0.5);
+      break;
+    case M2_LOGARITHMIC:
+      x[d] = x0[d] * exp(log(x1[d]/x0[d]) / N[d] * (index[d] + 0.5));
+      break;
+    default:
+      MSG(FATAL, "unknown coordinate scaling");
+      break;
+    }
+  }
 }

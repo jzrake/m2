@@ -16,6 +16,8 @@ enum m2flag {
   M2_CARTESIAN,
   M2_CYLINDRICAL,
   M2_SPHERICAL,
+  M2_LINEAR,
+  M2_LOGARITHMIC,
 
   /* physics */
   M2_RELATIVISTIC=(1<<1),
@@ -124,11 +126,15 @@ struct m2sim
   int domain_resolution[4];
   int local_grid_size[4];
   int number_guard_zones;
+  int coordinate_scaling1; /* logarithmic, linear, etc */
+  int coordinate_scaling2;
+  int coordinate_scaling3;
   int geometry;
   int physics;
   int ct_scheme;
   int rk_order;
   int simple_eigenvalues; /* fix outer characteristics to plus/minus c */
+  int interpolation_fields;
   double plm_parameter;
   double cfl_parameter;
   m2sim_status status;
