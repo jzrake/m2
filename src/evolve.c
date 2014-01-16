@@ -122,6 +122,7 @@ void m2sim_calculate_flux(m2sim *m2)
   int i, j, k, q;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
+#pragma omp parallel for private(V0,V1,V2,V3,j,k,q)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
@@ -151,6 +152,7 @@ void m2sim_calculate_emf(m2sim *m2)
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2;
+#pragma omp parallel for private(V0,V1,V2,j,k) default(shared)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
@@ -224,6 +226,7 @@ void m2sim_calculate_gradient(m2sim *m2)
   double x[3];
   double y[3];
 
+#pragma omp parallel for private(V,x,y,j,k,q,n) default(shared)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
@@ -328,6 +331,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   m2vol *V0, *V1, *V2, *V3;
   char scheme = m2->ct_scheme;
 
+#pragma omp parallel for private(V0,V1,V2,V3,j,k,q) default(shared)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
@@ -470,6 +474,7 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
+#pragma omp parallel for private(V,I) default(shared)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     V->x0[0] = 0.0;
@@ -494,6 +499,7 @@ void m2sim_cache_conserved(m2sim *m2)
   int n;
   int *L = m2->local_grid_size;
   m2vol *V;
+#pragma omp parallel for private(V) default(shared)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     memcpy(V->consB, V->consA, 5 * sizeof(double));
@@ -509,6 +515,7 @@ void m2sim_average_runge_kutta(m2sim *m2, double b)
   int n, q;
   int *L = m2->local_grid_size;
   m2vol *V;
+#pragma omp parallel for private(V,q) default(shared)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     for (q=0; q<5; ++q) {
@@ -532,6 +539,7 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
   int i, j, k;
   int *L = m2->local_grid_size;
   m2vol *VC, *V1, *V2, *V3;
+#pragma omp parallel for private(VC,V1,V2,V3,j,k) default(shared)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
@@ -554,9 +562,11 @@ int m2sim_from_conserved_all(m2sim *m2)
   int *L = m2->local_grid_size;
   m2vol *V;
   double B[4];
+#pragma omp parallel for private(V,B,error) shared(L, m2) default(shared)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     /* assume fields have been averaged from faces to center (prim) */
+    B[0] = 0.0;
     B[1] = V->prim.B1;
     B[2] = V->prim.B2;
     B[3] = V->prim.B3;
@@ -565,11 +575,11 @@ int m2sim_from_conserved_all(m2sim *m2)
     if (error) {
       m2->initial_data(V);
       m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-			   V->consA, &V->aux);
+    			   V->consA, &V->aux);
       MSGF(INFO, "at global index [%d %d %d]",
-	   V->global_index[1],
-	   V->global_index[2],
-	   V->global_index[3]);
+    	   V->global_index[1],
+    	   V->global_index[2],
+    	   V->global_index[3]);
     }
   }
   return 0;
@@ -581,6 +591,7 @@ int m2sim_from_primitive_all(m2sim *m2)
   int *L = m2->local_grid_size;
   int n;
   m2vol *V;
+#pragma omp parallel for private(V) default(shared)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
@@ -596,14 +607,25 @@ double m2sim_minimum_courant_time(m2sim *m2)
   int *L = m2->local_grid_size;
   double dt, mindt = -1.0;
   m2vol *V;
-  for (n=0; n<L[0]; ++n) {
-    V = m2->volumes + n;
-    dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux);
-    if (dt < mindt || mindt < 0.0) {
-      mindt = dt;
+  double globalmindt = mindt;
+#pragma omp parallel private(V, dt) firstprivate(mindt) default(shared)
+  {
+#pragma omp for
+    for (n=0; n<L[0]; ++n) {
+      V = m2->volumes + n;
+      dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux);
+      if (dt < mindt || mindt < 0.0) {
+	mindt = dt;
+      }
+    }
+#pragma omp critical
+    {
+      if (mindt < globalmindt || globalmindt < 0.0) {
+	globalmindt = mindt;
+      }
     }
   }
-  return mindt;
+  return globalmindt;
 }
 
 

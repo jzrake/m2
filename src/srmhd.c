@@ -78,12 +78,16 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[5] = B1;
   Uin[6] = B2;
   Uin[7] = B3;
+  int error;
 
+#pragma omp critical
+  {
   srmhd_c2p_set_gamma(gamma_law_index);
   srmhd_c2p_new_state(Uin);
   srmhd_c2p_estimate_from_cons();
   //int error = srmhd_c2p_solve_anton2dzw(Pin);
-  int error = srmhd_c2p_solve_noble1dw(Pin);
+  error = srmhd_c2p_solve_noble1dw(Pin);
+  }
 
   if (error == SRMHD_C2P_PRIM_NEGATIVE_PRESSURE) {
     m2prim Pfix;
