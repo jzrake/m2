@@ -79,8 +79,9 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[6] = B2;
   Uin[7] = B3;
   int error;
-
+#if (M2_HAVE_OMP)
 #pragma omp critical
+#endif
   {
   srmhd_c2p_set_gamma(gamma_law_index);
   srmhd_c2p_new_state(Uin);

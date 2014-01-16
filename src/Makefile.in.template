@@ -13,6 +13,7 @@ RANLIB = ranlib
 # Dependencies (set to 1 if available) and other flags
 # ----------------------------------------------------------
 HAVE_MPI = 0
+HAVE_OMP = 0
 HAVE_GLUT = 0
 DEBUG_FILE = NULL
 
