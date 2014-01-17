@@ -156,7 +156,9 @@ double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
 void m2_to_cartesian(double x[4], double xcart[4], int geometry);
-
+int m2_solve_quartic_equation(double d4, double d3,
+			      double d2, double d1, double d0,
+			      double roots[4]);
 
 /* vol */
 double m2vol_minimum_dimension(m2vol *V);

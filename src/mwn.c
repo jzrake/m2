@@ -44,8 +44,8 @@ static void boundary_conditions(m2sim *m2)
   double t;
   double a = 1.0;
   double g;
-  double g0 = 1.0 + 3.0 * f;
-  double B0 = 0.0 + 1.0 * f;
+  double g0 = 1.0 + 10.0 * f;
+  double B0 = 0.0 + 10.0 * f;
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -191,14 +191,15 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
+  m2sim_set_rk_order(m2, 2);
   m2sim_set_analysis(m2, analysis);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
   m2sim_set_initial_data(m2, initial_data);
 
-  m2->plm_parameter = 1.00;
-  m2->cfl_parameter = 0.30;
-  m2->simple_eigenvalues = 1;
+  m2->plm_parameter = 1.0;
+  m2->cfl_parameter = 0.4;
+  m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
   m2->coordinate_scaling1 = M2_LOGARITHMIC;
 

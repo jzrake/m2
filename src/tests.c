@@ -1,7 +1,6 @@
 #include <math.h>
 #include "m2.h"
 #include "hydro.h"
-#include "polynomials.h"
 
 
 void test_srmhd_c2p()
@@ -95,38 +94,38 @@ void test_quartic()
 		  -49480.3771267108,
 		  +82221.6612223221,
 		  -60722.5167663058,
-		  +16816.5669665401}; 
-  int n, nr;
-  double y, *A;
+		  +16816.5669665401};
+  double A3[5] = {+11782.9065783065,
+		  -48988.7329357975,
+		  +76377.5655986056,
+		  -52923.3676374477,
+		  +13751.6553530872};
+  double A4[5] = {+00.0335111570,
+		  -01.1655211505,
+		  +12.7687728282,
+		  -56.1746104789,
+		  +85.6898329342};
+  int i, n, nr;
+  double y, *A, *As[4] = {A1, A2, A3, A4};
 
-  A = A1;
-  nr = solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
-  printf("there are %d roots:\n", nr);
-  for (n=0; n<nr; ++n) {
-    y = (A[4]*pow(roots[n], 4) +
-	 A[3]*pow(roots[n], 3) +
-	 A[2]*pow(roots[n], 2) +
-	 A[1]*pow(roots[n], 1) +
-	 A[0]*pow(roots[n], 0));
-    printf("r%d = %f, y(r%d) = %f\n", n, roots[n], n, y);
-  }
-
-  A = A2;
-  nr = solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
-  printf("there are %d roots:\n", nr);
-  for (n=0; n<nr; ++n) {
-    y = (A[4]*pow(roots[n], 4) +
-	 A[3]*pow(roots[n], 3) +
-	 A[2]*pow(roots[n], 2) +
-	 A[1]*pow(roots[n], 1) +
-	 A[0]*pow(roots[n], 0));
-    printf("r%d = %f, y(r%d) = %f\n", n, roots[n], n, y);
+  for (i=0; i<4; ++i) {
+    A = As[i];
+    nr = m2_solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
+    printf("there are %d roots:\n", nr);
+    for (n=0; n<4; ++n) {
+      y = (A[4]*pow(roots[n], 4) +
+	   A[3]*pow(roots[n], 3) +
+	   A[2]*pow(roots[n], 2) +
+	   A[1]*pow(roots[n], 1) +
+	   A[0]*pow(roots[n], 0));
+      printf("r%d = %f, y(r%d) = %f\n", n, roots[n], n, y);
+    }
   }
 }
 
 void m2_self_test()
 {
   test_srmhd_c2p();
-  test_srmhd_waves();
+  //test_srmhd_waves();
   test_quartic();
 }

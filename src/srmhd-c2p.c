@@ -37,7 +37,7 @@ enum { rho, pre, vx, vy, vz };             // Primitive
 
 
 static const int MaxIteration = 250;
-static const double Tolerance = 1e-14;
+static const double Tolerance = 1e-12;
 static const double bigZ = 1e20;
 static const double bigW = 1e12;
 static const double smlZ = 0.0;

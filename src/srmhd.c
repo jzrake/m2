@@ -1,7 +1,6 @@
 #include <math.h>
 #include "hydro.h"
 #include "srmhd-c2p.h"
-#include "polynomials.h"
 
 #define gamma_law_index (4./3.)
 
@@ -88,7 +87,8 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     srmhd_c2p_set_gamma(gamma_law_index);
     srmhd_c2p_new_state(Uin);
     srmhd_c2p_estimate_from_cons();
-    error = srmhd_c2p_solve_noble1dw(Pin);
+    //    error = srmhd_c2p_solve_noble1dw(Pin);
+    error = srmhd_c2p_solve_anton2dzw(Pin);
   }
 
   if (error != SRMHD_C2P_SUCCESS) {
@@ -157,7 +157,7 @@ int srmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 
 int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
-  if (aux->m2->simple_eigenvalues) {
+  if (aux->m2 && aux->m2->simple_eigenvalues) {
     evals[0] = -1.0;
     evals[1] = 0.0;
     evals[2] = 0.0;
@@ -205,9 +205,10 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   double roots[4];
   int nr;
 
-  nr = solve_quartic_equation(A4, A3, A2, A1, A0, roots);
+  nr = m2_solve_quartic_equation(A4, A3, A2, A1, A0, roots);
 
-  if (nr == 4) {
+  if (nr == 2 || nr == 4) {
+    /* if nr=2, the slow wave has same speed as the entropy wave */
     evals[0] = roots[0];
     evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
     evals[2] = roots[1];
@@ -217,30 +218,13 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
     evals[7] = roots[3];
   }
-  else if (nr == 2) {
-    /* probably the slow wave has same speed as the entropy wave */
-    evals[0] = roots[0];
-    evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
-    evals[2] = vn;
-    evals[3] = vn;
-    evals[4] = vn;
-    evals[5] = vn;
-    evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
-    evals[7] = roots[1];
-  }
   else {
     m2_print_state(NULL, aux, NULL);
     printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n",
     	   A0, A1, A2, A3, A4);
-    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
-    evals[0] = -1.0;
-    evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
-    evals[2] = vn;
-    evals[3] = vn;
-    evals[4] = vn;
-    evals[5] = vn;
-    evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
-    evals[7] = +1.0;
+    printf("x = [%+12.10f %+12.10f %+12.10f %+12.10f]\n",
+    	   roots[0], roots[1], roots[2], roots[3]);
+    MSGF(FATAL, "magnetosonic polynomial N4=0 has %d real roots", nr);
   }
 
   return 0;

@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       157,          7]
-NotebookDataLength[     11256,        324]
-NotebookOptionsPosition[     10773,        302]
-NotebookOutlinePosition[     11130,        318]
-CellTagsIndexPosition[     11087,        315]
+NotebookDataLength[     14181,        408]
+NotebookOptionsPosition[     13658,        385]
+NotebookOutlinePosition[     14014,        401]
+CellTagsIndexPosition[     13971,        398]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -203,7 +203,8 @@ Cell[BoxData[
       RowBox[{
        FractionBox["bb", "cs2"], "+", "\[Rho]h"}], ")"}]}]}]}], 
   "}"}]], "Output",
- CellChangeTimes->{3.5986574124805813`*^9}]
+ CellChangeTimes->{
+  3.5986574124805813`*^9, {3.59892717404916*^9, 3.5989271887920017`*^9}}]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -297,11 +298,93 @@ $CellContext`u0) + (-1 + $CellContext`cs2^(-1)) $CellContext`Hg \
   Function[BoxForm`e$, 
    MatrixForm[BoxForm`e$]]]], "Output",
  CellChangeTimes->{{3.5986509607464867`*^9, 3.598651045632113*^9}, 
-   3.598657414849599*^9}]
-}, Open  ]]
+   3.598657414849599*^9, {3.598927174083736*^9, 3.598927188836378*^9}}]
+}, Open  ]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"GetCFormNoPowers", "[", 
+   RowBox[{"x", "/.", 
+    RowBox[{
+     RowBox[{"Solve", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         SuperscriptBox["x", "4"], "+", 
+         RowBox[{"a3", " ", 
+          SuperscriptBox["x", "3"]}], "+", 
+         RowBox[{"a2", " ", 
+          SuperscriptBox["x", "2"]}], "+", 
+         RowBox[{"a1", " ", 
+          SuperscriptBox["x", "1"]}], "+", 
+         RowBox[{"a0", " ", 
+          SuperscriptBox["x", "0"]}]}], "\[Equal]", "0"}], ",", "x"}], "]"}], 
+     "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}]}], "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"GetCFormNoPowers", "[", 
+   RowBox[{"x", "/.", 
+    RowBox[{
+     RowBox[{"Solve", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         SuperscriptBox["x", "4"], "+", 
+         RowBox[{"a3", " ", 
+          SuperscriptBox["x", "3"]}], "+", 
+         RowBox[{"a2", " ", 
+          SuperscriptBox["x", "2"]}], "+", 
+         RowBox[{"a1", " ", 
+          SuperscriptBox["x", "1"]}], "+", 
+         RowBox[{"a0", " ", 
+          SuperscriptBox["x", "0"]}]}], "\[Equal]", "0"}], ",", "x"}], "]"}], 
+     "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}]}], "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"GetCFormNoPowers", "[", 
+   RowBox[{"x", "/.", 
+    RowBox[{
+     RowBox[{"Solve", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         SuperscriptBox["x", "4"], "+", 
+         RowBox[{"a3", " ", 
+          SuperscriptBox["x", "3"]}], "+", 
+         RowBox[{"a2", " ", 
+          SuperscriptBox["x", "2"]}], "+", 
+         RowBox[{"a1", " ", 
+          SuperscriptBox["x", "1"]}], "+", 
+         RowBox[{"a0", " ", 
+          SuperscriptBox["x", "0"]}]}], "\[Equal]", "0"}], ",", "x"}], "]"}], 
+     "\[LeftDoubleBracket]", "3", "\[RightDoubleBracket]"}]}], "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"GetCFormNoPowers", "[", 
+   RowBox[{"x", "/.", 
+    RowBox[{
+     RowBox[{"Solve", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         SuperscriptBox["x", "4"], "+", 
+         RowBox[{"a3", " ", 
+          SuperscriptBox["x", "3"]}], "+", 
+         RowBox[{"a2", " ", 
+          SuperscriptBox["x", "2"]}], "+", 
+         RowBox[{"a1", " ", 
+          SuperscriptBox["x", "1"]}], "+", 
+         RowBox[{"a0", " ", 
+          SuperscriptBox["x", "0"]}]}], "\[Equal]", "0"}], ",", "x"}], "]"}], 
+     "\[LeftDoubleBracket]", "4", "\[RightDoubleBracket]"}]}], "]"}], 
+  ";"}]}], "Input",
+ CellChangeTimes->{{3.598925331418639*^9, 3.598925373743458*^9}, {
+  3.598925406198812*^9, 3.5989254517461433`*^9}, {3.598925486912176*^9, 
+  3.598925511153597*^9}, {3.598925588099489*^9, 3.5989256163826857`*^9}, {
+  3.5989271721537933`*^9, 3.598927172999836*^9}}]
 },
-WindowSize->{1127, 995},
-WindowMargins->{{-3, Automatic}, {Automatic, 0}},
+WindowSize->{1436, 856},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
 FrontEndVersion->"9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (November 20, \
 2012)",
 StyleDefinitions->"Default.nb"
@@ -317,15 +400,16 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[557, 20, 957, 28, 63, "Input"],
+Cell[557, 20, 957, 28, 46, "Input"],
 Cell[CellGroupData[{
 Cell[1539, 52, 3128, 75, 313, "Input"],
-Cell[4670, 129, 2353, 76, 124, "Output"]
+Cell[4670, 129, 2403, 77, 86, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[7060, 210, 456, 12, 28, "Input"],
-Cell[7519, 224, 3238, 75, 108, "Output"]
-}, Open  ]]
+Cell[7110, 211, 456, 12, 28, "Input"],
+Cell[7569, 225, 3284, 75, 108, "Output"]
+}, Open  ]],
+Cell[10868, 303, 2786, 80, 101, "Input"]
 }
 ]
 *)
