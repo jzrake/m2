@@ -44,7 +44,7 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   }
 
   m2sim_from_interpolated(VL->m2, yL, &PL);
-  m2sim_from_interpolated(VL->m2, yR, &PR);
+  m2sim_from_interpolated(VR->m2, yR, &PR);
 
   UL[B11] = PL.B1;
   UL[B22] = PL.B2;

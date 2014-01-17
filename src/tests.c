@@ -11,6 +11,8 @@ void test_srmhd_c2p()
   double U[5], UfromP[5];
   double B[4];
 
+  A.m2 = NULL;
+
   U[DDD] = 1.0;
   U[TAU] = 8.0;
   U[S11] = 0.1;
@@ -42,6 +44,7 @@ void test_srmhd_waves()
   double evals2[8];
   double n[4] = { 0.0, 1.0, 0.0, 0.0 };
 
+  A.m2 = NULL;
   P.v1 = 0.1;
   P.v2 = 0.2;
   P.v3 = 0.3;

@@ -44,8 +44,8 @@ static void boundary_conditions(m2sim *m2)
   double t;
   double a = 1.0;
   double g;
-  double g0 = 1.0 + 10.0 * f;
-  double B0 = 0.0 + 10.0 * f;
+  double g0 = 1.0 + 3.0 * f;
+  double B0 = 0.0 + 1.0 * f;
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -55,14 +55,17 @@ static void boundary_conditions(m2sim *m2)
       t = m2vol_coordinate_centroid(V, 2);
       g = g0 * (a + (1 - a) * sin(t) * sin(t));
 
+      V->prim.d = 1.00;
+      V->prim.p = 0.01;
       V->prim.v1 = sqrt(1.0 - 1.0/(g*g));
       V->prim.v2 = 0.0;
       V->prim.v3 = 0.0;
-      V->prim.d = 1.00;
-      V->prim.p = 0.01;
-      V->Bflux1A = 0.0;
-      V->Bflux2A = 0.0;
-      V->Bflux3A = B0 * sin(t) * V->area3;
+      V->prim.B1 = 0.0;
+      V->prim.B2 = 0.0;
+      V->prim.B3 = B0 * sin(t);
+      V->Bflux1A = V->prim.B1 * V->area1;
+      V->Bflux2A = V->prim.B2 * V->area2;
+      V->Bflux3A = V->prim.B3 * V->area3;
       m2sim_from_primitive(m2,
                            &V->prim, NULL, NULL,
                            V ->volume,
@@ -194,9 +197,9 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_initial_data(m2, initial_data);
 
   m2->plm_parameter = 1.00;
-  m2->cfl_parameter = 0.40;
+  m2->cfl_parameter = 0.30;
   m2->simple_eigenvalues = 1;
-  m2->interpolation_fields = M2_PRIMITIVE;//_AND_FOUR_VELOCITY;
+  m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
   m2->coordinate_scaling1 = M2_LOGARITHMIC;
 
   remove(FNAME_VOLUME_INTEGRALS_I);

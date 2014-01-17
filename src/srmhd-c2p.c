@@ -137,6 +137,11 @@ int srmhd_c2p_reconstruct_prim(double Z, double W, double *Pout)
     P[pre] = PressureFloor;    
   }
 
+  int error = srmhd_c2p_check_prim(P);
+  if (error) {
+    return error;
+  }
+
   // Don't actually modify the user's prim state until we're sure the state is
   // good.
   // ---------------------------------------------------------------------------

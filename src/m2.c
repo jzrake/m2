@@ -253,6 +253,7 @@ void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
     P->B3 = y[5];
     P->d  = y[6];
     P->p  = y[7];
+    break;
   case M2_PRIMITIVE_AND_FOUR_VELOCITY:
     /* gamma * beta = {y[0], y[1], y[2]} */
     u0 = sqrt(1.0 + y[0]*y[0] + y[1]*y[1] + y[2]*y[2]);
