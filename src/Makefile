@@ -53,7 +53,6 @@ m2-cfg.h : .FORCE
 	@$(RM) $(TMP_H)
 	@echo "/* m2 config header file */" >> $(TMP_H)
 	@echo "#define M2_HAVE_MPI $(HAVE_MPI)" >> $(TMP_H)
-	@echo "#define M2_HAVE_OMP $(HAVE_OMP)" >> $(TMP_H)
 	@echo "#define M2_HAVE_GLUT $(HAVE_GLUT)" >> $(TMP_H)
 	@echo "#define M2_GIT_SHA \"$(GIT_SHA)\"" >> $(TMP_H)
 	@echo "#define M2_DEBUG_FILE $(DEBUG_FILE)" >> $(TMP_H)

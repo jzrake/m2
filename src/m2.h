@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "m2-cfg.h"
-#if (M2_HAVE_OMP)
-#include <omp.h>
-#endif
 
 #define M2_NONRELATIVISTIC 0
 #define M2_UNMAGNETIZED 0
@@ -183,7 +180,6 @@ void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc);
 void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg);
 void m2sim_set_initial_data(m2sim *m2, m2vol_operator id);
 void m2sim_initialize(m2sim *m2);
-void m2sim_map(m2sim *m2, m2vol_operator f);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4]);
 void m2sim_calculate_gradient(m2sim *m2);

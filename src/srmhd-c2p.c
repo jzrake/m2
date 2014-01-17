@@ -35,95 +35,117 @@
 enum { ddd, tau, Sx, Sy, Sz, Bx, By, Bz }; // Conserved
 enum { rho, pre, vx, vy, vz };             // Primitive
 
+struct srmhd_c2p {
+  int MaxIterations;
+  double Tolerance;
+  double bigZ;
+  double bigW;
+  double smlZ;
+  double smlW;
 
-static const int MaxIteration = 250;
-static const double Tolerance = 1e-12;
-static const double bigZ = 1e20;
-static const double bigW = 1e12;
-static const double smlZ = 0.0;
-static const double smlW = 1.0;
+  int Iterations;
+  double AdiabaticGamma;
+  double gamf;
+  double D,Tau;
+  double S2,B2,BS,BS2;
+  double Cons[8];
+  double Z_start, W_start;
+  double PressureFloor;
+} ;
 
-static int Iterations = 0;
-static double AdiabaticGamma = 1.4;
-static double gamf;
-static double D,Tau;
-static double S2,B2,BS,BS2;
-static double Cons[8];
-static double Z_start, W_start;
-static double PressureFloor = -1.0;
 
+srmhd_c2p *srmhd_c2p_new()
+{
+  srmhd_c2p *c2p = (srmhd_c2p*) malloc(sizeof(srmhd_c2p));
+  c2p->MaxIterations = 250;
+  c2p->Tolerance = 1e-12;
+  c2p->bigZ = 1e20;
+  c2p->bigW = 1e12;
+  c2p->smlZ = 0.0;
+  c2p->smlW = 1.0;
+  c2p->Iterations = 0;
+  c2p->AdiabaticGamma = 1.4;
+  c2p->PressureFloor = -1.0;
+  return c2p;
+}
+void srmhd_c2p_del(srmhd_c2p *c2p)
+{
+  free(c2p);
+}
 
 
 // Set method for the adiabatic index (defaults to 1.4)
 // -----------------------------------------------------------------------------
-void srmhd_c2p_set_gamma(double adiabatic_gamma)
+void srmhd_c2p_set_gamma(srmhd_c2p *c2p, double adiabatic_gamma)
 {
-  AdiabaticGamma = adiabatic_gamma;
-  gamf = (AdiabaticGamma - 1.0) / AdiabaticGamma;
+  c2p->AdiabaticGamma = adiabatic_gamma;
+  c2p->gamf = (c2p->AdiabaticGamma - 1.0) / c2p->AdiabaticGamma;
 }
 
 // Get method for the iterations on the last execution
 // -----------------------------------------------------------------------------
-int srmhd_c2p_get_iterations()
+int srmhd_c2p_get_iterations(srmhd_c2p *c2p)
 {
-  return Iterations;
+  return c2p->Iterations;
 }
 
-void srmhd_c2p_set_pressure_floor(double pf)
+void srmhd_c2p_set_pressure_floor(srmhd_c2p *c2p, double pf)
 {
-  PressureFloor = pf;
+  c2p->PressureFloor = pf;
 }
 
 // Provide a new conserved state in memory. Before the solver is executed, the
 // user must provide a guess for the initial primitive state, by calling either
 // estimate_from_cons() or set_starting_prim(P).
 // -----------------------------------------------------------------------------
-void srmhd_c2p_new_state(const double *U)
+void srmhd_c2p_new_state(srmhd_c2p *c2p, const double *U)
 {
-  D    = U[ddd];
-  Tau  = U[tau];
-  S2   = U[Sx]*U[Sx] + U[Sy]*U[Sy] + U[Sz]*U[Sz];
-  B2   = U[Bx]*U[Bx] + U[By]*U[By] + U[Bz]*U[Bz];
-  BS   = U[Bx]*U[Sx] + U[By]*U[Sy] + U[Bz]*U[Sz];
-  BS2  = BS*BS;
-
-  memcpy(Cons, U, 8*sizeof(double));
+  c2p->D    = U[ddd];
+  c2p->Tau  = U[tau];
+  c2p->S2   = U[Sx]*U[Sx] + U[Sy]*U[Sy] + U[Sz]*U[Sz];
+  c2p->B2   = U[Bx]*U[Bx] + U[By]*U[By] + U[Bz]*U[Bz];
+  c2p->BS   = U[Bx]*U[Sx] + U[By]*U[Sy] + U[Bz]*U[Sz];
+  c2p->BS2  = c2p->BS * c2p->BS;
+  memcpy(c2p->Cons, U, 8*sizeof(double));
 }
 
 // This estimate becomes exact for no magnetic field in the NR limit.
 // -----------------------------------------------------------------------------
-void srmhd_c2p_estimate_from_cons()
+void srmhd_c2p_estimate_from_cons(srmhd_c2p *c2p)
 {
-  Z_start = sqrt(S2 + D*D);
-  W_start = Z_start / D;
+  c2p->Z_start = sqrt(c2p->S2 + c2p->D*c2p->D);
+  c2p->W_start = c2p->Z_start / c2p->D;
 }
-void srmhd_c2p_get_starting_prim(double *P)
+void srmhd_c2p_get_starting_prim(srmhd_c2p *c2p, double *P)
 {
-  srmhd_c2p_reconstruct_prim(Z_start, W_start, P);
+  srmhd_c2p_reconstruct_prim(c2p, c2p->Z_start, c2p->W_start, P);
 }
 
 // Explicitly provide a guess to be used at the initial iteration.
 // -----------------------------------------------------------------------------
-void srmhd_c2p_set_starting_prim(const double *P)
+void srmhd_c2p_set_starting_prim(srmhd_c2p *c2p, const double *P)
 {
   const double V2 = P[vx]*P[vx] + P[vy]*P[vy] + P[vz]*P[vz];
   const double W2 = 1.0 / (1.0 - V2);
-  const double e = P[pre] / (P[rho] * (AdiabaticGamma - 1.0));
+  const double e = P[pre] / (P[rho] * (c2p->AdiabaticGamma - 1.0));
   const double h = 1.0 + e + P[pre] / P[rho];
 
-  Z_start = P[rho] * h * W2;
-  W_start = sqrt(W2);
+  c2p->Z_start = P[rho] * h * W2;
+  c2p->W_start = sqrt(W2);
 }
 
 // Using Z=rho*h*W^2, and W, get the primitive variables.
 // -----------------------------------------------------------------------------
-int srmhd_c2p_reconstruct_prim(double Z, double W, double *Pout)
+int srmhd_c2p_reconstruct_prim(srmhd_c2p *c2p, double Z, double W, double *Pout)
 {
   double P[8]; // Place result into temporary prim state for now.
-  const double b0 = BS * W / Z;
+  const double b0    = c2p->BS * W / Z;
+  const double D     = c2p->D;
+  const double B2    = c2p->B2;
+  const double *Cons = c2p->Cons;
 
   P[rho] =  D/W;
-  P[pre] = (D/W) * (Z/(D*W) - 1.0) * gamf;
+  P[pre] = (D/W) * (Z/(D*W) - 1.0) * c2p->gamf;
   P[vx ] = (Cons[Sx] + b0*Cons[Bx]/W) / (Z+B2);
   P[vy ] = (Cons[Sy] + b0*Cons[By]/W) / (Z+B2);
   P[vz ] = (Cons[Sz] + b0*Cons[Bz]/W) / (Z+B2);
@@ -131,13 +153,13 @@ int srmhd_c2p_reconstruct_prim(double Z, double W, double *Pout)
   P[By ] =  Cons[By];
   P[Bz ] =  Cons[Bz];
 
-  if (P[pre] < PressureFloor && PressureFloor > 0.0) {
+  if (P[pre] < c2p->PressureFloor && c2p->PressureFloor > 0.0) {
     /* printf("setting pressure floor, p=%4.3e -> %2.1e\n", */
-    /* 	   P[pre], PressureFloor); */
-    P[pre] = PressureFloor;    
+    /*     P[pre], PressureFloor); */
+    P[pre] = c2p->PressureFloor;
   }
 
-  int error = srmhd_c2p_check_prim(P);
+  int error = srmhd_c2p_check_prim(c2p, P);
   if (error) {
     return error;
   }
@@ -151,7 +173,7 @@ int srmhd_c2p_reconstruct_prim(double Z, double W, double *Pout)
 
 // Routines to verify the health of conserved or primitive states
 // -----------------------------------------------------------------------------
-int srmhd_c2p_check_cons(const double *U)
+int srmhd_c2p_check_cons(srmhd_c2p *c2p, const double *U)
 {
   int i;
   if (U[ddd] < 0.0) return SRMHD_C2P_CONS_NEGATIVE_DENSITY;
@@ -163,7 +185,7 @@ int srmhd_c2p_check_cons(const double *U)
   }
   return SRMHD_C2P_SUCCESS;
 }
-int srmhd_c2p_check_prim(const double *P)
+int srmhd_c2p_check_prim(srmhd_c2p *c2p, const double *P)
 {
   int i;
   const double v2 = P[vx]*P[vx] + P[vy]*P[vy] + P[vz]*P[vz];
@@ -180,31 +202,37 @@ int srmhd_c2p_check_prim(const double *P)
 
 // Solution based on Anton & Zanotti (2006), equations 84 and 85.
 // -----------------------------------------------------------------------------
-int srmhd_c2p_solve_anton2dzw(double *P)
+int srmhd_c2p_solve_anton2dzw(srmhd_c2p *c2p, double *P)
 {
-  int bad_input = srmhd_c2p_check_cons(Cons);
+  int bad_input = srmhd_c2p_check_cons(c2p, c2p->Cons);
   if (bad_input) {
     return bad_input;
   }
   // Starting values
   // ---------------------------------------------------------------------------
-  Iterations = 0;
-  double error = 1.0;
-  double W = W_start;
-  double Z = Z_start;
+  c2p->Iterations = 0;
+  const double D   = c2p->D;
+  const double B2  = c2p->B2;
+  const double S2  = c2p->S2;
+  const double BS2 = c2p->BS2;
+  const double Tau = c2p->Tau;
 
-  while (error > Tolerance) {
+  double error = 1.0;
+  double W = c2p->W_start;
+  double Z = c2p->Z_start;
+
+  while (error > c2p->Tolerance) {
 
     const double Z2 = Z*Z;
     const double Z3 = Z*Z2;
     const double W2 = W*W;
     const double W3 = W*W2;
-    const double Pre = (D/W) * (Z/(D*W) - 1.0) * gamf;
+    const double Pre = (D/W) * (Z/(D*W) - 1.0) * c2p->gamf;
 
     const double df0dZ = 2*(B2+Z)*(BS2*W2 + (W2-1)*Z3) / (W2*Z3);
     const double df0dW = 2*(B2+Z)*(B2+Z) / W3;
-    const double df1dZ = 1.0 + BS2/Z3 - gamf/W2;
-    const double df1dW = B2/W3 + (2*Z - D*W)/W3 * gamf;
+    const double df1dZ = 1.0 + BS2/Z3 - c2p->gamf/W2;
+    const double df1dW = B2/W3 + (2*Z - D*W)/W3 * c2p->gamf;
 
     double f[2];
     double J[4], G[4];
@@ -232,25 +260,25 @@ int srmhd_c2p_solve_anton2dzw(double *P)
     double Z_new = Z + dZ;
     double W_new = W + dW;
 
-    Z_new = (Z_new > smlZ) ? Z_new : -Z_new;
-    Z_new = (Z_new < bigZ) ? Z_new :  Z;
+    Z_new = (Z_new > c2p->smlZ) ? Z_new : -Z_new;
+    Z_new = (Z_new < c2p->bigZ) ? Z_new :  Z;
 
-    W_new = (W_new > smlW) ? W_new : smlW;
-    W_new = (W_new < bigW) ? W_new : bigW;
+    W_new = (W_new > c2p->smlW) ? W_new : c2p->smlW;
+    W_new = (W_new < c2p->bigW) ? W_new : c2p->bigW;
 
     Z = Z_new;
     W = W_new;
 
     // -------------------------------------------------------------------------
     error = fabs(dZ/Z) + fabs(dW/W);
-    ++Iterations;
+    ++c2p->Iterations;
 
-    if (Iterations == MaxIteration) {
+    if (c2p->Iterations == c2p->MaxIterations) {
       return SRMHD_C2P_MAXITER;
     }
   }
 
-  return srmhd_c2p_reconstruct_prim(Z, W, P);
+  return srmhd_c2p_reconstruct_prim(c2p, Z, W, P);
 }
 
 
@@ -259,21 +287,27 @@ int srmhd_c2p_solve_anton2dzw(double *P)
 // really be called '1dz', but I use this name to reflect the name of the
 // section in which it appears.
 // -----------------------------------------------------------------------------
-int srmhd_c2p_solve_noble1dw(double *P)
+int srmhd_c2p_solve_noble1dw(srmhd_c2p *c2p, double *P)
 {
-  int bad_input = srmhd_c2p_check_cons(Cons);
+  int bad_input = srmhd_c2p_check_cons(c2p, c2p->Cons);
   if (bad_input) {
     return bad_input;
   }
   // Starting values
   // ---------------------------------------------------------------------------
-  Iterations = 0;
+  c2p->Iterations = 0;
+  const double D   = c2p->D;
+  const double B2  = c2p->B2;
+  const double S2  = c2p->S2;
+  const double BS2 = c2p->BS2;
+  const double Tau = c2p->Tau;
+
   double error = 1.0;
-  double Z = Z_start;
+  double Z = c2p->Z_start;
 
   double f, g;
 
-  while (error > Tolerance) {
+  while (error > c2p->Tolerance) {
 
     const double Z2  = Z*Z;
     const double Z3  = Z*Z2;
@@ -285,11 +319,11 @@ int srmhd_c2p_solve_noble1dw(double *P)
     const double W2  = 1.0 / (1.0 - V2);
     const double W   = sqrt(W2);
     const double W3  = W*W2;
-    const double Pre = (D/W) * (Z/(D*W) - 1.0) * gamf;
+    const double Pre = (D/W) * (Z/(D*W) - 1.0) * c2p->gamf;
 
     const double dv2dZ    = (ap*b - bp*a) / (b*b); // (a'b - b'a) / b^2
-    const double delPdelZ = gamf/W2;
-    const double delPdelW = gamf*(D/W2 - 2*Z/W3);
+    const double delPdelZ = c2p->gamf/W2;
+    const double delPdelW = c2p->gamf * (D/W2 - 2*Z/W3);
     const double dWdv2    = 0.5*W3;
     const double dPdZ     = delPdelW * dWdv2 * dv2dZ + delPdelZ;
 
@@ -301,15 +335,15 @@ int srmhd_c2p_solve_noble1dw(double *P)
     // -------------------------------------------------------------------------
     double Z_new = Z + dZ;
 
-    Z_new = (Z_new > smlZ) ? Z_new : -Z_new;
-    Z_new = (Z_new < bigZ) ? Z_new :  Z;
+    Z_new = (Z_new > c2p->smlZ) ? Z_new : -Z_new;
+    Z_new = (Z_new < c2p->bigZ) ? Z_new :  Z;
 
     Z = Z_new;
 
     error = fabs(dZ/Z);
-    ++Iterations;
+    ++c2p->Iterations;
 
-    if (Iterations == MaxIteration) {
+    if (c2p->Iterations == c2p->MaxIterations) {
       return SRMHD_C2P_MAXITER;
     }
   }
@@ -323,10 +357,10 @@ int srmhd_c2p_solve_noble1dw(double *P)
   const double W2  = 1.0 / (1.0 - V2);
   const double W   = sqrt(W2);
 
-  return srmhd_c2p_reconstruct_prim(Z, W, P);
+  return srmhd_c2p_reconstruct_prim(c2p, Z, W, P);
 }
 
-char *srmhd_c2p_get_error(int error)
+const char *srmhd_c2p_get_error(srmhd_c2p *c2p, int error)
 {
   switch (error) {
   case SRMHD_C2P_SUCCESS:

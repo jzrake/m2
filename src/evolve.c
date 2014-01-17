@@ -1,5 +1,8 @@
 #include <string.h>
 #include <math.h>
+#if _OPENMP
+#include <omp.h>
+#endif
 #include "m2.h"
 
 #define ENABLE_PLM 1
@@ -115,7 +118,7 @@ void m2sim_calculate_flux(m2sim *m2)
   int i, j, k, q;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,V3,j,k,q)
 #endif
   for (i=0; i<L[1]; ++i) {
@@ -147,7 +150,7 @@ void m2sim_calculate_emf(m2sim *m2)
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,j,k) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
@@ -216,7 +219,7 @@ void m2sim_calculate_gradient(m2sim *m2)
   m2vol *V[3];
   double x[3];
   double ys[24];
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V,x,ys,j,k,q,n) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
@@ -314,7 +317,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
   char scheme = m2->ct_scheme;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,V3,j,k,q) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
@@ -459,7 +462,7 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V,I) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
@@ -486,7 +489,7 @@ void m2sim_cache_conserved(m2sim *m2)
   int n;
   int *L = m2->local_grid_size;
   m2vol *V;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
@@ -504,7 +507,7 @@ void m2sim_average_runge_kutta(m2sim *m2, double b)
   int n, q;
   int *L = m2->local_grid_size;
   m2vol *V;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V,q) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
@@ -530,7 +533,7 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
   int i, j, k;
   int *L = m2->local_grid_size;
   m2vol *VC, *V1, *V2, *V3;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(VC,V1,V2,V3,j,k) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
@@ -555,8 +558,8 @@ int m2sim_from_conserved_all(m2sim *m2)
   int *L = m2->local_grid_size;
   m2vol *V;
   double B[4];
-#if (M2_HAVE_OMP)
-  //#pragma omp parallel for private(V,B,error) shared(L, m2) default(shared)
+#ifdef _OPENMP
+#pragma omp parallel for private(V,B,error) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -586,7 +589,7 @@ int m2sim_from_primitive_all(m2sim *m2)
   int *L = m2->local_grid_size;
   int n;
   m2vol *V;
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp parallel for private(V) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
@@ -605,11 +608,11 @@ double m2sim_minimum_courant_time(m2sim *m2)
   double dt, mindt = -1.0;
   m2vol *V;
   double globalmindt = mindt;
-#if (M2_HAVE_OMP)
-#pragma omp parallel private(V, dt) firstprivate(mindt) default(shared)
+#ifdef _OPENMP
+#pragma omp parallel private(V,dt) firstprivate(mindt) default(shared)
 #endif
   {
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp for
 #endif
     for (n=0; n<L[0]; ++n) {
@@ -619,7 +622,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
 	mindt = dt;
       }
     }
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
 #pragma omp critical
 #endif
     {
@@ -663,7 +666,7 @@ void m2sim_drive(m2sim *m2)
   int rk_order = m2->rk_order;
   double kzps; /* kilozones per second */
 
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
   double start_wtime, stop_wtime;
 #else
   clock_t start_cycle, stop_cycle;
@@ -674,7 +677,7 @@ void m2sim_drive(m2sim *m2)
 
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
 
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
   start_wtime = omp_get_wtime();
 #else
   start_cycle = clock();
@@ -695,7 +698,7 @@ void m2sim_drive(m2sim *m2)
     break;
   }
 
-#if (M2_HAVE_OMP)
+#ifdef _OPENMP
   stop_wtime = omp_get_wtime();
   kzps = 1e-3 * m2->local_grid_size[0] / (stop_wtime - start_wtime);
 #else

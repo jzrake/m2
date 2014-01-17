@@ -69,6 +69,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double B2 = B[2];
   double B3 = B[3];
   int error;
+  srmhd_c2p *c2p = srmhd_c2p_new();
 
   Uin[0] = U[DDD] / dV;
   Uin[1] = U[TAU] / dV;
@@ -79,20 +80,16 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[6] = B2;
   Uin[7] = B3;
 
-#if (M2_HAVE_OMP)
-#pragma omp critical
-#endif
-  {
-    srmhd_c2p_set_pressure_floor(1e-6);
-    srmhd_c2p_set_gamma(gamma_law_index);
-    srmhd_c2p_new_state(Uin);
-    srmhd_c2p_estimate_from_cons();
-    //    error = srmhd_c2p_solve_noble1dw(Pin);
-    error = srmhd_c2p_solve_anton2dzw(Pin);
-  }
+  srmhd_c2p_set_pressure_floor(c2p, 1e-6);
+  srmhd_c2p_set_gamma(c2p, gamma_law_index);
+  srmhd_c2p_new_state(c2p, Uin);
+  srmhd_c2p_estimate_from_cons(c2p);
+  error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
+  //error = srmhd_c2p_solve_noble1dw(c2p, Pin);
 
   if (error != SRMHD_C2P_SUCCESS) {
-    MSGF(WARNING, "%s", srmhd_c2p_get_error(error));
+    MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));
+    srmhd_c2p_del(c2p);
     return 1;
   }
 
@@ -144,6 +141,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->p = pg;
   }
 
+  srmhd_c2p_del(c2p);
   return 0;
 }
 

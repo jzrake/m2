@@ -385,8 +385,12 @@ void m2sim_run_analysis(m2sim *m2)
 }
 void m2sim_run_initial_data(m2sim *m2)
 {
+  int *L = m2->local_grid_size;
+  int n;
   if (m2->initial_data) {
-    m2sim_map(m2, m2->initial_data);
+    for (n=0; n<L[0]; ++n) {
+      m2->initial_data(m2->volumes + n);
+    }
   }
   else {
     MSG(FATAL, "no initial data function supplied");
