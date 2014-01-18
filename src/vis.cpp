@@ -17,12 +17,14 @@ extern "C" {
 ****************************************************************************/
 
 #include <string>
+#include <map>
 #include <cmath>
 #include "glui/glui.h"
 
 int   last_x, last_y;
 float xy_aspect;
 float rotationX = 0.0, rotationY = 0.0;
+
 
 /** These are the live variables passed into GLUI ***/
 int   obj_type = 0;
@@ -35,15 +37,6 @@ int   DrawMesh = 0;
 float scale = 0.0;
 std::string text = "";
 
-/** Pointers to the windows and some of the controls we'll create **/
-GLUI *cmd_line_glui=0, *glui;
-GLUI_Checkbox    *checkbox;
-GLUI_Spinner     *colortable_spinner, *scale_spinner;
-GLUI_RadioGroup  *radio;
-GLUI_EditText    *edittext;
-GLUI_CommandLine *cmd_line;
-GLUI_Panel       *obj_panel;
-GLUI_Button      *open_console_btn;
 
 /********** User IDs for callbacks ********/
 #define OPEN_CONSOLE_ID      100
@@ -59,17 +52,8 @@ GLUI_Button      *open_console_btn;
 #define CHANGE_DRAWMESH_ID   353
 
 
-/********** Miscellaneous global variables **********/
 
-GLfloat light0_ambient[] =  {0.1f, 0.1f, 0.3f, 1.0f};
-GLfloat light0_diffuse[] =  {.6f, .6f, 1.0f, 1.0f};
-GLfloat light0_position[] = {.5f, .5f, 1.0f, 0.0f};
-
-GLfloat light1_ambient[] =  {0.1f, 0.1f, 0.3f, 1.0f};
-GLfloat light1_diffuse[] =  {.9f, .6f, 0.0f, 1.0f};
-GLfloat light1_position[] = {-1.0f, -1.0f, 1.0f, 0.0f};
-
-
+static GLUI *glui;
 class M2GL_Dataset;
 static m2sim *M2;
 static std::vector<int> obj_keys;
@@ -113,10 +97,11 @@ public:
     double x11c[4];
     double x10c[4];
 
+
     VertexData = (GLfloat*) realloc(VertexData, L[0]*3*4*sizeof(GLfloat));
     ColorData = (GLfloat*) realloc(ColorData, L[0]*3*sizeof(GLfloat));
-    DataMember = obj_keys[obj_type];
-    //    printf("reloading data field %d\n", DataMember);
+    DataMember = M2_COMOVING_MASS_DENSITY;//obj_keys[obj_type];
+
 
     for (n=0; n<L[0]; ++n) {
       V = m2->volumes + n;
@@ -223,67 +208,6 @@ public:
     }
   }
 } ;
-
-
-
-
-void control_cb(int control)
-{
-  if (control == CHANGE_FIELD_ID) {
-    dataset->reload_data();
-  }
-  else if (control == CHANGE_COLORTABLE_ID) {
-    dataset->reload_data();    
-  }
-  else if (control == CHANGE_LOGSCALING_ID) {
-    dataset->reload_data();    
-  }
-}
-
-/**************************************** pointer_cb() *******************/
-/* GLUI control pointer callback                                         */
-/* You can also use a function that takes a GLUI_Control pointer as its  */
-/* argument.  This can simplify things sometimes, and reduce the clutter */
-/* of global variables by giving you the control pointer directly.       */
-/* For instance here we didn't need an additional global ID for the      */
-/* cmd_line because we can just compare pointers directly.               */
-
-void pointer_cb(GLUI_Control *control)
-{
-  if (control->get_id() == OPEN_CONSOLE_ID) {
-    cmd_line_glui = GLUI_Master.create_glui("Enter command:",
-					    0, 50, 500);
-    cmd_line = new GLUI_CommandLine(cmd_line_glui,
-				    "Command (try 'exit'):", NULL, -1,
-				    pointer_cb);
-    cmd_line->set_w(400);
-
-    GLUI_Panel *panel = new GLUI_Panel(cmd_line_glui, "", GLUI_PANEL_NONE);
-    new GLUI_Button(panel, "Clear History", CMD_HIST_RESET_ID, pointer_cb);
-    new GLUI_Column(panel, false);
-    new GLUI_Button(panel, "Close", CMD_CLOSE_ID, pointer_cb);
-    
-    cmd_line_glui->set_main_gfx_window( main_window );
-    control->disable();
-  }
-  else if ( control->get_id() == CMD_CLOSE_ID ) {
-    open_console_btn->enable();
-    control->glui->close();
-  }
-  else if ( control == cmd_line ) {
-    /*** User typed text into the 'command line' window ***/
-    printf( "Command (%d): %s\n", counter, cmd_line->get_text() );
-    std::string text = cmd_line->get_text();
-    if (text =="exit" || text == "quit") {
-      exit(0);
-    }
-  }
-  else if ( control->get_id() == CMD_HIST_RESET_ID ) {
-    cmd_line->reset_history();
-  }
-}
-
-
 void myGlutKeyboard(unsigned char Key, int x, int y)
 {
   if (Key == 27) {
@@ -326,6 +250,8 @@ void myGlutIdle(void)
     dataset->reload_data();
   }
 }
+
+
 void myGlutMouse(int button, int button_state, int x, int y)
 {
   if ( button == GLUT_LEFT_BUTTON && button_state == GLUT_DOWN ) {
@@ -387,85 +313,107 @@ void myGlutDisplay( void )
 }
 
 
+
+class MyClass
+{
+private:
+  int user_id;
+  int val1, val2, val3, val4;
+public:
+  MyClass(GLUI_Panel *parent);
+  void keyboard(int key, int x, int y) { }
+  void draw() { }
+  void refresh() { }
+  static std::map<int, MyClass*> instances;
+  static void refresh_cb(int user_id)
+  {
+    instances[user_id]->refresh();
+  }
+} ;
+std::map<int, MyClass*> MyClass::instances;
+MyClass::MyClass(GLUI_Panel *parent)
+{
+  user_id = instances.size();
+  instances[user_id] = this;
+  new GLUI_Column(parent);
+  new GLUI_Checkbox(parent, "check1", &val1, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "check2", &val2, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "check3", &val3, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "check4", &val4, user_id, refresh_cb);
+}
+
+
+
+
+class SimulationController
+{
+private:
+  int user_id;
+  int val1, val2, val3, val4;
+public:
+  SimulationController(GLUI_Panel *parent);
+  void keyboard(int key, int x, int y) { }
+  void draw() { }
+  void refresh() { }
+  static std::map<int, SimulationController*> instances;
+  static void refresh_cb(int user_id)
+  {
+    instances[user_id]->refresh();
+  }
+} ;
+std::map<int, SimulationController*> SimulationController::instances;
+SimulationController::SimulationController(GLUI_Panel *parent)
+{
+  user_id = instances.size();
+  instances[user_id] = this;
+  new GLUI_Column(parent);
+  new GLUI_Checkbox(parent, "check1", &val1, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "check2", &val2, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "check3", &val3, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "check4", &val4, user_id, refresh_cb);
+  new GLUI_Button(parent, "Quit", 0, exit);
+}
+
+
+
+
+
+
+
+
 void m2sim_visualize(m2sim *m2, int argc, char **argv)
 {
   M2 = m2;
   glutInit(&argc, argv);
-  glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
+  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
   glutInitWindowPosition(50, 50);
   glutInitWindowSize(768, 768);
  
   main_window = glutCreateWindow("M2");
-  glutDisplayFunc( myGlutDisplay );
-  glutReshapeFunc( myGlutReshape );  
-  glutKeyboardFunc( myGlutKeyboard );
-  glutMotionFunc( myGlutMotion );
-  glutMouseFunc( myGlutMouse );
+  glutDisplayFunc(myGlutDisplay);
+  glutReshapeFunc(myGlutReshape);  
+  glutKeyboardFunc(myGlutKeyboard);
+  glutMotionFunc(myGlutMotion);
+  glutMouseFunc(myGlutMouse);
 
   glEnable(GL_DEPTH_TEST);
-
 
 
   glui = GLUI_Master.create_glui("GLUI", 0, 768+50, 50);
   new GLUI_StaticText(glui, "M2 controls"); 
 
 
+  GLUI_Panel *dataset_panel = new GLUI_Panel(glui, "data sets");
+  new MyClass(dataset_panel);
+  new MyClass(dataset_panel);
 
-  obj_panel = new GLUI_Panel(glui, "Object");
-  GLUI_Panel *type_panel = new GLUI_Panel(obj_panel, "Field");
-  radio = new GLUI_RadioGroup(type_panel, &obj_type, CHANGE_FIELD_ID, control_cb);
-  new GLUI_RadioButton(radio, "mass density"); obj_keys.push_back(M2_COMOVING_MASS_DENSITY);
-  new GLUI_RadioButton(radio, "gas pressure"); obj_keys.push_back(M2_GAS_PRESSURE);
-  new GLUI_RadioButton(radio, "v1"); obj_keys.push_back(M2_VELOCITY1);
-  new GLUI_RadioButton(radio, "v2"); obj_keys.push_back(M2_VELOCITY2);
-  new GLUI_RadioButton(radio, "v3"); obj_keys.push_back(M2_VELOCITY3);
-  new GLUI_RadioButton(radio, "B1"); obj_keys.push_back(M2_MAGNETIC1);
-  new GLUI_RadioButton(radio, "B2"); obj_keys.push_back(M2_MAGNETIC2);
-  new GLUI_RadioButton(radio, "B3"); obj_keys.push_back(M2_MAGNETIC3);
 
+  GLUI_Panel *general_panel = new GLUI_Panel(glui, "simulation controls");
+  new SimulationController(general_panel);
 
 
   dataset = new M2GL_Dataset(m2);
   dataset->reload_data();
-
-
-  /* ----------- */
-  /* check boxes */
-  /* ----------- */
-  new GLUI_Checkbox(obj_panel, "Draw mesh", &DrawMesh,CHANGE_FIELD_ID, control_cb);
-  new GLUI_Checkbox(obj_panel, "Log scaling", &LogScaling, CHANGE_LOGSCALING_ID, control_cb);
-  new GLUI_Checkbox(obj_panel, "Auto play", &AutoPlay, -1, control_cb);
-
-
-  /* ------------------ */
-  /* colortable spinner */
-  /* ------------------ */
-  colortable_spinner = new GLUI_Spinner(obj_panel, "Color table:", &ColorTable,
-					CHANGE_COLORTABLE_ID, control_cb);
-  colortable_spinner->set_int_limits(0, 5);
-  colortable_spinner->set_alignment(GLUI_ALIGN_RIGHT);
-
-
-  /* ------------- */
-  /* scale spinner */
-  /* ------------- */
-  scale_spinner = new GLUI_Spinner(obj_panel, "Zoom level:", &scale, -1, control_cb);
-  scale_spinner->set_float_limits(-2.0, 2.0f);
-  scale_spinner->set_alignment(GLUI_ALIGN_RIGHT);
-
-
-  new GLUI_Separator(obj_panel);
-  edittext = new GLUI_EditText(obj_panel, "Label:", text);
-  edittext->set_w(150);
-
-
-
-  open_console_btn = 
-    new GLUI_Button(glui, "Open Console", OPEN_CONSOLE_ID, pointer_cb);
-  new GLUI_Button(glui, "Quit", 0, exit);  
-
-
-
 
 
 
