@@ -39,7 +39,7 @@ static void boundary_conditions(m2sim *m2)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
-  double T = m2->status.time_simulation / 0.1;
+  double T = m2->status.time_simulation;
   double f = tanh(T) * tanh(T); /* ramp factor */
   double t;
   double a = 1.0;
@@ -191,11 +191,13 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
-  m2sim_set_rk_order(m2, 3);
+  m2sim_set_rk_order(m2, 2);
   m2sim_set_analysis(m2, analysis);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
-  m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
   m2sim_set_initial_data(m2, initial_data);
+  if (0) {
+    m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
+  }
 
   m2->plm_parameter = 1.0;
   m2->cfl_parameter = 0.3;
