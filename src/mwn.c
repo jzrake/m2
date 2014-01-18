@@ -23,8 +23,8 @@ static void initial_data(m2vol *V)
     V->prim.v1 = 0.0;
     V->prim.v2 = 0.0;
     V->prim.v3 = 0.0;
-    V->prim.d  = 10.0;
-    V->prim.p  = 0.01;
+    V->prim.d  = 100.0 * 1.0/(R*R);
+    V->prim.p  = 0.010 * 1.0/(R*R);
 
     V->Bflux1A = 0.0 * V->area1;
     V->Bflux2A = 0.0 * V->area2;
@@ -39,13 +39,13 @@ static void boundary_conditions(m2sim *m2)
   int *G = m2->domain_resolution;
   int *I;
   m2vol *V;
-  double T = m2->status.time_simulation;
+  double T = m2->status.time_simulation / 0.1;
   double f = tanh(T) * tanh(T); /* ramp factor */
   double t;
   double a = 1.0;
   double g;
-  double g0 = 1.0 + 10.0 * f;
-  double B0 = 0.0 + 10.0 * f;
+  double g0 = 1.0 + 1.0 * f;
+  double B0 = 0.0 + 4.0 * f;
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -186,19 +186,19 @@ void initialize_problem_mwn(m2sim *m2)
 {
   m2sim_set_resolution(m2, 128, 96, 1);
   m2sim_set_guard_zones(m2, 0);
-  m2sim_set_extent0(m2, 0.1, 0.0  , 0.0    );
-  m2sim_set_extent1(m2, 5e1, M2_PI, 2*M2_PI);
+  m2sim_set_extent0(m2,  0.10, 0.0  , 0.0    );
+  m2sim_set_extent1(m2, 10.00, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
-  m2sim_set_rk_order(m2, 2);
+  m2sim_set_rk_order(m2, 3);
   m2sim_set_analysis(m2, analysis);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
   m2sim_set_initial_data(m2, initial_data);
 
   m2->plm_parameter = 1.0;
-  m2->cfl_parameter = 0.4;
+  m2->cfl_parameter = 0.3;
   m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
   m2->coordinate_scaling1 = M2_LOGARITHMIC;

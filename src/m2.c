@@ -324,15 +324,29 @@ int m2sim_memory_usage(m2sim *m2)
 }
 double m2aux_get(m2aux *aux, int member)
 {
+  const double u0 = aux->velocity_four_vector[0];
+  const double u1 = aux->velocity_four_vector[1];
+  const double u2 = aux->velocity_four_vector[2];
+  const double u3 = aux->velocity_four_vector[3];
+  const double b0 = aux->magnetic_four_vector[0];
+  const double b1 = aux->magnetic_four_vector[1];
+  const double b2 = aux->magnetic_four_vector[2];
+  const double b3 = aux->magnetic_four_vector[3];
   switch (member) {
-  case M2_VELOCITY_FOUR_VECTOR0: return aux->velocity_four_vector[0];
-  case M2_VELOCITY_FOUR_VECTOR1: return aux->velocity_four_vector[1];
-  case M2_VELOCITY_FOUR_VECTOR2: return aux->velocity_four_vector[2];
-  case M2_VELOCITY_FOUR_VECTOR3: return aux->velocity_four_vector[3];
-  case M2_MAGNETIC_FOUR_VECTOR0: return aux->magnetic_four_vector[0];
-  case M2_MAGNETIC_FOUR_VECTOR1: return aux->magnetic_four_vector[1];
-  case M2_MAGNETIC_FOUR_VECTOR2: return aux->magnetic_four_vector[2];
-  case M2_MAGNETIC_FOUR_VECTOR3: return aux->magnetic_four_vector[3];
+  case M2_MAGNETIC1: return b1 * u0 - b0 * u1;
+  case M2_MAGNETIC2: return b2 * u0 - b0 * u2;
+  case M2_MAGNETIC3: return b3 * u0 - b0 * u3;
+  case M2_VELOCITY1: return u1 / u0;
+  case M2_VELOCITY2: return u2 / u0;
+  case M2_VELOCITY3: return u3 / u0;
+  case M2_VELOCITY_FOUR_VECTOR0: return u0;
+  case M2_VELOCITY_FOUR_VECTOR1: return u1;
+  case M2_VELOCITY_FOUR_VECTOR2: return u2;
+  case M2_VELOCITY_FOUR_VECTOR3: return u3;
+  case M2_MAGNETIC_FOUR_VECTOR0: return b0;
+  case M2_MAGNETIC_FOUR_VECTOR1: return b1;
+  case M2_MAGNETIC_FOUR_VECTOR2: return b2;
+  case M2_MAGNETIC_FOUR_VECTOR3: return b3;
   case M2_COMOVING_MASS_DENSITY: return aux->comoving_mass_density;
   case M2_GAS_PRESSURE: return aux->gas_pressure;
   case M2_MAGNETIC_PRESSURE: return aux->magnetic_pressure;

@@ -105,10 +105,15 @@ void test_quartic()
 		  +12.7687728282,
 		  -56.1746104789,
 		  +85.6898329342};
+  double A5[5] = {+0751.8716976283,
+		  -3465.6791436275,
+		  +5989.3459074759,
+		  -4599.4258609677,
+		  +1324.2662465491};
   int i, n, nr;
-  double y, *A, *As[4] = {A1, A2, A3, A4};
+  double y, *A, *As[5] = {A1, A2, A3, A4, A5};
 
-  for (i=0; i<4; ++i) {
+  for (i=0; i<5; ++i) {
     A = As[i];
     nr = m2_solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
     printf("there are %d roots:\n", nr);

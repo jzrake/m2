@@ -157,12 +157,12 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
   if (aux->m2 && aux->m2->simple_eigenvalues) {
     evals[0] = -1.0;
-    evals[1] = 0.0;
-    evals[2] = 0.0;
-    evals[3] = 0.0;
-    evals[4] = 0.0;
-    evals[5] = 0.0;
-    evals[6] = 0.0;
+    evals[1] =  0.0;
+    evals[2] =  0.0;
+    evals[3] =  0.0;
+    evals[4] =  0.0;
+    evals[5] =  0.0;
+    evals[6] =  0.0;
     evals[7] = +1.0;
     return 0;
   }

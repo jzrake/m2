@@ -574,7 +574,7 @@ int m2sim_from_conserved_all(m2sim *m2)
       m2->initial_data(V);
       m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
     			   V->consA, &V->aux);
-      MSGF(INFO, "at global index [%d %d %d]",
+      MSGF(WARNING, "at global index [%d %d %d]",
     	   V->global_index[1],
     	   V->global_index[2],
     	   V->global_index[3]);

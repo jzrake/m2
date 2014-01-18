@@ -44,7 +44,8 @@ static int ColorTable = 3;
 static int LogScaling = 0;
 static int AutoPlay = 0;
 static int DrawMesh = 0;
-static double DataRange[2];
+static double DataRange1[2];
+static double DataRange2[2];
 static GLfloat *VertexData = NULL;
 static GLfloat *ColorData = NULL;
 
@@ -99,10 +100,7 @@ void GLUTDisplayFunc()
 
 
   int n;
-  m2vol *V;
-  for (n=0; n<M2->local_grid_size[0]; ++n) {
-    V = M2->volumes + n;
-
+  for (n=0; n<M2->local_grid_size[0]*2; ++n) {
     if (DrawMesh) {
       glBegin(GL_LINE_LOOP);
     }
@@ -152,7 +150,7 @@ void GLUTKeyboardFunc(unsigned char key, int x, int y)
   case '-': ZoomLevel /= 1.1; break;
   case '=': ZoomLevel *= 1.1; break;
   case 's': m2sim_drive(M2); reload_rgb_data(); break;
-  case 'p': printf("data range: [%4.3e %4.3e]\n", DataRange[0], DataRange[1]);
+  case 'p': printf("data range: [%4.3e %4.3e]\n", DataRange1[0], DataRange1[1]);
     break;
   }
 }
@@ -207,12 +205,17 @@ void menu_callback_main(int num)
 }
 void create_menu()
 {
-  int main_menu;
   int field_variable;
   int color_mapping;
 
 
   field_variable = glutCreateMenu(menu_callback_field_variable);
+  glutAddMenuEntry("velocity: 1", M2_VELOCITY1);
+  glutAddMenuEntry("velocity: 2", M2_VELOCITY2);
+  glutAddMenuEntry("velocity: 3", M2_VELOCITY3);
+  glutAddMenuEntry("magnetic: 1", M2_MAGNETIC1);
+  glutAddMenuEntry("magnetic: 2", M2_MAGNETIC2);
+  glutAddMenuEntry("magnetic: 3", M2_MAGNETIC3);
   glutAddMenuEntry("velocity four vector: 0", M2_VELOCITY_FOUR_VECTOR0);
   glutAddMenuEntry("velocity four vector: 1", M2_VELOCITY_FOUR_VECTOR1);
   glutAddMenuEntry("velocity four vector: 2", M2_VELOCITY_FOUR_VECTOR2);
@@ -236,7 +239,7 @@ void create_menu()
   glutAddMenuEntry("color table 5", 5);
 
 
-  main_menu = glutCreateMenu(menu_callback_main);
+  glutCreateMenu(menu_callback_main);
   glutAddSubMenu("Field Variable", field_variable);
   glutAddSubMenu("Color Mapping", color_mapping);
   glutAddMenuEntry("Toggle log scale", VIS_TOGGLE_LOG_SCALE);
@@ -260,8 +263,8 @@ void reload_rgb_data()
   double x11c[4];
   double x10c[4];
 
-  VertexData = (GLfloat*) realloc(VertexData, L[0] * 3 * 4 * sizeof(GLfloat));
-  ColorData = (GLfloat*) realloc(ColorData, L[0] * 3 * sizeof(GLfloat));
+  VertexData = (GLfloat*) realloc(VertexData, 2 * L[0] * 3 * 4 * sizeof(GLfloat));
+  ColorData = (GLfloat*) realloc(ColorData, 2 * L[0] * 3 * sizeof(GLfloat));
 
   for (n=0; n<L[0]; ++n) {
     V = M2->volumes + n;
@@ -274,12 +277,29 @@ void reload_rgb_data()
     }
 
     if (n == 0) {
-      DataRange[0] = y;
-      DataRange[1] = y;
+      DataRange1[0] = y;
+      DataRange1[1] = y;
     }
     else {
-      if (y < DataRange[0]) DataRange[0] = y;
-      if (y > DataRange[1]) DataRange[1] = y;
+      if (y < DataRange1[0]) DataRange1[0] = y;
+      if (y > DataRange1[1]) DataRange1[1] = y;
+    }
+
+
+    y = m2aux_get(&V->aux, M2_COMOVING_MASS_DENSITY);
+
+    if (LogScaling) {
+      if (y < 1e-6) y = 1e-6;
+      y = log10(fabs(y));
+    }
+
+    if (n == 0) {
+      DataRange2[0] = y;
+      DataRange2[1] = y;
+    }
+    else {
+      if (y < DataRange2[0]) DataRange2[0] = y;
+      if (y > DataRange2[1]) DataRange2[1] = y;
     }
   }
 
@@ -336,9 +356,49 @@ void reload_rgb_data()
       y = log10(fabs(y));
     }
 
-    y -= DataRange[0];
-    y /= DataRange[1] - DataRange[0];
+    y -= DataRange1[0];
+    y /= DataRange1[1] - DataRange1[0];
     color_map(y, &ColorData[3*n]);
+
+
+    /* left meridian */
+    VertexData += L[0] * 3 * 4;
+    ColorData += L[0] * 3;
+
+    x00[3] += M2_PI;
+    x01[3] += M2_PI;
+    x11[3] += M2_PI;
+    x10[3] += M2_PI;
+    m2_to_cartesian(x00, x00c, M2->geometry);
+    m2_to_cartesian(x01, x01c, M2->geometry);
+    m2_to_cartesian(x11, x11c, M2->geometry);
+    m2_to_cartesian(x10, x10c, M2->geometry);
+
+    VertexData[4*3*n + 0*3 + 0] = x00c[1];
+    VertexData[4*3*n + 0*3 + 1] = x00c[2];
+    VertexData[4*3*n + 0*3 + 2] = x00c[3];
+    VertexData[4*3*n + 1*3 + 0] = x01c[1];
+    VertexData[4*3*n + 1*3 + 1] = x01c[2];
+    VertexData[4*3*n + 1*3 + 2] = x01c[3];
+    VertexData[4*3*n + 2*3 + 0] = x11c[1];
+    VertexData[4*3*n + 2*3 + 1] = x11c[2];
+    VertexData[4*3*n + 2*3 + 2] = x11c[3];
+    VertexData[4*3*n + 3*3 + 0] = x10c[1];
+    VertexData[4*3*n + 3*3 + 1] = x10c[2];
+    VertexData[4*3*n + 3*3 + 2] = x10c[3];
+
+    y = m2aux_get(&V->aux, M2_COMOVING_MASS_DENSITY);
+
+    if (LogScaling) {
+      y = log10(fabs(y));
+    }
+
+    y -= DataRange2[0];
+    y /= DataRange2[1] - DataRange2[0];
+    color_map(y, &ColorData[3*n]);
+
+    VertexData -= L[0] * 3 * 4;
+    ColorData -= L[0] * 3;
   }
 }
 void color_map(double val, GLfloat rgb[3])

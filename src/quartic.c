@@ -45,11 +45,12 @@ int m2_solve_quartic_equation(double d4, double d3,
   roots[2] = creal(r2);
   roots[3] = creal(r3);
 
-  int nr = 0;
-  if (fabs(cimag(r0)) < 1e-10) ++nr;
-  if (fabs(cimag(r1)) < 1e-10) ++nr;
-  if (fabs(cimag(r2)) < 1e-10) ++nr;
-  if (fabs(cimag(r3)) < 1e-10) ++nr;
+  /* int nr = 0; */
+  /* if (fabs(cimag(r0)) < 1e-10) ++nr; */
+  /* if (fabs(cimag(r1)) < 1e-10) ++nr; */
+  /* if (fabs(cimag(r2)) < 1e-10) ++nr; */
+  /* if (fabs(cimag(r3)) < 1e-10) ++nr; */
 
-  return nr;
+  /* the check for whether realness of roots is hard to make robust */
+  return 4;
 }
