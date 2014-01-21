@@ -243,11 +243,10 @@ void SimulationController::action_cb(int action_id)
 {
   switch (action_id) {
   case ACTION_SAVE_FILE:
-    //    printf("save file %s\n", sim_controller->chkptname_field->get_text());
     m2sim_save_checkpoint(M2, sim_controller->chkptname_field->get_text());
     break;
   case ACTION_LOAD_FILE:
-    printf("load file %s\n", sim_controller->chkptload_browser->get_file());
+    m2sim_load_checkpoint(M2, sim_controller->chkptload_browser->get_file());
     break;
   case ACTION_TAKE_SCREENSHOT:
     sim_controller->take_screenshot();

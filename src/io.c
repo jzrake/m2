@@ -42,8 +42,13 @@ void m2sim_load_header(m2sim *m2, FILE *of)
 {
   printf("\t[load header]\n");
   tpl_node *tpl;
+  int err;
   tpl = tpl_map M2_SIM_SERIALIZE(m2);
-  tpl_load(tpl, TPL_FD, fileno(of));
+  err = tpl_load(tpl, TPL_FD, fileno(of));
+  if (err) {
+    MSG(ERROR, "bad file format");
+    return;    
+  }
   tpl_unpack(tpl, 0);
   tpl_free(tpl);
 }
@@ -74,12 +79,16 @@ void m2sim_save_volumes(m2sim *m2, FILE *of)
 void m2sim_load_volumes(m2sim *m2, FILE *of)
 {
   printf("\t[load volumes]\n");
-  int n, d;
+  int n, d, err;
   tpl_node *tpl;
   m2vol *V;
   struct reduced_volume v;
   tpl = tpl_map M2_VOL_SERIALIZE(&v);
-  tpl_load(tpl, TPL_FD, fileno(of));
+  err = tpl_load(tpl, TPL_FD, fileno(of));
+  if (err) {
+    MSG(ERROR, "bad file format");
+    return;    
+  }
   for (n=0; n<m2->local_grid_size[0]; ++n) {
     V = m2->volumes + n;
     tpl_unpack(tpl, 1);
@@ -109,8 +118,11 @@ void m2sim_load_checkpoint(m2sim *m2, const char *fname)
 {
   printf("[load checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "r");
+  if (of == NULL) {
+    MSGF(ERROR, "no such file: %s", fname);
+    return;
+  }
   m2sim_load_header(m2, of);
-  m2sim_initialize(m2);
   m2sim_load_volumes(m2, of);
   fclose(of);
 }
