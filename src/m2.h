@@ -91,11 +91,20 @@ struct m2aux
 struct m2vol
 {
   int global_index[4];
+  m2prim prim;
+  double Bflux1A; /* magnetic flux through (+1/2) faces */
+  double Bflux2A;
+  double Bflux3A;
+  /* end serialized data members */
   double x0[4];
   double x1[4];
+  double volume;
   double consA[5];
-  double consB[5];
-  double flux1[8];
+  double consB[5]; /* RK cache for cons */
+  double Bflux1B; /* RK cache for Bflux */
+  double Bflux2B;
+  double Bflux3B;
+  double flux1[8]; /* Godunov fluxes through (+1/2) faces */
   double flux2[8];
   double flux3[8];
   double grad1[8];
@@ -107,17 +116,13 @@ struct m2vol
   double line1;
   double line2;
   double line3;
-  double volume;
-  m2prim prim;
-  double Bflux1A, Bflux1B; /* magnetic flux through (+1/2) faces */
-  double Bflux2A, Bflux2B;
-  double Bflux3A, Bflux3B;
   double emf1; /* line integral of electric field along (+1/2, +1/2) edges */
   double emf2;
   double emf3;
   m2aux aux;
   m2sim *m2;
 } ;
+#define M2_VOL_SERIALIZE(b) ("A(S(i#$(ffffffff)fff))",b,4)
 
 struct m2sim_status
 {
@@ -150,7 +155,7 @@ struct m2sim
   m2vol_operator initial_data;
   m2vol *volumes;
 } ;
-
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiiff$(fi))",m2,4,4,4,4)
 
 
 void m2_self_test();
@@ -199,8 +204,8 @@ void m2sim_average_runge_kutta(m2sim *m2, double b);
 void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
 void m2sim_enforce_boundary_condition(m2sim *m2);
 void m2sim_print(m2sim *m2);
-void m2sim_save_checkpoint(m2sim *m2, char *fname);
-void m2sim_load_checkpoint(m2sim *m2, char *fname);
+void m2sim_save_checkpoint(m2sim *m2, const char *fname);
+void m2sim_load_checkpoint(m2sim *m2, const char *fname);
 void m2sim_write_ascii_1d(m2sim *m2, char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, char *fname);
 void m2sim_run_analysis(m2sim *m2);

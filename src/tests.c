@@ -123,7 +123,7 @@ void test_quartic()
 	   A[2]*pow(roots[n], 2) +
 	   A[1]*pow(roots[n], 1) +
 	   A[0]*pow(roots[n], 0));
-      printf("r%d = %f, y(r%d) = %f\n", n, roots[n], n, y);
+      printf("r%d = %f, y(r%d) = %8.6e\n", n, roots[n], n, y);
     }
   }
 }

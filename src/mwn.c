@@ -44,8 +44,8 @@ static void boundary_conditions(m2sim *m2)
   double t;
   double a = 1.0;
   double g;
-  double g0 = 1.0 + 1.0 * f;
-  double B0 = 0.0 + 4.0 * f;
+  double g0 = 1.0 +  7.0 * f;
+  double B0 = 0.0 + 24.0 * f;
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -184,10 +184,10 @@ static void analysis(m2sim *m2)
 }
 void initialize_problem_mwn(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 128, 96, 1);
+  m2sim_set_resolution(m2, 128+64, 96, 1);
   m2sim_set_guard_zones(m2, 0);
-  m2sim_set_extent0(m2,  0.10, 0.0  , 0.0    );
-  m2sim_set_extent1(m2, 10.00, M2_PI, 2*M2_PI);
+  m2sim_set_extent0(m2,  0.01, 0.0  , 0.0    );
+  m2sim_set_extent1(m2, 20.00, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);

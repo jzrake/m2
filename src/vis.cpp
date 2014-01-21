@@ -4,17 +4,16 @@ extern "C" {
 #if (M2_HAVE_GLUT)
 
 
-
 #include <string>
 #include <map>
 #include <cmath>
 #include "glui/glui.h"
 
 
-static GLUI *glui;
-static int last_x, last_y;
-static int main_window;
-static float xy_aspect;
+static GLUI *glui=NULL;
+static int last_x=0, last_y=0;
+static int main_window=0;
+static float xy_aspect=1.0;
 
 
 
@@ -23,8 +22,12 @@ class SimulationController
 {
 private:
   int user_id;
-  GLUI_EditText *filename_field;
+  GLUI_EditText *imagename_field;
+  GLUI_EditText *chkptname_field;
+  GLUI_FileBrowser *chkptload_browser;
   enum {
+    ACTION_LOAD_FILE,
+    ACTION_SAVE_FILE,
     ACTION_TAKE_SCREENSHOT,
     ACTION_RESET_VIEW,
     ACTION_STEP,
@@ -199,7 +202,9 @@ void m2sim_visualize(m2sim *m2, int argc, char **argv)
 
 
 SimulationController::SimulationController(GLUI_Panel *parent)
-  : ZoomLevel(0.0),
+  : rotationX(0.0),
+    rotationY(0.0),
+    ZoomLevel(0.0),
     AutoAdvance(0)
 {
   user_id = instances.size();
@@ -211,15 +216,24 @@ SimulationController::SimulationController(GLUI_Panel *parent)
 					       GLUI_SCROLL_HORIZONTAL,
 					       &ZoomLevel);
   new GLUI_Separator(parent);
-  filename_field = new GLUI_EditText(parent, "File name");
+  imagename_field = new GLUI_EditText(parent, "Image file name");
   new GLUI_Button(parent, "Save image", ACTION_TAKE_SCREENSHOT, action_cb);
   new GLUI_Separator(parent);
   new GLUI_Button(parent, "Reset view", ACTION_RESET_VIEW, action_cb);
   new GLUI_Button(parent, "Step", ACTION_STEP, action_cb);
   new GLUI_Button(parent, "Quit", ACTION_QUIT, action_cb);
+  new GLUI_Column(parent);
+  chkptload_browser = new GLUI_FileBrowser(parent, "Load M2 file");
+  new GLUI_Button(parent, "Load checkpoint", ACTION_LOAD_FILE, action_cb);
+  chkptname_field = new GLUI_EditText(parent, "Checkpoint file name");
+  new GLUI_Button(parent, "Save checkpoint", ACTION_SAVE_FILE, action_cb);
   zoom_sb->set_float_limits(-2.0, 2.0);
-  filename_field->set_w(200);
-  filename_field->set_text("m2.ppm");
+  imagename_field->set_w(200);
+  imagename_field->set_text("m2.ppm");
+  chkptname_field->set_w(200);
+  chkptname_field->set_text("m2.tpl");
+  chkptload_browser->set_allow_change_dir(1);
+  chkptload_browser->set_w(200);
 }
 void SimulationController::refresh_cb(int user_id)
 {
@@ -228,6 +242,13 @@ void SimulationController::refresh_cb(int user_id)
 void SimulationController::action_cb(int action_id)
 {
   switch (action_id) {
+  case ACTION_SAVE_FILE:
+    //    printf("save file %s\n", sim_controller->chkptname_field->get_text());
+    m2sim_save_checkpoint(M2, sim_controller->chkptname_field->get_text());
+    break;
+  case ACTION_LOAD_FILE:
+    printf("load file %s\n", sim_controller->chkptload_browser->get_file());
+    break;
   case ACTION_TAKE_SCREENSHOT:
     sim_controller->take_screenshot();
     break;
@@ -305,7 +326,7 @@ void SimulationController::take_screenshot()
   char *pixels = (char*) malloc(imsize*sizeof(char));
   glReadPixels(0, 0, dimx, dimy, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
-  FILE *fp = fopen(filename_field->get_text(), "wb");
+  FILE *fp = fopen(imagename_field->get_text(), "wb");
   fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
   fwrite(pixels, sizeof(char), imsize, fp);
   fclose(fp);

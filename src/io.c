@@ -32,7 +32,7 @@ void m2sim_save_header(m2sim *m2, FILE *of)
 {
   printf("\t[save header]\n");
   tpl_node *tpl;
-  tpl = tpl_map("S(f#f#i#i#iii)", m2, 4, 4, 4, 4);
+  tpl = tpl_map M2_SIM_SERIALIZE(m2);
   tpl_pack(tpl, 0);
   tpl_dump(tpl, TPL_FD, fileno(of));
   tpl_free(tpl);
@@ -42,7 +42,7 @@ void m2sim_load_header(m2sim *m2, FILE *of)
 {
   printf("\t[load header]\n");
   tpl_node *tpl;
-  tpl = tpl_map("S(f#f#i#i#iii)", m2, 4, 4, 4, 4);
+  tpl = tpl_map M2_SIM_SERIALIZE(m2);
   tpl_load(tpl, TPL_FD, fileno(of));
   tpl_unpack(tpl, 0);
   tpl_free(tpl);
@@ -55,7 +55,7 @@ void m2sim_save_volumes(m2sim *m2, FILE *of)
   tpl_node *tpl;
   m2vol *V;
   struct reduced_volume v;
-  tpl = tpl_map("A(S(i#$(ffffffff)fff))", &v, 4);
+  tpl = tpl_map M2_VOL_SERIALIZE(&v);
   for (n=0; n<m2->local_grid_size[0]; ++n) {
     V = m2->volumes + n;
     for (d=0; d<4; ++d) {
@@ -78,7 +78,7 @@ void m2sim_load_volumes(m2sim *m2, FILE *of)
   tpl_node *tpl;
   m2vol *V;
   struct reduced_volume v;
-  tpl = tpl_map("A(S(i#$(ffffffff)fff))", &v, 4);
+  tpl = tpl_map M2_VOL_SERIALIZE(&v);
   tpl_load(tpl, TPL_FD, fileno(of));
   for (n=0; n<m2->local_grid_size[0]; ++n) {
     V = m2->volumes + n;
@@ -96,7 +96,7 @@ void m2sim_load_volumes(m2sim *m2, FILE *of)
   tpl_free(tpl);
 }
 
-void m2sim_save_checkpoint(m2sim *m2, char *fname)
+void m2sim_save_checkpoint(m2sim *m2, const char *fname)
 {
   printf("[save checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "w");
@@ -105,7 +105,7 @@ void m2sim_save_checkpoint(m2sim *m2, char *fname)
   fclose(of);
 }
 
-void m2sim_load_checkpoint(m2sim *m2, char *fname)
+void m2sim_load_checkpoint(m2sim *m2, const char *fname)
 {
   printf("[load checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "r");
