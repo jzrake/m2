@@ -28,7 +28,9 @@ int m2_solve_quartic_equation(double d4, double d3,
   Complex Q = cpow(X,3);
   Complex S = csqrt(-4*Q + cpow(P,2));
   Complex T = -8*a1 + 4*a2*a3 - a3*a3*a3;
-  Complex B = (cpow(2,W)*X)/(3.*cpow(P + S,W));
+  //  Complex B = cpow(2,W)*X/V; /* V cannot be zero because of above check */
+  Complex B = cabs(P + S) < 1e-15 ? 0.0 : (cpow(2,W)*X)/(3.*cpow(P + S,W));
+  //Complex B = (cpow(2,W)*X)/(3.*cpow(P + S,W));
   Complex U = (-2*a2)/3. + (a3*a3)/4. + B;
   Complex C = csqrt(U + cpow(P + S,W)/(3.*cpow(2,W)))/2.;
   Complex D = cpow(P + S,W)/(3.*cpow(2,W));
@@ -45,12 +47,20 @@ int m2_solve_quartic_equation(double d4, double d3,
   roots[2] = creal(r2);
   roots[3] = creal(r3);
 
+  if (roots[0] != roots[0] ||
+      roots[1] != roots[1] ||
+      roots[2] != roots[2] ||
+      roots[3] != roots[3]) {
+    /* set breakpoint */
+    return 0;
+  }
+
   /* int nr = 0; */
   /* if (fabs(cimag(r0)) < 1e-10) ++nr; */
   /* if (fabs(cimag(r1)) < 1e-10) ++nr; */
   /* if (fabs(cimag(r2)) < 1e-10) ++nr; */
   /* if (fabs(cimag(r3)) < 1e-10) ++nr; */
 
-  /* the check for whether realness of roots is hard to make robust */
+  /* the check for realness of roots is hard to make robust */
   return 4;
 }

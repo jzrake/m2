@@ -172,6 +172,7 @@ double m2aux_maximum_wavespeed(m2aux *aux)
 		  aux->velocity_four_vector[2],
 		  aux->velocity_four_vector[3] };
   double N = sqrt(n[1]*n[1] + n[2]*n[2] + n[3]*n[3]);
+  double a;
   if (fabs(N) < 1e-10) { /* if no velocity, then just use sound speed */
     n[1] = 0.0;
     n[2] = 0.0;
@@ -183,5 +184,10 @@ double m2aux_maximum_wavespeed(m2aux *aux)
     n[3] /= N;
   }
   m2aux_eigenvalues(aux, n, evals);
-  return fabs(evals[0]) > fabs(evals[7]) ? fabs(evals[0]) : fabs(evals[7]);
+  a = fabs(evals[0]) > fabs(evals[7]) ? fabs(evals[0]) : fabs(evals[7]);
+  if (a != a) {
+    m2_print_state(NULL, aux, NULL);
+    MSG(FATAL, "got NAN max wavespeed");
+  }
+  return a;
 }
