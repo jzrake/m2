@@ -58,7 +58,8 @@ GLUI_FileBrowser::GLUI_FileBrowser( GLUI_Node *parent,
   callback   = cb;
 
   parent->add_control( this );
-  list = new GLUI_List(this, true, 1);
+  //list = new GLUI_List(this, true, 1);
+  list = new GLUI_List(this, name, id, dir_list_callback);
   list->set_object_callback( GLUI_FileBrowser::dir_list_callback, this );
   list->set_click_type(GLUI_DOUBLE_CLICK);
   this->fbreaddir(this->current_dir.c_str());
@@ -78,13 +79,14 @@ void GLUI_FileBrowser::dir_list_callback(GLUI_Control *glui_object) {
   this_item = list->get_current_item();
   if (this_item > 0) { /* file or directory selected */
     selected = list->get_item_ptr( this_item )->text.c_str();
-    if (selected[0] == '/' || selected[0] == '\\') {
+    if (selected[strlen(selected)-1] == '/' ||
+	selected[strlen(selected)-1] == '\\') {
       if (me->allow_change_dir) {
 #ifdef __GNUC__
-        chdir(selected+1);
+        chdir(selected);
 #endif
 #ifdef _WIN32
-        SetCurrentDirectory(selected+1);
+        SetCurrentDirectory(selected);
 #endif
         me->fbreaddir(".");
       }
