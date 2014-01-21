@@ -23,7 +23,9 @@ class SimulationController
 {
 private:
   int user_id;
+  GLUI_EditText *filename_field;
   enum {
+    ACTION_TAKE_SCREENSHOT,
     ACTION_RESET_VIEW,
     ACTION_STEP,
     ACTION_QUIT,
@@ -40,6 +42,7 @@ public:
   void keyboard(int key, int x, int y) { }
   void draw();
   void refresh();
+  void take_screenshot();
   static std::map<int, SimulationController*> instances;
   static void refresh_cb(int user_id);
   static void action_cb(int action_id);
@@ -50,21 +53,20 @@ std::map<int, SimulationController*> SimulationController::instances;
 class DatasetController
 {
 private:
-  double DataRange[2];
+  float DataRange[2];
   GLfloat *ColorData;
   GLfloat *VertexData;
   double AngularOffset;
   int user_id;
   std::vector<int> obj_keys;
 
-  GLUI_StaticText *text_min;
-  GLUI_StaticText *text_max;
-
   /* live variables */
   int DrawMesh;
   int LogScale;
+  int AutoRange;
   int ColorMap;
   int DataMember;
+  int Visible;
 public:
   DatasetController(GLUI_Panel *parent);
   void SetAngularOffset(double x) { AngularOffset = x; }
@@ -97,7 +99,7 @@ void myGlutKeyboard(unsigned char Key, int x, int y)
     exit(0);
   }
   else {
-    //    dataset->keyboard(Key, x, y);
+    sim_controller->keyboard(Key, x, y);
   }
   glutPostRedisplay();
 }
@@ -114,26 +116,12 @@ void myGlutIdle(void)
     glutSetWindow(main_window);
   }
   glutPostRedisplay();
-  /****************************************************************/
-  /*            This demonstrates GLUI::sync_live()               */
-  /*   We change the value of a variable that is 'live' to some   */
-  /*   control.  We then call sync_live, and the control          */
-  /*   associated with that variable is automatically updated     */
-  /*   with the new value.  This frees the programmer from having */
-  /*   to always remember which variables are used by controls -  */
-  /*   simply change whatever variables are necessary, then sync  */
-  /*   the live ones all at once with a single call to sync_live  */
-  /****************************************************************/
-
   glui->sync_live();
-
   if (sim_controller->AutoAdvance) {
     m2sim_drive(M2);
     sim_controller->refresh();
   }
 }
-
-
 void myGlutMouse(int button, int button_state, int x, int y)
 {
   if (button == GLUT_LEFT_BUTTON && button_state == GLUT_DOWN) {
@@ -187,14 +175,15 @@ void m2sim_visualize(m2sim *m2, int argc, char **argv)
 
 
   /* Build the GUI */
-  glui = GLUI_Master.create_glui("GLUI", 0, 768+50, 50);
+  glui = GLUI_Master.create_glui("M2", 0, 768+50, 50);
   new GLUI_StaticText(glui, "M2 controls"); 
+  GLUI_Panel *general_panel = new GLUI_Panel(glui, "simulation controls");
+  sim_controller = new SimulationController(general_panel);
   GLUI_Panel *dataset_panel = new GLUI_Panel(glui, "data sets");
   DatasetController *ds1 = new DatasetController(dataset_panel);
   new GLUI_Column(dataset_panel);
   DatasetController *ds2 = new DatasetController(dataset_panel);
-  GLUI_Panel *general_panel = new GLUI_Panel(glui, "simulation controls");
-  sim_controller = new SimulationController(general_panel);
+
 
   ds1->SetAngularOffset(M2_PI);
   ds2->SetAngularOffset(0.0);
@@ -216,14 +205,21 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   user_id = instances.size();
   instances[user_id] = this;
   new GLUI_Checkbox(parent, "Auto advance", &AutoAdvance);
+  new GLUI_StaticText(parent, "Zoom level");
   GLUI_Scrollbar *zoom_sb = new GLUI_Scrollbar(parent,
-					       "zoom level",
+					       "Zoom level",
 					       GLUI_SCROLL_HORIZONTAL,
 					       &ZoomLevel);
+  new GLUI_Separator(parent);
+  filename_field = new GLUI_EditText(parent, "File name");
+  new GLUI_Button(parent, "Save image", ACTION_TAKE_SCREENSHOT, action_cb);
+  new GLUI_Separator(parent);
   new GLUI_Button(parent, "Reset view", ACTION_RESET_VIEW, action_cb);
   new GLUI_Button(parent, "Step", ACTION_STEP, action_cb);
   new GLUI_Button(parent, "Quit", ACTION_QUIT, action_cb);
   zoom_sb->set_float_limits(-2.0, 2.0);
+  filename_field->set_w(200);
+  filename_field->set_text("m2.ppm");
 }
 void SimulationController::refresh_cb(int user_id)
 {
@@ -232,6 +228,9 @@ void SimulationController::refresh_cb(int user_id)
 void SimulationController::action_cb(int action_id)
 {
   switch (action_id) {
+  case ACTION_TAKE_SCREENSHOT:
+    sim_controller->take_screenshot();
+    break;
   case ACTION_RESET_VIEW:
     sim_controller->ZoomLevel = 0.0;
     sim_controller->rotationX = 0.0;
@@ -292,13 +291,27 @@ void SimulationController::draw()
   glColor3ub(0, 0, 0);
   glRasterPos2i(10, 10);
 
-  std::string text = "test";
-
+  std::string text = "";
   for (unsigned int i=0; i<text.length(); ++i) {
     glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
   }
 }
+void SimulationController::take_screenshot()
+{
+  int dimx = glutGet(GLUT_WINDOW_WIDTH);
+  int dimy = glutGet(GLUT_WINDOW_HEIGHT);
+ 
+  size_t imsize = 3*dimx*dimy;
+  char *pixels = (char*) malloc(imsize*sizeof(char));
+  glReadPixels(0, 0, dimx, dimy, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
+  FILE *fp = fopen(filename_field->get_text(), "wb");
+  fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+  fwrite(pixels, sizeof(char), imsize, fp);
+  fclose(fp);
+
+  free(pixels);
+}
 
 DatasetController::DatasetController(GLUI_Panel *parent)
   :
@@ -309,32 +322,63 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   /* live variables */
   DrawMesh(0),
   LogScale(0),
+  AutoRange(1),
   ColorMap(3),
-  DataMember(0)
+  DataMember(0),
+  Visible(1)
 {
   user_id = instances.size();
   instances[user_id] = this;
-  GLUI_RadioGroup *radio = new GLUI_RadioGroup(parent, &DataMember, user_id, refresh_cb);
-  new GLUI_RadioButton(radio, "mass density"); obj_keys.push_back(M2_COMOVING_MASS_DENSITY);
-  new GLUI_RadioButton(radio, "gas pressure"); obj_keys.push_back(M2_GAS_PRESSURE);
-  new GLUI_RadioButton(radio, "v1"); obj_keys.push_back(M2_VELOCITY1);
-  new GLUI_RadioButton(radio, "v2"); obj_keys.push_back(M2_VELOCITY2);
-  new GLUI_RadioButton(radio, "v3"); obj_keys.push_back(M2_VELOCITY3);
-  new GLUI_RadioButton(radio, "B1"); obj_keys.push_back(M2_MAGNETIC1);
-  new GLUI_RadioButton(radio, "B2"); obj_keys.push_back(M2_MAGNETIC2);
-  new GLUI_RadioButton(radio, "B3"); obj_keys.push_back(M2_MAGNETIC3);
-  new GLUI_Separator(parent);
-  text_min = new GLUI_StaticText(parent, "min");
-  text_max = new GLUI_StaticText(parent, "max");
+
+  obj_keys.push_back(M2_COMOVING_MASS_DENSITY);
+  obj_keys.push_back(M2_GAS_PRESSURE);
+  obj_keys.push_back(M2_MAGNETIC_PRESSURE);
+  obj_keys.push_back(M2_MACH_NUMBER);
+  obj_keys.push_back(M2_SIGMA);
+  obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR0);
+  obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR1);
+  obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR2);
+  obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR3);
+  obj_keys.push_back(M2_VELOCITY1);
+  obj_keys.push_back(M2_VELOCITY2);
+  obj_keys.push_back(M2_VELOCITY3);
+  obj_keys.push_back(M2_MAGNETIC1);
+  obj_keys.push_back(M2_MAGNETIC2);
+  obj_keys.push_back(M2_MAGNETIC3);
+
+  GLUI_RadioGroup *radio = new GLUI_RadioGroup(parent, &DataMember,
+					       user_id, refresh_cb);
+  new GLUI_RadioButton(radio, "mass density");
+  new GLUI_RadioButton(radio, "gas pressure");
+  new GLUI_RadioButton(radio, "magnetic pressure");
+  new GLUI_RadioButton(radio, "mach number");
+  new GLUI_RadioButton(radio, "sigma");
+  new GLUI_RadioButton(radio, "u0");
+  new GLUI_RadioButton(radio, "u1");
+  new GLUI_RadioButton(radio, "u2");
+  new GLUI_RadioButton(radio, "u3");
+  new GLUI_RadioButton(radio, "v1");
+  new GLUI_RadioButton(radio, "v2");
+  new GLUI_RadioButton(radio, "v3");
+  new GLUI_RadioButton(radio, "B1");
+  new GLUI_RadioButton(radio, "B2");
+  new GLUI_RadioButton(radio, "B3");
   new GLUI_Separator(parent);
   new GLUI_Checkbox(parent, "draw mesh", &DrawMesh, user_id, refresh_cb);
   new GLUI_Checkbox(parent, "log scale", &LogScale, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "auto range", &AutoRange, user_id, refresh_cb);
+  new GLUI_Checkbox(parent, "visible", &Visible, user_id, refresh_cb);
   GLUI_Spinner *cm = new GLUI_Spinner (parent, "color map", &ColorMap, user_id, refresh_cb);
+  new GLUI_Spinner (parent, "range min",
+		    &DataRange[0], user_id, refresh_cb);
+  new GLUI_Spinner (parent, "range max",
+		    &DataRange[1], user_id, refresh_cb);
   cm->set_int_limits(0, 5);
   this->refresh();
 }
 void DatasetController::draw()
 {
+  if (!Visible) return;
   for (int n=0; n<M2->local_grid_size[0]; ++n) {
     if (DrawMesh) {
       glBegin(GL_LINE_LOOP);
@@ -365,30 +409,24 @@ void DatasetController::refresh()
   m2vol *V;
   VertexData = (GLfloat*) realloc(VertexData, L[0]*3*4*sizeof(GLfloat));
   ColorData = (GLfloat*) realloc(ColorData, L[0]*3*sizeof(GLfloat));
-  for (int n=0; n<L[0]; ++n) {
-    V = M2->volumes + n;
-    y = m2aux_get(&V->aux, obj_keys[DataMember]);
-    if (LogScale) {
-      if (y < 1e-6) y = 1e-6;
-      y = log10(fabs(y));
-    }
-    if (n == 0) {
-      DataRange[0] = y;
-      DataRange[1] = y;
-    }
-    else {
-      if (y < DataRange[0]) DataRange[0] = y;
-      if (y > DataRange[1]) DataRange[1] = y;
+  if (AutoRange) {
+    for (int n=0; n<L[0]; ++n) {
+      V = M2->volumes + n;
+      y = m2aux_get(&V->aux, obj_keys[DataMember]);
+      if (LogScale) {
+	if (y < 1e-6) y = 1e-6;
+	y = log10(fabs(y));
+      }
+      if (n == 0) {
+	DataRange[0] = y;
+	DataRange[1] = y;
+      }
+      else {
+	if (y < DataRange[0]) DataRange[0] = y;
+	if (y > DataRange[1]) DataRange[1] = y;
+      }
     }
   }
-
-  char min[256];
-  char max[256];
-  snprintf(min, 256, "min: %3.2f", DataRange[0]);
-  snprintf(max, 256, "max: %3.2f", DataRange[1]);
-  text_min->set_text(min);
-  text_max->set_text(max);
-
   for (int n=0; n<L[0]; ++n) {
     V = M2->volumes + n;
     x00[1] = V->x0[1];
