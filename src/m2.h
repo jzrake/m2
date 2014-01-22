@@ -53,6 +53,11 @@ enum m2flag {
   M2_SOUND_SPEED,
   M2_MACH_NUMBER,
 
+  /* Lorentz-scalar directional Mach number measurements used with m2aux_mach */
+  M2_MACH_ALFVEN,
+  M2_MACH_SLOW,
+  M2_MACH_FAST,
+
   /* CT schemes */
   M2_CT_OUTOFPAGE3,
   M2_CT_TRANSVERSE1B3,
@@ -234,7 +239,7 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 				       double *U);
 double m2aux_get(m2aux *aux, int member);
 double m2aux_measure(m2aux *aux, int member);
-
+double m2aux_mach(m2aux *aux, double n[4], int mode);
 
 
 

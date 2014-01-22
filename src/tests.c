@@ -5,6 +5,7 @@
 
 void test_srmhd_c2p()
 {
+  printf("\n\n********* %s *********\n", __FUNCTION__);
   m2aux A;
   m2prim P;
   double U[5], UfromP[5];
@@ -25,8 +26,8 @@ void test_srmhd_c2p()
   srmhd_from_conserved(NULL, U, B, NULL, 1.0, &A, &P);
   srmhd_from_primitive(NULL, &P, NULL, NULL, 1.0, UfromP, NULL);
 
-  printf("state:\n------\n"); m2_print_state(&P, &A, U);
-  printf("U out:\n------\n"); m2_print_state(NULL, NULL, UfromP);
+  printf("\nstate:\n------\n"); m2_print_state(&P, &A, U);
+  printf("\nU out:\n------\n"); m2_print_state(NULL, NULL, UfromP);
 
   ASSERTEQF(U[TAU], UfromP[TAU]);
   ASSERTEQF(U[DDD], UfromP[DDD]);
@@ -37,6 +38,7 @@ void test_srmhd_c2p()
 
 void test_srmhd_waves()
 {
+  printf("\n\n********* %s *********\n", __FUNCTION__);
   m2prim P;
   m2aux A;
   double evals1[8];
@@ -62,12 +64,12 @@ void test_srmhd_waves()
 
 
   P.v1 = 0.00001;
-  P.v2 = 0.0000;
-  P.v3 = 0.0000;
+  P.v2 = 0.00000;
+  P.v3 = 0.00000;
   P.B1 = 0.000;
   P.B2 = 0.000;
-  P.B3 = 0.0;
-  P.d = 1.0;
+  P.B3 = 0.001;
+  P.d = 1.0000;
   P.p = 0.0001;
 
   srmhd_from_primitive(NULL, &P, NULL, NULL, 1.0, NULL, &A);
@@ -75,19 +77,52 @@ void test_srmhd_waves()
   nrmhd_from_primitive(NULL, &P, NULL, NULL, 1.0, NULL, &A);
   nrmhd_eigenvalues(&A, n, evals2);
 
-  printf("SRMHD:\n------\n");
+  printf("\nSRMHD (with non-relativistic conditions):\n------\n");
   printf("slow magnetosonic: %+8.6e %+8.6e\n", evals1[2], evals1[5]);
   printf("Alfven waves     : %+8.6e %+8.6e\n", evals1[1], evals1[6]);
   printf("fast magnetosonic: %+8.6e %+8.6e\n", evals1[0], evals1[7]);
 
-  printf("NRMHD:\n------\n");
+  printf("\nNRMHD:\n------\n");
   printf("slow magnetosonic: %+8.6e %+8.6e\n", evals2[2], evals2[5]);
   printf("Alfven waves     : %+8.6e %+8.6e\n", evals2[1], evals2[6]);
   printf("fast magnetosonic: %+8.6e %+8.6e\n", evals2[0], evals2[7]);
+
+
+  P.v1 = 0.0;
+  P.v2 = 0.0;
+  P.v3 = 0.0;
+  P.B1 = 1.0;
+  P.B2 = 0.0;
+  P.B3 = 0.0;
+  P.d = 1.0;
+  P.p = 1.0;
+  srmhd_from_primitive(NULL, &P, NULL, NULL, 1.0, NULL, &A);
+  srmhd_eigenvalues(&A, n, evals1);
+  printf("\nSRMHD (longitudinal field):\n------\n");
+  printf("slow magnetosonic: %+8.6e %+8.6e\n", evals1[2], evals1[5]);
+  printf("Alfven waves     : %+8.6e %+8.6e\n", evals1[1], evals1[6]);
+  printf("fast magnetosonic: %+8.6e %+8.6e\n", evals1[0], evals1[7]);
+
+
+  P.v1 = 0.0;
+  P.v2 = 0.0;
+  P.v3 = 0.0;
+  P.B1 = 0.0;
+  P.B2 = 1.0;
+  P.B3 = 0.0;
+  P.d = 1.0;
+  P.p = 1.0;
+  srmhd_from_primitive(NULL, &P, NULL, NULL, 1.0, NULL, &A);
+  srmhd_eigenvalues(&A, n, evals1);
+  printf("\nSRMHD (transverse field):\n------\n");
+  printf("slow magnetosonic: %+8.6e %+8.6e\n", evals1[2], evals1[5]);
+  printf("Alfven waves     : %+8.6e %+8.6e\n", evals1[1], evals1[6]);
+  printf("fast magnetosonic: %+8.6e %+8.6e\n", evals1[0], evals1[7]);
 }
 
 void test_quartic()
 {
+  printf("\n\n********* %s *********\n", __FUNCTION__);
   double roots[4];
   double A1[5] = {+1, -1, +1, -2, +1};
   double A2[5] = {+11166.1589491647,
@@ -116,7 +151,7 @@ void test_quartic()
   for (i=0; i<5; ++i) {
     A = As[i];
     nr = m2_solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
-    printf("there are %d roots:\n", nr);
+    printf("\nthere are %d roots:\n", nr);
     for (n=0; n<4; ++n) {
       y = (A[4]*pow(roots[n], 4) +
 	   A[3]*pow(roots[n], 3) +
@@ -131,6 +166,6 @@ void test_quartic()
 void m2_self_test()
 {
   test_srmhd_c2p();
-  //test_srmhd_waves();
+  test_srmhd_waves();
   test_quartic();
 }

@@ -228,18 +228,6 @@ void m2sim_initialize(m2sim *m2)
     }
   }
 }
-void m2sim_map(m2sim *m2, m2vol_operator f)
-{
-  int *L = m2->local_grid_size;
-  int i, j, k;
-  for (i=0; i<L[1]; ++i) {
-    for (j=0; j<L[2]; ++j) {
-      for (k=0; k<L[3]; ++k) {
-	f(m2->volumes + M2_IND(i,j,k));
-      }
-    }
-  }
-}
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
 {
   double u0;
@@ -352,6 +340,44 @@ double m2aux_get(m2aux *aux, int member)
   case M2_MAGNETIC_PRESSURE: return aux->magnetic_pressure;
   default: return m2aux_measure(aux, member);
   }
+}
+double m2aux_mach(m2aux *aux, double n[4], int mode)
+/*
+ * Return a signed, directional, frame-independent Mach number for either fast,
+ * slow, or Alfven modes. The Mach number is based on the relativistic velocity
+ * addition of the left and right going characteristic speeds.
+ */
+{
+  double ap = 0.0, am = 0.0;
+  double evals[8];
+  double us, uf;
+  double vs, vf;
+  m2aux_eigenvalues(aux, n, evals);
+  switch (mode) {
+  case M2_MACH_ALFVEN:
+    am = evals[1];
+    ap = evals[6];
+    break;
+  case M2_MACH_FAST:
+    am = evals[0];
+    ap = evals[7];
+    break;
+  case M2_MACH_SLOW:
+    am = evals[2];
+    ap = evals[5];
+    break;
+  }
+  if (aux->m2->physics & M2_RELATIVISTIC) {
+    vf = (ap + am) / (1.0 + ap*am);
+    vs = (ap - am) / (1.0 + ap*am);
+    uf = vf / sqrt(1.0 - vf*vf);
+    us = vs / sqrt(1.0 - vs*vs);
+  }
+  else {
+    uf = ap + am;
+    us = ap - am;
+  }
+  return uf / us;
 }
 double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
 {

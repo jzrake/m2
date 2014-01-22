@@ -76,6 +76,7 @@ public:
   void keyboard(int key, int x, int y) { }
   void draw();
   void refresh();
+  double get_scalar(m2vol *V);
   static std::map<int, DatasetController*> instances;
   static void refresh_cb(int user_id);
 } ;
@@ -247,6 +248,7 @@ void SimulationController::action_cb(int action_id)
     break;
   case ACTION_LOAD_FILE:
     m2sim_load_checkpoint(M2, sim_controller->chkptload_browser->get_file());
+    sim_controller->refresh();
     break;
   case ACTION_TAKE_SCREENSHOT:
     sim_controller->take_screenshot();
@@ -354,6 +356,7 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   obj_keys.push_back(M2_GAS_PRESSURE);
   obj_keys.push_back(M2_MAGNETIC_PRESSURE);
   obj_keys.push_back(M2_MACH_NUMBER);
+  obj_keys.push_back(M2_MACH_FAST);
   obj_keys.push_back(M2_SIGMA);
   obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR0);
   obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR1);
@@ -371,7 +374,8 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   new GLUI_RadioButton(radio, "mass density");
   new GLUI_RadioButton(radio, "gas pressure");
   new GLUI_RadioButton(radio, "magnetic pressure");
-  new GLUI_RadioButton(radio, "mach number");
+  new GLUI_RadioButton(radio, "sonic mach number");
+  new GLUI_RadioButton(radio, "fast mach number");
   new GLUI_RadioButton(radio, "sigma");
   new GLUI_RadioButton(radio, "u0");
   new GLUI_RadioButton(radio, "u1");
@@ -414,8 +418,30 @@ void DatasetController::draw()
     glEnd();
   }
 }
+double DatasetController::get_scalar(m2vol *V)
+{
+  int mem = obj_keys[DataMember];
+  double rhat[4] = { 0.0, 1.0, 0.0, 0.0 };
+  double y;
+  if (mem == M2_MACH_ALFVEN ||
+      mem == M2_MACH_FAST ||
+      mem == M2_MACH_SLOW) {
+    y = m2aux_mach(&V->aux, rhat, mem);
+  }
+  else {
+    y = m2aux_get(&V->aux, mem);
+  }
+  if (LogScale) {
+    if (fabs(y) < 1e-6) {
+      y = 1e-6;
+    }
+    y = log10(fabs(y));
+  }
+  return y;
+}
 void DatasetController::refresh()
 {
+  if (!Visible) return;
   int *L = M2->local_grid_size;
   double y;
   double x00[4]; /* vertex coordinates */
@@ -431,12 +457,7 @@ void DatasetController::refresh()
   ColorData = (GLfloat*) realloc(ColorData, L[0]*3*sizeof(GLfloat));
   if (AutoRange) {
     for (int n=0; n<L[0]; ++n) {
-      V = M2->volumes + n;
-      y = m2aux_get(&V->aux, obj_keys[DataMember]);
-      if (LogScale) {
-	if (y < 1e-6) y = 1e-6;
-	y = log10(fabs(y));
-      }
+      y = get_scalar(M2->volumes + n);
       if (n == 0) {
 	DataRange[0] = y;
 	DataRange[1] = y;
@@ -477,10 +498,7 @@ void DatasetController::refresh()
     VertexData[4*3*n + 3*3 + 0] = x10c[1];
     VertexData[4*3*n + 3*3 + 1] = x10c[2];
     VertexData[4*3*n + 3*3 + 2] = x10c[3];
-    y = m2aux_get(&V->aux, obj_keys[DataMember]);
-    if (LogScale) {
-      y = log10(fabs(y));
-    }
+    y = get_scalar(M2->volumes + n);
     y -= DataRange[0];
     y /= DataRange[1] - DataRange[0];
     color_map(y, &ColorData[3*n], ColorMap);
