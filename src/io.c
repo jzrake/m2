@@ -1,15 +1,6 @@
 #include "m2.h"
 #include "tpl.h"
 
-struct reduced_volume
-{
-  int global_index[4];
-  m2prim prim;
-  double Bflux1;
-  double Bflux2;
-  double Bflux3;
-} ;
-
 void m2sim_print(m2sim *m2)
 {
   printf("domain_extent_lower: [%f %f %f]\n",
@@ -56,20 +47,12 @@ void m2sim_load_header(m2sim *m2, FILE *of)
 void m2sim_save_volumes(m2sim *m2, FILE *of)
 {
   printf("\t[save volumes]\n");
-  int n, d;
+  int n;
   tpl_node *tpl;
-  m2vol *V;
-  struct reduced_volume v;
-  tpl = tpl_map M2_VOL_SERIALIZE(&v);
+  m2vol V;
+  tpl = tpl_map M2_VOL_SERIALIZE(&V);
   for (n=0; n<m2->local_grid_size[0]; ++n) {
-    V = m2->volumes + n;
-    for (d=0; d<4; ++d) {
-      v.global_index[d] = V->global_index[d];
-    }
-    v.prim = V->prim;
-    v.Bflux1 = V->Bflux1A;
-    v.Bflux2 = V->Bflux2A;
-    v.Bflux3 = V->Bflux3A;
+    V = m2->volumes[n];
     tpl_pack(tpl, 1);
   }
   tpl_dump(tpl, TPL_FD, fileno(of));
@@ -79,28 +62,19 @@ void m2sim_save_volumes(m2sim *m2, FILE *of)
 void m2sim_load_volumes(m2sim *m2, FILE *of)
 {
   printf("\t[load volumes]\n");
-  int n, d, err;
+  int n, err;
   tpl_node *tpl;
-  m2vol *V;
-  struct reduced_volume v;
-  tpl = tpl_map M2_VOL_SERIALIZE(&v);
+  m2vol V;
+  tpl = tpl_map M2_VOL_SERIALIZE(&V);
   err = tpl_load(tpl, TPL_FD, fileno(of));
   if (err) {
     MSG(ERROR, "bad file format");
-    return;    
+    return;
   }
   for (n=0; n<m2->local_grid_size[0]; ++n) {
-    V = m2->volumes + n;
-    tpl_unpack(tpl, 1);
-    for (d=0; d<4; ++d) {
-      if (V->global_index[d] != v.global_index[d]) {
-	MSG(FATAL, "data format mismatch");
-      }
-    }
-    V->prim = v.prim;
-    V->Bflux1A = v.Bflux1;
-    V->Bflux2A = v.Bflux2;
-    V->Bflux3A = v.Bflux3;
+    V = m2->volumes[n]; /* so that non-serialized data is not replaced */
+    tpl_unpack(tpl, 1); /* replace only serialized data */
+    m2->volumes[n] = V;
   }
   tpl_free(tpl);
 }
@@ -124,6 +98,7 @@ void m2sim_load_checkpoint(m2sim *m2, const char *fname)
   }
   m2sim_load_header(m2, of);
   m2sim_load_volumes(m2, of);
+  m2sim_from_primitive_all(m2);
   fclose(of);
 }
 
