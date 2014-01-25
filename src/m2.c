@@ -343,15 +343,14 @@ double m2aux_get(m2aux *aux, int member)
 }
 double m2aux_mach(m2aux *aux, double n[4], int mode)
 /*
- * Return a signed, directional, frame-independent Mach number for either fast,
- * slow, or Alfven modes. The Mach number is based on the relativistic velocity
- * addition of the left and right going characteristic speeds.
+ * Return a signed, directional Mach number for either fast, slow, or Alfven
+ * modes. The Mach number is based on the separation and inclination of the left
+ * and right going characteristic four-velocities.
  */
 {
   double ap = 0.0, am = 0.0;
+  double up = 0.0, um = 0.0;
   double evals[8];
-  double us, uf;
-  double vs, vf;
   m2aux_eigenvalues(aux, n, evals);
   switch (mode) {
   case M2_MACH_ALFVEN:
@@ -368,16 +367,14 @@ double m2aux_mach(m2aux *aux, double n[4], int mode)
     break;
   }
   if (aux->m2->physics & M2_RELATIVISTIC) {
-    vf = (ap + am) / (1.0 + ap*am);
-    vs = (ap - am) / (1.0 + ap*am);
-    uf = vf / sqrt(1.0 - vf*vf);
-    us = vs / sqrt(1.0 - vs*vs);
+    up = ap / sqrt(1.0 - ap*ap);
+    um = am / sqrt(1.0 - am*am);
   }
   else {
-    uf = ap + am;
-    us = ap - am;
+    up = ap;
+    um = am;
   }
-  return uf / us;
+  return (up + um) / (up - um);
 }
 double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
 {
