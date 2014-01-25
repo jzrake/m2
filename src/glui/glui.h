@@ -1171,7 +1171,6 @@ public:
 
     GLUI_List *list;
     GLUI_String current_dir;
-
     void fbreaddir(const char *);
     static void dir_list_callback(GLUI_Control*);
 
@@ -1179,7 +1178,11 @@ public:
     void set_h(int h);
     const char* get_file() { return file.c_str(); }
     void set_allow_change_dir(int c) { allow_change_dir = c; }
-
+    void set_show_all_files(int c) { show_all_files = c; }
+    void add_allowed_extension(const char *ext)
+    {
+      allowed_extensions.push_back(ext);
+    }
 protected:
     void common_init() 
     {
@@ -1195,13 +1198,15 @@ protected:
         name         = "";
         current_dir  = ".";
         file         = "";
+	show_all_files = 1;
     };
 
 private:
     int last_item;
     GLUI_String file;
     int allow_change_dir;
-
+    std::vector<GLUI_String> allowed_extensions;
+    int show_all_files;
 };
 
 /************************************************************/

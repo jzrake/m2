@@ -32,6 +32,7 @@
 #include "glui.h"
 #include "glui_internal.h"
 #include <sys/types.h>
+#include <algorithm>
 
 #ifdef __GNUC__
 #include <dirent.h>
@@ -154,8 +155,15 @@ void GLUI_FileBrowser::fbreaddir(const char *d) {
         else
           item = dirp->d_name;
 
-        list->add_item(i,item.c_str());
-        i++;
+	GLUI_String ext = item.substr(item.find_last_of(".") + 1);
+	int is_valid_ext = std::find(allowed_extensions.begin(),
+				     allowed_extensions.end(),
+				     ext) != allowed_extensions.end();
+	int is_dir = item[item.size()-1] == '/';
+	if (show_all_files || is_dir || is_valid_ext) {
+	  list->add_item(i,item.c_str());
+	  i++;
+	}
       }
       closedir(dir);
     }
