@@ -22,6 +22,8 @@ class SimulationController
 {
 private:
   int user_id;
+  GLUI_EditText *time_label;
+  GLUI_EditText *iter_label;
   GLUI_EditText *imagename_field;
   GLUI_EditText *chkptname_field;
   GLUI_FileBrowser *chkptload_browser;
@@ -210,6 +212,8 @@ SimulationController::SimulationController(GLUI_Panel *parent)
 {
   user_id = instances.size();
   instances[user_id] = this;
+  time_label = new GLUI_EditText(parent, "Time", GLUI_EDITTEXT_FLOAT);
+  iter_label = new GLUI_EditText(parent, "Iteration", GLUI_EDITTEXT_INT);
   new GLUI_Checkbox(parent, "Auto advance", &AutoAdvance);
   new GLUI_StaticText(parent, "Zoom level");
   GLUI_Scrollbar *zoom_sb = new GLUI_Scrollbar(parent,
@@ -228,13 +232,18 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   new GLUI_Button(parent, "Load checkpoint", ACTION_LOAD_FILE, action_cb);
   chkptname_field = new GLUI_EditText(parent, "Checkpoint file name");
   new GLUI_Button(parent, "Save checkpoint", ACTION_SAVE_FILE, action_cb);
+  time_label->deactivate();
+  iter_label->deactivate();
   zoom_sb->set_float_limits(-2.0, 2.0);
   imagename_field->set_w(200);
   imagename_field->set_text("m2.ppm");
   chkptname_field->set_w(200);
-  chkptname_field->set_text("m2.tpl");
-  chkptload_browser->set_allow_change_dir(1);
+  chkptname_field->set_text("chkpt.m2");
   chkptload_browser->set_w(200);
+  chkptload_browser->set_allow_change_dir(1);
+  chkptload_browser->set_show_all_files(0);
+  chkptload_browser->add_allowed_extension("m2");
+  chkptload_browser->fbreaddir(".");
 }
 void SimulationController::refresh_cb(int user_id)
 {
@@ -269,6 +278,10 @@ void SimulationController::action_cb(int action_id)
 }
 void SimulationController::refresh()
 {
+  time_label->set_float_val(M2->status.time_simulation);
+  iter_label->set_int_val(M2->status.iteration_number);
+  time_label->deactivate();
+  iter_label->deactivate();
   std::map<int, DatasetController*>::iterator d =
     DatasetController::instances.begin();
   while (d != DatasetController::instances.end()) {
