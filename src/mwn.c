@@ -8,28 +8,32 @@
 static void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
+  double t = m2vol_coordinate_centroid(V, 2);
   if (R < 1.0) {
-    V->prim.v1 = 0.0;
-    V->prim.v2 = 0.0;
-    V->prim.v3 = 0.0;
     V->prim.d  = 1.0;
     V->prim.p  = 0.01;
-
-    V->Bflux1A = 0.0 * V->area1;
-    V->Bflux2A = 0.0 * V->area2;
-    V->Bflux3A = 0.0 * V->area3;
+  }
+  else if (R < 2.0 &&  (t < 0.15 || t > M2_PI - 0.15)) {
+    V->prim.d  = 0.10;
+    V->prim.p  = 0.01;
+  }
+  else if (R < 2.0 && !(t < 0.15 || t > M2_PI - 0.15)) {
+    V->prim.d  = 1000.0;
+    V->prim.p  = 0.01;
   }
   else {
-    V->prim.v1 = 0.0;
-    V->prim.v2 = 0.0;
-    V->prim.v3 = 0.0;
-    V->prim.d  = 100.0 * 1.0/(R*R);
-    V->prim.p  = 0.010 * 1.0/(R*R);
-
-    V->Bflux1A = 0.0 * V->area1;
-    V->Bflux2A = 0.0 * V->area2;
-    V->Bflux3A = 0.0 * V->area3;
+    V->prim.d  = 0.10 * pow(R, -2.0);
+    V->prim.p  = 0.01;
   }
+  V->prim.v1 = 0.0;
+  V->prim.v2 = 0.0;
+  V->prim.v3 = 0.0;
+  V->prim.B1 = 0.0;
+  V->prim.B2 = 0.0;
+  V->prim.B3 = 0.0;
+  V->Bflux1A = V->prim.B1 * V->area1;
+  V->Bflux2A = V->prim.B2 * V->area2;
+  V->Bflux3A = V->prim.B3 * V->area3;
 }
 
 static void boundary_conditions(m2sim *m2)
@@ -40,12 +44,13 @@ static void boundary_conditions(m2sim *m2)
   int *I;
   m2vol *V;
   double T = m2->status.time_simulation;
-  double f = tanh(T) * tanh(T); /* ramp factor */
+  double f = tanh(T/.1) * tanh(T/.1); /* ramp factor */
   double t;
   double a = 1.0;
   double g;
-  double g0 = 1.0 +  7.0 * f;
-  double B0 = 0.0 + 24.0 * f;
+  double g0 = 1.0 +    8 * f;
+  double B0 = 0.0 +   24 * f;
+  //double B0 = 0.0 + 600.0 * f;
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -55,8 +60,8 @@ static void boundary_conditions(m2sim *m2)
       t = m2vol_coordinate_centroid(V, 2);
       g = g0 * (a + (1 - a) * sin(t) * sin(t));
 
-      V->prim.d = 1.00;
-      V->prim.p = 0.01;
+      V->prim.d =  4.00;
+      V->prim.p =  0.04;
       V->prim.v1 = sqrt(1.0 - 1.0/(g*g));
       V->prim.v2 = 0.0;
       V->prim.v3 = 0.0;
@@ -184,10 +189,10 @@ static void analysis(m2sim *m2)
 }
 void initialize_problem_mwn(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 128+64, 96, 1);
+  m2sim_set_resolution(m2, 128+64, 128, 1);
   m2sim_set_guard_zones(m2, 0);
-  m2sim_set_extent0(m2,  0.01, 0.0  , 0.0    );
-  m2sim_set_extent1(m2, 20.00, M2_PI, 2*M2_PI);
+  m2sim_set_extent0(m2,  0.05, 0.0  , 0.0    );
+  m2sim_set_extent1(m2, 10.00, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
