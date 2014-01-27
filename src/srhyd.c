@@ -2,7 +2,7 @@
 #include "hydro.h"
 
 
-#define gamma_law_index (4./3.)
+#define gamma_law_index (m2->gamma_law_index)
 
 
 int srhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -174,6 +174,7 @@ int srhyd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 
 int srhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
+  m2sim *m2 = aux->m2;
   const double d = aux->comoving_mass_density;
   const double p = aux->gas_pressure;
   const double u = aux->gas_pressure / (gamma_law_index - 1.0);

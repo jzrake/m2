@@ -371,6 +371,8 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   obj_keys.push_back(M2_MACH_NUMBER);
   obj_keys.push_back(M2_MACH_FAST);
   obj_keys.push_back(M2_SIGMA);
+  obj_keys.push_back(M2_PLASMA_BETA);
+  obj_keys.push_back(M2_ENTROPY);
   obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR0);
   obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR1);
   obj_keys.push_back(M2_VELOCITY_FOUR_VECTOR2);
@@ -390,6 +392,8 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   new GLUI_RadioButton(radio, "sonic mach number");
   new GLUI_RadioButton(radio, "fast mach number");
   new GLUI_RadioButton(radio, "sigma");
+  new GLUI_RadioButton(radio, "plasma beta");
+  new GLUI_RadioButton(radio, "entropy");
   new GLUI_RadioButton(radio, "u0");
   new GLUI_RadioButton(radio, "u1");
   new GLUI_RadioButton(radio, "u2");

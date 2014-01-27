@@ -9,8 +9,12 @@ static void initial_data(m2vol *V)
 {
   double R = m2vol_coordinate_centroid(V, 1);
   double t = m2vol_coordinate_centroid(V, 2);
-  if (R < 1.0) {
-    V->prim.d  = 1.0;
+  if (1) {
+    V->prim.d  = 0.01;
+    V->prim.p  = 0.0001;
+  }
+  else if (R < 1.0) {
+    V->prim.d  = 1.00;
     V->prim.p  = 0.01;
   }
   else if (R < 2.0 &&  (t < 0.15 || t > M2_PI - 0.15)) {
@@ -44,12 +48,12 @@ static void boundary_conditions(m2sim *m2)
   int *I;
   m2vol *V;
   double T = m2->status.time_simulation;
-  double f = tanh(T/.1) * tanh(T/.1); /* ramp factor */
+  double f = tanh(T/.5) * tanh(T/.5); /* ramp factor */
   double t;
   double a = 1.0;
   double g;
-  double g0 = 1.0 +    8 * f;
-  double B0 = 0.0 +   24 * f;
+  double g0 = 1.0 + 9 * f;
+  double B0 = 0.0 + 5 * f;
   //double B0 = 0.0 + 600.0 * f;
 
   for (n=0; n<L[0]; ++n) {
@@ -60,8 +64,8 @@ static void boundary_conditions(m2sim *m2)
       t = m2vol_coordinate_centroid(V, 2);
       g = g0 * (a + (1 - a) * sin(t) * sin(t));
 
-      V->prim.d =  4.00;
-      V->prim.p =  0.04;
+      V->prim.d =  1.00;
+      V->prim.p =  0.01;
       V->prim.v1 = sqrt(1.0 - 1.0/(g*g));
       V->prim.v2 = 0.0;
       V->prim.v3 = 0.0;
@@ -153,24 +157,35 @@ static void write_equatorial_slice_1d(m2sim *m2, char *fname)
   int *G = m2->domain_resolution;
   int i, j = G[2] / 2, k = 0;
   printf("[write equatorial slice 1d: %s]\n", fname);
-  fprintf(outfile, "r d p u1 u2 u3 b1 b2 b3 sigma mach\n");
+  fprintf(outfile,
+	  "r d pg pb Ms sigma beta s "
+	  "u0 u1 u2 u3 v1 v2 v3 B1 B2 B3\n");
   for (i=0; i<L[1]; ++i) {
     V = M2_VOL(i, j, k);
     fprintf(outfile,
 	    "%+8.6e %+8.6e %+8.6e %+8.6e "
 	    "%+8.6e %+8.6e %+8.6e %+8.6e "
-	    "%+8.6e %+8.6e %+8.6e\n",
+	    "%+8.6e %+8.6e %+8.6e %+8.6e "
+	    "%+8.6e %+8.6e %+8.6e %+8.6e "
+	    "%+8.6e %+8.6e\n",
 	    m2vol_coordinate_centroid(V, 1),
 	    m2aux_get(&V->aux, M2_COMOVING_MASS_DENSITY),
 	    m2aux_get(&V->aux, M2_GAS_PRESSURE),
+	    m2aux_get(&V->aux, M2_MAGNETIC_PRESSURE),
+	    m2aux_get(&V->aux, M2_MACH_NUMBER),
+	    m2aux_get(&V->aux, M2_SIGMA),
+	    m2aux_get(&V->aux, M2_PLASMA_BETA),
+	    m2aux_get(&V->aux, M2_ENTROPY),
+	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR0),
 	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR1),
 	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR2),
 	    m2aux_get(&V->aux, M2_VELOCITY_FOUR_VECTOR3),
-	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR1),
-	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR2),
-	    m2aux_get(&V->aux, M2_MAGNETIC_FOUR_VECTOR3),
-	    m2aux_get(&V->aux, M2_SIGMA),
-	    m2aux_get(&V->aux, M2_MACH_NUMBER));
+	    m2aux_get(&V->aux, M2_VELOCITY1),
+	    m2aux_get(&V->aux, M2_VELOCITY2),
+	    m2aux_get(&V->aux, M2_VELOCITY3),
+	    m2aux_get(&V->aux, M2_MAGNETIC1),
+	    m2aux_get(&V->aux, M2_MAGNETIC2),
+	    m2aux_get(&V->aux, M2_MAGNETIC3));
   }
   fclose(outfile);
 }
@@ -189,14 +204,15 @@ static void analysis(m2sim *m2)
 }
 void initialize_problem_mwn(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 128+64, 128, 1);
+  m2sim_set_resolution(m2, 128, 96, 1);
   m2sim_set_guard_zones(m2, 0);
-  m2sim_set_extent0(m2,  0.05, 0.0  , 0.0    );
+  m2sim_set_extent0(m2,  0.10, 0.0  , 0.0    );
   m2sim_set_extent1(m2, 10.00, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
-  m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
-  m2sim_set_rk_order(m2, 2);
+  //m2sim_set_ct_scheme(m2, M2_CT_OUTOFPAGE3);
+  m2sim_set_ct_scheme(m2, M2_CT_FULL3D);
+  m2sim_set_rk_order(m2, 3);
   m2sim_set_analysis(m2, analysis);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);

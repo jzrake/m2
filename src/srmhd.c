@@ -2,7 +2,7 @@
 #include "hydro.h"
 #include "srmhd-c2p.h"
 
-#define gamma_law_index (4./3.)
+#define gamma_law_index (m2->gamma_law_index)
 
 
 int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -84,8 +84,8 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   srmhd_c2p_set_gamma(c2p, gamma_law_index);
   srmhd_c2p_new_state(c2p, Uin);
   srmhd_c2p_estimate_from_cons(c2p);
-  error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
-  //error = srmhd_c2p_solve_noble1dw(c2p, Pin);
+  //error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
+  error = srmhd_c2p_solve_noble1dw(c2p, Pin);
 
   if (error != SRMHD_C2P_SUCCESS) {
     MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));
@@ -155,7 +155,8 @@ int srmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 
 int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
-  if (aux->m2 && aux->m2->simple_eigenvalues) {
+  m2sim *m2 = aux->m2;
+  if (m2 && m2->simple_eigenvalues) {
     evals[0] = -1.0;
     evals[1] =  0.0;
     evals[2] =  0.0;
@@ -231,6 +232,7 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 
 double srmhd_measure(m2aux *aux, int flag)
 {
+  m2sim *m2 = aux->m2;
   double u0 = aux->velocity_four_vector[0];
   double v1 = aux->velocity_four_vector[1] / u0;
   double v2 = aux->velocity_four_vector[2] / u0;

@@ -1,8 +1,7 @@
 #include <math.h>
 #include "hydro.h"
 
-
-#define gamma_law_index (5./3.)
+#define gamma_law_index (m2->gamma_law_index)
 
 
 int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -102,6 +101,7 @@ int nrhyd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 
 int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
+  m2sim *m2 = aux->m2;
   const double d = aux->comoving_mass_density;
   const double p = aux->gas_pressure;
   const double u0 = aux->velocity_four_vector[0];
@@ -121,7 +121,12 @@ int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
   return 0;
 }
 
+
 double nrhyd_measure(m2aux *aux, int flag)
 {
-  return 0.0;
+  switch (flag) {
+  default:
+    MSG(FATAL, "unknown measure flag");
+    return 0.0;
+  }
 }

@@ -49,9 +49,11 @@ enum m2flag {
   M2_INTERNAL_ENERGY_DENSITY,
   M2_GAS_PRESSURE,
   M2_MAGNETIC_PRESSURE,
+  M2_PLASMA_BETA,
   M2_SIGMA,
   M2_SOUND_SPEED,
   M2_MACH_NUMBER,
+  M2_ENTROPY,
 
   /* Lorentz-scalar directional Mach number measurements used with m2aux_mach */
   M2_MACH_ALFVEN,
@@ -153,6 +155,7 @@ struct m2sim
   int interpolation_fields;
   double plm_parameter;
   double cfl_parameter;
+  double gamma_law_index;
   m2sim_status status;
   m2sim_operator analysis;
   m2sim_operator boundary_conditions;
@@ -160,7 +163,7 @@ struct m2sim
   m2vol_operator initial_data;
   m2vol *volumes;
 } ;
-#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiiff$(fi))",m2,4,4,4,4)
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiifff$(fi))",m2,4,4,4,4)
 
 
 void m2_self_test();

@@ -38,6 +38,7 @@ m2sim *m2sim_new()
   m2->interpolation_fields = M2_PRIMITIVE;
   m2->plm_parameter = 1.5;
   m2->cfl_parameter = 0.4;
+  m2->gamma_law_index = 4./3;
 
   /* callback functions */
   m2->analysis = NULL;
@@ -338,6 +339,9 @@ double m2aux_get(m2aux *aux, int member)
   case M2_COMOVING_MASS_DENSITY: return aux->comoving_mass_density;
   case M2_GAS_PRESSURE: return aux->gas_pressure;
   case M2_MAGNETIC_PRESSURE: return aux->magnetic_pressure;
+  case M2_PLASMA_BETA: return aux->gas_pressure / aux->magnetic_pressure;
+  case M2_ENTROPY: return aux->gas_pressure /
+      pow(aux->comoving_mass_density, aux->m2->gamma_law_index);
   default: return m2aux_measure(aux, member);
   }
 }
