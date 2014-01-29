@@ -149,6 +149,7 @@ void m2sim_calculate_emf(m2sim *m2)
   int i, j, k;
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
+  int *I;
   m2vol *V0, *V1, *V2;
 #ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,j,k) default(shared)
@@ -157,21 +158,46 @@ void m2sim_calculate_emf(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
+	I = M2_VOL(i, j, k)->global_index;
+
 	/* ---------------------- */
 	/* EMF in the x-direction */
 	/* ---------------------- */
 	V0 = M2_VOL(i, j+0, k+0);
 	V1 = M2_VOL(i, j+1, k+0); V1 = V1 ? V1 : V0;
 	V2 = M2_VOL(i, j+0, k+1); V2 = V2 ? V2 : V0;
-	if (G[2] == 1 && G[3] == 1) V0->emf1 = 0.0;
-	else if (G[2] == 1) V0->emf1 = 0.50 * (+V0->flux3[B22]*V0->line1
-					       +V1->flux3[B22]*V0->line1);
-	else if (G[3] == 1) V0->emf1 = 0.50 * (-V0->flux2[B33]*V0->line1
-					       -V2->flux2[B33]*V0->line1);
-	else V0->emf1 = 0.25 * (-V0->flux2[B33]*V0->line1
-				-V2->flux2[B33]*V0->line1
-				+V0->flux3[B22]*V0->line1
-				+V1->flux3[B22]*V0->line1);
+	if (G[2] == 1 && G[3] == 1) {
+	  V0->emf1 = 0.0;
+	}
+	else if (G[2] == 1) {
+	  if (I[3] >= G[3] - 1) {
+	    V0->emf1 = 0.0;
+	  }
+	  else {
+	    V0->emf1 = 0.50 * (+V0->flux3[B22]*V0->line1
+			       +V1->flux3[B22]*V0->line1);
+	  }
+	}
+	else if (G[3] == 1) {
+	  if (I[2] >= G[2] - 1) {
+	    V0->emf1 = 0.0;
+	  }
+	  else {
+	    V0->emf1 = 0.50 * (-V0->flux2[B33]*V0->line1
+			       -V2->flux2[B33]*V0->line1);
+	  }
+	}
+	else {
+	  if (I[2] >= G[2] - 1 || I[3] >= G[3] - 1) {
+	    V0->emf1 = 0.0;
+	  }
+	  else {
+	    V0->emf1 = 0.25 * (-V0->flux2[B33]*V0->line1
+			       -V2->flux2[B33]*V0->line1
+			       +V0->flux3[B22]*V0->line1
+			       +V1->flux3[B22]*V0->line1);
+	  }
+	}
 
 
 	/* ---------------------- */
@@ -180,15 +206,38 @@ void m2sim_calculate_emf(m2sim *m2)
 	V0 = M2_VOL(i+0, j, k+0);
 	V1 = M2_VOL(i+0, j, k+1); V1 = V1 ? V1 : V0;
 	V2 = M2_VOL(i+1, j, k+0); V2 = V2 ? V2 : V0;
-	if (G[3] == 1 && G[1] == 1) V0->emf2 = 0.0;
-	else if (G[3] == 1) V0->emf2 = 0.50 * (+V0->flux1[B33]*V0->line2
-					       +V1->flux1[B33]*V0->line2);
-	else if (G[1] == 1) V0->emf2 = 0.50 * (-V0->flux3[B11]*V0->line2
-					       -V2->flux3[B11]*V0->line2);
-	else V0->emf2 = 0.25 * (-V0->flux3[B11]*V0->line2
-				-V2->flux3[B11]*V0->line2
-				+V0->flux1[B33]*V0->line2
-				+V1->flux1[B33]*V0->line2);
+	if (G[3] == 1 && G[1] == 1) {
+	  V0->emf2 = 0.0;
+	}
+	else if (G[3] == 1) {
+	  if (I[1] >= G[1] - 1) {
+	    V0->emf2 = 0.0;
+	  }
+	  else {
+	    V0->emf2 = 0.50 * (+V0->flux1[B33]*V0->line2
+			       +V1->flux1[B33]*V0->line2);
+	  }
+	}
+	else if (G[1] == 1) {
+	  if (I[3] >= G[3] - 1) {
+	    V0->emf2 = 0.0;
+	  }
+	  else {
+	    V0->emf2 = 0.50 * (-V0->flux3[B11]*V0->line2
+			       -V2->flux3[B11]*V0->line2);
+	  }
+	}
+	else {
+	  if (I[3] >= G[3] - 1 || I[1] >= G[1] - 1) {
+	    V0->emf2 = 0.0;
+	  }
+	  else {
+	    V0->emf2 = 0.25 * (-V0->flux3[B11]*V0->line2
+			       -V2->flux3[B11]*V0->line2
+			       +V0->flux1[B33]*V0->line2
+			       +V1->flux1[B33]*V0->line2);
+	  }
+	}
 
 
 	/* ---------------------- */
@@ -197,15 +246,38 @@ void m2sim_calculate_emf(m2sim *m2)
 	V0 = M2_VOL(i+0, j+0, k);
 	V1 = M2_VOL(i+1, j+0, k); V1 = V1 ? V1 : V0;
 	V2 = M2_VOL(i+0, j+1, k); V2 = V2 ? V2 : V0;
-	if (G[1] == 1 && G[2] == 1) V0->emf3 = 0.0;
-	else if (G[1] == 1) V0->emf3 = 0.50 * (+V0->flux2[B11]*V0->line3
-					       +V1->flux2[B11]*V0->line3);
-	else if (G[2] == 1) V0->emf3 = 0.50 * (-V0->flux1[B22]*V0->line3
-					       -V2->flux1[B22]*V0->line3);
-	else V0->emf3 = 0.25 * (-V0->flux1[B22]*V0->line3
-				-V2->flux1[B22]*V0->line3
-				+V0->flux2[B11]*V0->line3
-				+V1->flux2[B11]*V0->line3);
+	if (G[1] == 1 && G[2] == 1) {
+	  V0->emf3 = 0.0;
+	}
+	else if (G[1] == 1) {
+	  if (I[2] >= G[2] - 1) {
+	    V0->emf3 = 0.0;
+	  }
+	  else {
+	    V0->emf3 = 0.50 * (+V0->flux2[B11]*V0->line3
+			       +V1->flux2[B11]*V0->line3);
+	  }
+	}
+	else if (G[2] == 1) {
+	  if (I[1] >= G[1] - 1) {
+	    V0->emf3 = 0.0;
+	  }
+	  else {
+	    V0->emf3 = 0.50 * (-V0->flux1[B22]*V0->line3
+			       -V2->flux1[B22]*V0->line3);
+	  }
+	}
+	else {
+	  if (I[1] >= G[1] - 1 || I[2] >= G[2] - 1) {
+	    V0->emf3 = 0.0;
+	  }
+	  else {
+	    V0->emf3 = 0.25 * (-V0->flux1[B22]*V0->line3
+			       -V2->flux1[B22]*V0->line3
+			       +V0->flux2[B11]*V0->line3
+			       +V1->flux2[B11]*V0->line3);
+	  }
+	}
       }
     }
   }
@@ -327,6 +399,10 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 	if ((m2->physics & M2_MAGNETIZED) && scheme == M2_CT_OUTOFPAGE3) {
 	  /* special case of 2d simulation with symmetry and B-field in the
 	     3-direction */
+	  if (m2->geometry != M2_CARTESIAN) {
+	    MSG(WARNING, "M2_CT_OUTOFPAGE3 requires a geometrical"
+		"source term that is not implemented");
+	  }
 	  double dB3 = 0.0;
 
 	  V0 = M2_VOL(i+0, j+0, k);
@@ -346,6 +422,10 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 	if ((m2->physics & M2_MAGNETIZED) && scheme == M2_CT_TRANSVERSE1B3) {
 	  /* special case of 1d simulation with symmetry along y and z, B-field
 	     along z */
+	  if (m2->geometry != M2_CARTESIAN) {
+	    MSG(WARNING, "M2_CT_TRANSVERSE1B3 requires a geometrical "
+		"source term that is not implemented");
+	  }
 	  double dB3 = 0.0;
 
 	  V0 = M2_VOL(i+0, j+0, k);
@@ -365,72 +445,72 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 	  /* x-directed face */
 	  /* --------------- */
 	  V0 = M2_VOL(i, j+0, k+0);
-	  V1 = M2_VOL(i, j-1, k+0); V1 = V1 ? V1 : V0;
-	  V2 = M2_VOL(i, j+0, k-1); V2 = V2 ? V2 : V0;
+	  V1 = M2_VOL(i, j-1, k+0);
+	  V2 = M2_VOL(i, j+0, k-1);
 	  if (G[2] == 1 && G[3] == 1) { /* symmetric in y and z */
 
 	  }
 	  else if (G[2] == 1) { /* symmetric in y */
-	    V0->Bflux1A += dt * V0->emf2;
-	    V0->Bflux1A -= dt * V2->emf2;
+	    if (V0) V0->Bflux1A += dt * V0->emf2;
+	    if (V0) V0->Bflux1A -= dt * V2->emf2;
 	  }
 	  else if (G[3] == 1) { /* symmetric in z */
-	    V0->Bflux1A += dt * V1->emf3;
-	    V0->Bflux1A -= dt * V0->emf3;
+	    if (V1) V0->Bflux1A += dt * V1->emf3;
+	    if (V0) V0->Bflux1A -= dt * V0->emf3;
 	  }
 	  else {
-	    V0->Bflux1A += dt * V0->emf2;
-	    V0->Bflux1A -= dt * V2->emf2;
-	    V0->Bflux1A += dt * V1->emf3;
-	    V0->Bflux1A -= dt * V0->emf3;
+	    if (V0) V0->Bflux1A += dt * V0->emf2;
+	    if (V2) V0->Bflux1A -= dt * V2->emf2;
+	    if (V1) V0->Bflux1A += dt * V1->emf3;
+	    if (V0) V0->Bflux1A -= dt * V0->emf3;
 	  }
 
 	  /* --------------- */
 	  /* y-directed face */
 	  /* --------------- */
 	  V0 = M2_VOL(i+0, j, k+0);
-	  V1 = M2_VOL(i+0, j, k-1); V1 = V1 ? V1 : V0;
-	  V2 = M2_VOL(i-1, j, k+0); V2 = V2 ? V2 : V0;
+	  V1 = M2_VOL(i+0, j, k-1);
+	  V2 = M2_VOL(i-1, j, k+0);
 	  if (G[3] == 1 && G[1] == 1) { /* symmetric in z and x */
 
 	  }
 	  else if (G[3] == 1) { /* symmetric in z */
-	    V0->Bflux2A += dt * V0->emf3;
-	    V0->Bflux2A -= dt * V2->emf3;
+	    if (V0) V0->Bflux2A += dt * V0->emf3;
+	    if (V2) V0->Bflux2A -= dt * V2->emf3;
 	  }
 	  else if (G[1] == 1) { /* symmetric in x */
-	    V0->Bflux2A += dt * V1->emf1;
-	    V0->Bflux2A -= dt * V0->emf1;
+	    if (V1) V0->Bflux2A += dt * V1->emf1;
+	    if (V0) V0->Bflux2A -= dt * V0->emf1;
 	  }
 	  else {
-	    V0->Bflux2A += dt * V0->emf3;
-	    V0->Bflux2A -= dt * V2->emf3;
-	    V0->Bflux2A += dt * V1->emf1;
-	    V0->Bflux2A -= dt * V0->emf1;
+	    if (V0) V0->Bflux2A += dt * V0->emf3;
+	    if (V2) V0->Bflux2A -= dt * V2->emf3;
+	    if (V1) V0->Bflux2A += dt * V1->emf1;
+	    if (V0) V0->Bflux2A -= dt * V0->emf1;
 	  }
 
 	  /* --------------- */
 	  /* z-directed face */
 	  /* --------------- */
 	  V0 = M2_VOL(i+0, j+0, k);
-	  V1 = M2_VOL(i-1, j+0, k); V1 = V1 ? V1 : V0;
-	  V2 = M2_VOL(i+0, j-1, k); V2 = V2 ? V2 : V0;
+	  V1 = M2_VOL(i-1, j+0, k);
+	  V2 = M2_VOL(i+0, j-1, k);
 	  if (G[1] == 1 && G[2] == 1) { /* symmetric in x and y */
 
 	  }
 	  else if (G[1] == 1) { /* symmetric in x */
-	    V0->Bflux3A += dt * V0->emf1;
-	    V0->Bflux3A -= dt * V2->emf1;
+	    if (V0) V0->Bflux3A += dt * V0->emf1;
+	    if (V2) V0->Bflux3A -= dt * V2->emf1;
 	  }
 	  else if (G[2] == 1) { /* symmetric in y */
-	    V0->Bflux3A += dt * V1->emf2;
-	    V0->Bflux3A -= dt * V0->emf2;
+	    if (V1) V0->Bflux3A += dt * V1->emf2;
+	    if (V0) V0->Bflux3A -= dt * V0->emf2;
 	  }
 	  else {
-	    V0->Bflux3A += dt * V0->emf1;
-	    V0->Bflux3A -= dt * V2->emf1;
-	    V0->Bflux3A += dt * V1->emf2;
-	    V0->Bflux3A -= dt * V0->emf2;
+	    if (V0) V0->Bflux3A += dt * V0->emf1;
+	    if (V2) V0->Bflux3A -= dt * V2->emf1;
+	    if (V1) V0->Bflux3A += dt * V1->emf2;
+	    if (V0) V0->Bflux3A -= dt * V0->emf2;
 	  }
 	}
 
