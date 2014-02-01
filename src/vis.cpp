@@ -207,7 +207,7 @@ void m2sim_visualize(m2sim *m2, int argc, char **argv)
 SimulationController::SimulationController(GLUI_Panel *parent)
   : rotationX(0.0),
     rotationY(0.0),
-    ZoomLevel(0.0),
+    ZoomLevel(-1.0),
     AutoAdvance(0)
 {
   user_id = instances.size();
@@ -234,7 +234,7 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   new GLUI_Button(parent, "Save checkpoint", ACTION_SAVE_FILE, action_cb);
   time_label->deactivate();
   iter_label->deactivate();
-  zoom_sb->set_float_limits(-2.0, 2.0);
+  zoom_sb->set_float_limits(-3.0, 0.0);
   imagename_field->set_w(200);
   imagename_field->set_text("m2.ppm");
   chkptname_field->set_w(200);

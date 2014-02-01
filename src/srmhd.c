@@ -68,7 +68,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double B1 = B[1];
   double B2 = B[2];
   double B3 = B[3];
-  int error;
+  int error = 1;
   srmhd_c2p *c2p = srmhd_c2p_new();
 
   Uin[0] = U[DDD] / dV;
@@ -80,14 +80,21 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[6] = B2;
   Uin[7] = B3;
 
-  srmhd_c2p_set_pressure_floor(c2p, 1e-6);
+  srmhd_c2p_set_pressure_floor(c2p, 1e-10);
   srmhd_c2p_set_gamma(c2p, gamma_law_index);
   srmhd_c2p_new_state(c2p, Uin);
   srmhd_c2p_estimate_from_cons(c2p);
-  //error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
-  error = srmhd_c2p_solve_noble1dw(c2p, Pin);
 
-  if (error != SRMHD_C2P_SUCCESS) {
+  if (error) {
+    error = srmhd_c2p_solve_noble1dw(c2p, Pin);
+  }
+  if (error) {
+    error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
+    if (error == SRMHD_C2P_SUCCESS) {
+      MSG(INFO, "got a success with anton2dzw after noble1dw failed");
+    }
+  }
+  if (error) {
     MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));
     srmhd_c2p_del(c2p);
     return 1;
