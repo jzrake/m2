@@ -559,6 +559,11 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
     }
     else {
       m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
+      if (m2->add_physical_source_terms) {
+	V->x1[0] = dt;
+	V->x0[0] = 0.0;
+	m2->add_physical_source_terms(V);
+      }
     }
   }
 }

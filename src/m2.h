@@ -161,6 +161,7 @@ struct m2sim
   m2sim_operator boundary_conditions;
   m2sim_operator boundary_conditions_gradient;
   m2vol_operator initial_data;
+  m2vol_operator add_physical_source_terms;
   m2vol *volumes;
 } ;
 #define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiifff$(fi))",m2,4,4,4,4)

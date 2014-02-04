@@ -263,9 +263,9 @@ void SimulationController::action_cb(int action_id)
     sim_controller->take_screenshot();
     break;
   case ACTION_RESET_VIEW:
-    sim_controller->ZoomLevel = 0.0;
-    sim_controller->rotationX = 0.0;
-    sim_controller->rotationY = 0.0;
+    sim_controller->ZoomLevel = -1.0;
+    sim_controller->rotationX =  0.0;
+    sim_controller->rotationY =  0.0;
     break;
   case ACTION_STEP:
     m2sim_drive(M2);

@@ -45,6 +45,7 @@ m2sim *m2sim_new()
   m2->boundary_conditions = NULL;
   m2->boundary_conditions_gradient = NULL;
   m2->initial_data = NULL;
+  m2->add_physical_source_terms = NULL;
 
   /* status initializer */
   m2->status.time_simulation = 0.0;
