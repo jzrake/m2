@@ -49,13 +49,13 @@ static void boundary_conditions(m2sim *m2)
   double d0;
   double p0;
 
-  if (T < 10.0) {
+  if (T < 1.0) {
     B0 = 0.0;
     g0 = 1.0 / sqrt(1.0 - 0.1*0.1);
     d0 = 1e6;
     p0 = 0.001 * d0;
   }
-  else if (T < 50.0) {
+  else if (T < 100.0) {
     B0 = 0.0;
     g0 = 1.0 / sqrt(1.0 - 0.1*0.1);
     d0 = 1.0;
