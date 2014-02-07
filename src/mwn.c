@@ -103,37 +103,12 @@ static void boundary_conditions(m2sim *m2)
     }
     else if (I[2] == 0) {
       if (V->consA[S22] < 0.0) {
-	V->consA[S22] *= -1.0;
+	//V->consA[S22] *= -1.0;
       }
     }
     else if (I[2] == G[2] - 1) {
       if (V->consA[S22] > 0.0) {
-	V->consA[S22] *= -1.0;
-      }
-    }
-  }
-}
-
-static void boundary_conditions_gradient(m2sim *m2)
-{
-  int *L = m2->local_grid_size;
-  int i, j, k;
-  m2vol *V[3];
-  for (i=0; i<L[1]; ++i) {
-    for (j=0; j<L[2]; ++j) {
-      for (k=0; k<L[3]; ++k) {
-
-  	V[0] = M2_VOL(i, j+0, k);
-  	V[1] = M2_VOL(i, j+1, k);
-  	if (V[0]->global_index[2] == 0) {
-  	  memcpy(V[0]->grad2, V[1]->grad2, 8 * sizeof(double));
-  	}
-
-  	V[0] = M2_VOL(i, j-0, k);
-  	V[1] = M2_VOL(i, j-1, k);
-  	if (V[0]->global_index[2] == m2->domain_resolution[2] - 1) {
-  	  memcpy(V[0]->grad2, V[1]->grad2, 8 * sizeof(double));
-  	}
+	//V->consA[S22] *= -1.0;
       }
     }
   }
@@ -216,10 +191,10 @@ static void analysis(m2sim *m2)
 }
 void initialize_problem_mwn(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 256/2, (128+64)/2, 1);
+  m2sim_set_resolution(m2, 256/1, (128+64)/1, 1);
   m2sim_set_guard_zones(m2, 0);
   m2sim_set_extent0(m2, 1e0, 0.0  , 0.0    );
-  m2sim_set_extent1(m2, 1e3, M2_PI, 2*M2_PI);
+  m2sim_set_extent1(m2, 5e2, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_FULL3D);
@@ -228,15 +203,12 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);
 
-  if (0) {
-    m2sim_set_boundary_conditions_gradient(m2, boundary_conditions_gradient);
-  }
-
   m2->plm_parameter = 1.25;
   m2->cfl_parameter = 0.30;
   m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
   m2->coordinate_scaling1 = M2_LOGARITHMIC;
+  m2->status.checkpoint_cadence = 0.5;
 
   remove(FNAME_VOLUME_INTEGRALS_I);
   remove(FNAME_VOLUME_INTEGRALS_O);

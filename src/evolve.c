@@ -746,7 +746,6 @@ void m2sim_drive(m2sim *m2)
   int rk_order = m2->rk_order;
   double kzps; /* kilozones per second */
   char checkpoint_name[1024];
-  int checkpoint_cadence = 5000;
 
 #ifdef _OPENMP
   double start_wtime, stop_wtime;
@@ -756,9 +755,11 @@ void m2sim_drive(m2sim *m2)
 
   m2sim_run_analysis(m2);
   m2sim_cache_conserved(m2);
-  if (m2->status.iteration_number % checkpoint_cadence == 0) {
+  if (m2->status.checkpoint_cadence * m2->status.checkpoint_number <
+      m2->status.time_simulation) {
+    m2->status.checkpoint_number += 1;
     snprintf(checkpoint_name, sizeof(checkpoint_name), "chkpt.%04d.m2",
-	     m2->status.iteration_number / checkpoint_cadence);
+	     m2->status.checkpoint_number);
     m2sim_save_checkpoint(m2, checkpoint_name);
   }
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);

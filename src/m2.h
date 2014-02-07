@@ -134,7 +134,9 @@ struct m2vol
 struct m2sim_status
 {
   double time_simulation;
+  double checkpoint_cadence;
   int iteration_number;
+  int checkpoint_number;
 } ;
 
 struct m2sim
@@ -163,7 +165,7 @@ struct m2sim
   m2vol_operator initial_data;
   m2vol *volumes;
 } ;
-#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiifff$(fi))",m2,4,4,4,4)
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiifff$(ffii))",m2,4,4,4,4)
 
 
 void m2_self_test();

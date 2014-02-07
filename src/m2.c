@@ -49,6 +49,8 @@ m2sim *m2sim_new()
   /* status initializer */
   m2->status.time_simulation = 0.0;
   m2->status.iteration_number = 0;
+  m2->status.checkpoint_cadence = 1.0;
+  m2->status.checkpoint_number = 0;
   return m2;
 }
 void m2sim_del(m2sim *m2)

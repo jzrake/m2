@@ -16,11 +16,9 @@ static int main_window=0;
 static float xy_aspect=1.0;
 
 
-
-
 class SimulationController
 {
-private:
+public:
   int user_id;
   GLUI_EditText *time_label;
   GLUI_EditText *iter_label;
@@ -89,7 +87,7 @@ std::map<int, DatasetController*> DatasetController::instances;
 static SimulationController *sim_controller = NULL;
 static m2sim *M2;
 static void color_map(double val, GLfloat rgb[3], int ct);
-
+static void load_next_frame();
 
 
 
@@ -124,7 +122,8 @@ void myGlutIdle(void)
   glutPostRedisplay();
   glui->sync_live();
   if (sim_controller->AutoAdvance) {
-    m2sim_drive(M2);
+    //m2sim_drive(M2);
+    load_next_frame();
     sim_controller->refresh();
   }
 }
@@ -235,9 +234,9 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   time_label->deactivate();
   iter_label->deactivate();
   zoom_sb->set_float_limits(-3.0, 0.0);
-  imagename_field->set_w(200);
+  imagename_field->set_w(240);
   imagename_field->set_text("m2.ppm");
-  chkptname_field->set_w(200);
+  chkptname_field->set_w(240);
   chkptname_field->set_text("chkpt.m2");
   chkptload_browser->set_w(200);
   chkptload_browser->set_allow_change_dir(1);
@@ -326,7 +325,9 @@ void SimulationController::draw()
   glColor3ub(0, 0, 0);
   glRasterPos2i(10, 10);
 
-  std::string text = "";
+  char label[256];
+  snprintf(label, 256, "t=%3.2f ms", M2->status.time_simulation);
+  std::string text = label;
   for (unsigned int i=0; i<text.length(); ++i) {
     glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
   }
@@ -528,7 +529,33 @@ void DatasetController::refresh_cb(int user_id)
 
 
 
+void load_next_frame()
+{
+  static int checkpoint_number = 0;
+  char fname[256];
+  if (checkpoint_number == 900) {
+    return;
+  }
+  else {
+    checkpoint_number += 1;
+  }
+  snprintf(fname, 256, "sgrbA/chkpt.%04d.m2", checkpoint_number);
+  m2sim_load_checkpoint(M2, fname);
+  sim_controller->refresh();
 
+  if (M2->status.time_simulation < 100.0) {
+    sim_controller->ZoomLevel -= 0.001;
+  }
+  else if (M2->status.time_simulation < 1000.0) {
+    if (sim_controller->ZoomLevel > -2.5) {
+      sim_controller->ZoomLevel -= 0.005;
+    }
+  }
+
+  snprintf(fname, 256, "sgrbA/pressure.%04d.ppm", checkpoint_number);
+  sim_controller->imagename_field->set_text(fname);
+  sim_controller->take_screenshot();
+}
 
 
 void color_map(double val, GLfloat rgb[3], int ct)
