@@ -95,11 +95,11 @@ static void boundary_conditions(m2sim *m2)
 
 void initialize_problem_jet(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 512, 128, 1);
+  m2sim_set_resolution(m2, 64, 256, 1);
   m2sim_set_guard_zones(m2, 0);
-  m2sim_set_extent0(m2, 1e0, 0.0, 0.0);
-  m2sim_set_extent1(m2, 1e2, M2_PI/2, 2*M2_PI);
-  m2sim_set_geometry(m2, M2_SPHERICAL);
+  m2sim_set_extent0(m2, 0.0, 1.0, 0.0);
+  m2sim_set_extent1(m2, 1.0, 4.0, 2.0*M2_PI);
+  m2sim_set_geometry(m2, M2_PARABOLIC);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_ct_scheme(m2, M2_CT_FULL3D);
   m2sim_set_rk_order(m2, 2);
@@ -110,5 +110,5 @@ void initialize_problem_jet(m2sim *m2)
   m2->cfl_parameter = 0.30;
   m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
-  m2->coordinate_scaling1 = M2_LOGARITHMIC;
+  //m2->coordinate_scaling1 = M2_LOGARITHMIC;
 }
