@@ -119,6 +119,47 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 		    (-(r0*r0) + r1*r1))/(2.*u0);
     return 0;
   }
+  else if (aux->m2->geometry == M2_PARABOLIC) {
+    const double dt = x1[0] - x0[0];
+    const double s0 = x0[1];
+    const double s1 = x1[1];
+    const double t0 = x0[2];
+    const double t1 = x1[2];
+    const double f0 = x0[3];
+    const double f1 = x1[3];
+    const double dV = -((f0 - f1)*(s0 - s1)*
+			(s0 + s1)*(t0 - t1)*
+			(t0 + t1)*(s0*s0 + s1*s1 + t0*t0 + t1*t1))/8.;
+    const double S1 = aux->momentum_density[1];
+    const double S2 = aux->momentum_density[2];
+    const double S3 = aux->momentum_density[3];
+    const double u0 = aux->velocity_four_vector[0];
+    const double u1 = aux->velocity_four_vector[1];
+    const double u2 = aux->velocity_four_vector[2];
+    const double u3 = aux->velocity_four_vector[3];
+    const double b0 = aux->magnetic_four_vector[0];
+    const double b1 = aux->magnetic_four_vector[1];
+    const double b2 = aux->magnetic_four_vector[2];
+    const double b3 = aux->magnetic_four_vector[3];
+    const double v1 = aux->velocity_four_vector[1] / u0;
+    const double v2 = aux->velocity_four_vector[2] / u0;
+    const double v3 = aux->velocity_four_vector[3] / u0;
+    const double B1 = b1 * u0 - b0 * u1;
+    const double B2 = b2 * u0 - b0 * u2;
+    const double B3 = b3 * u0 - b0 * u3;
+    const double p  = aux->gas_pressure + aux->magnetic_pressure;
+    const double s  = 0.5 * (s0 + s1);
+    const double t  = 0.5 * (t0 + t1);
+    const double f  = 0.5 * (f0 + f1);
+    /* 
+     * NOTE: these are not the exact integrals of the source terms, but the
+     * cell-centered source terms density. The integrals were just too much.
+     */
+    U[S11] += dt * dV * ((s*t*(s*t*(s*s + t*t)*(p*s*u0*sqrt(s*s*(t*t))*(1 + t*t) + 2*(B2*b3 - S2*u0*v3)*sqrt(s*s + t*t)) - B1*sqrt(s*s*(t*t))*(b1*t*(2*(s*s) + t*t) + b2*(2*s*(t*t) + s*s*s)) + S1*u0*sqrt(s*s*(t*t))*(t*v1*(2*(s*s) + t*t) + v2*(2*s*(t*t) + s*s*s)) + sqrt(s*s*(t*t))*(2*s*t*(b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*cos(f) + cos(2*f)*(B1*(b2*(s*s*s) + b1*(t*t*t)) - u0*(p*t*(s*s)*(-1 + t*t)*(s*s + t*t) + S1*(v2*(s*s*s) + v1*(t*t*t)))) + sin(2*f)*(B2*(b2*(s*s*s) + b1*(t*t*t)) - u0*(p*s*(-1 + s*s)*(t*t)*(s*s + t*t) + S2*(v2*(s*s*s) + v1*(t*t*t)))))))/(2.*u0*pow(s*s*(t*t),1.5)*pow(s*s + t*t,1.5)));
+    U[S22] += dt * dV * ((s*t*(s*t*(s*s + t*t)*(p*t*u0*(1 + s*s)*sqrt(s*s*(t*t)) + 2*(-(B1*b3) + S1*u0*v3)*sqrt(s*s + t*t)) - B2*sqrt(s*s*(t*t))*(b1*t*(2*(s*s) + t*t) + b2*(2*s*(t*t) + s*s*s)) + S2*u0*sqrt(s*s*(t*t))*(t*v1*(2*(s*s) + t*t) + v2*(2*s*(t*t) + s*s*s)) + sqrt(s*s*(t*t))*(2*s*t*(b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*sin(f) + sin(2*f)*(B1*(b2*(s*s*s) + b1*(t*t*t)) - u0*(p*t*(s*s)*(-1 + t*t)*(s*s + t*t) + S1*(v2*(s*s*s) + v1*(t*t*t)))) + cos(2*f)*(-(B2*(b2*(s*s*s) + b1*(t*t*t))) + u0*(p*s*(-1 + s*s)*(t*t)*(s*s + t*t) + S2*(v2*(s*s*s) + 			     v1*(t*t*t)))))))/(2.*u0*pow(s*s*(t*t),1.5)*pow(s*s + t*t,1.5)));
+    U[S33] += dt * dV * ((-(b1*B3*s) - b2*B3*t + s*S3*u0*v1 + S3*t*u0*v2 + sin(f)*(-(b2*B2*s) + b1*B2*t - S2*t*u0*v1 + s*S2*u0*v2 + p*s*u0*(t*t) + p*u0*(s*s*s)) - cos(f)*(B1*(b2*s - b1*t) + u0*(S1*t*v1 - s*S1*v2 + p*t*(s*s) + p*(t*t*t))))/(u0*pow(s*s + t*t,1.5)));
+    return 0;
+  }
   else {
     MSG(FATAL, "invalid geometry");
     return 0;
