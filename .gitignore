@@ -6,3 +6,6 @@
 /src/glui/libglui.a
 *.dat
 *.m2
+*.ppm
+*.png
+

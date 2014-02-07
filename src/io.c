@@ -79,27 +79,29 @@ void m2sim_load_volumes(m2sim *m2, FILE *of)
   tpl_free(tpl);
 }
 
-void m2sim_save_checkpoint(m2sim *m2, const char *fname)
+int m2sim_save_checkpoint(m2sim *m2, const char *fname)
 {
   printf("[save checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "w");
   m2sim_save_header(m2, of);
   m2sim_save_volumes(m2, of);
   fclose(of);
+  return 0;
 }
 
-void m2sim_load_checkpoint(m2sim *m2, const char *fname)
+int m2sim_load_checkpoint(m2sim *m2, const char *fname)
 {
   printf("[load checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "r");
   if (of == NULL) {
     MSGF(ERROR, "no such file: %s", fname);
-    return;
+    return 1;
   }
   m2sim_load_header(m2, of);
   m2sim_load_volumes(m2, of);
   m2sim_from_primitive_all(m2);
   fclose(of);
+  return 0;
 }
 
 void m2sim_write_ascii_1d(m2sim *m2, char *fname)

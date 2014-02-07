@@ -1,7 +1,8 @@
 #include <math.h>
 #include "hydro.h"
 
-#define gamma_law_index (m2->gamma_law_index)
+
+#define gamma_law_index (m2 ? m2->gamma_law_index : 4./3.)
 
 
 int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
