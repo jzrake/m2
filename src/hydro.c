@@ -119,6 +119,140 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 		    (-(r0*r0) + r1*r1))/(2.*u0);
     return 0;
   }
+  else if (aux->m2->geometry == M2_PARABOLIC) {
+    const double dt = x1[0] - x0[0];
+    const double s0 = x0[1];
+    const double s1 = x1[1];
+    const double t0 = x0[2];
+    const double t1 = x1[2];
+    const double f0 = x0[3];
+    const double f1 = x1[3];
+    const double S1 = aux->momentum_density[1];
+    const double S2 = aux->momentum_density[2];
+    const double S3 = aux->momentum_density[3];
+    const double u0 = aux->velocity_four_vector[0];
+    const double u1 = aux->velocity_four_vector[1];
+    const double u2 = aux->velocity_four_vector[2];
+    const double u3 = aux->velocity_four_vector[3];
+    const double b0 = aux->magnetic_four_vector[0];
+    const double b1 = aux->magnetic_four_vector[1];
+    const double b2 = aux->magnetic_four_vector[2];
+    const double b3 = aux->magnetic_four_vector[3];
+    const double v1 = aux->velocity_four_vector[1] / u0;
+    const double v2 = aux->velocity_four_vector[2] / u0;
+    const double v3 = aux->velocity_four_vector[3] / u0;
+    const double B1 = b1 * u0 - b0 * u1;
+    const double B2 = b2 * u0 - b0 * u2;
+    const double B3 = b3 * u0 - b0 * u3;
+    const double p  = aux->gas_pressure + aux->magnetic_pressure;
+    U[S11] += dt * 
+(((-f0 + f1)*(sqrt(s0*s0 + t0*t0)*(3*t0*(b1*B2 - S2*u0*v1)*(s0*s0) + 
+s0*(-3*b2*B2 - 5*b3*B3 + u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t0*t0) - 
+2*(3*b2*B2 + b3*B3 - u0*(4*p + 3*S2*v2 + S3*v3))*(s0*s0*s0) + 
+6*(b1*B2 - S2*u0*v1)*(t0*t0*t0)) + sqrt(s1*s1 + 
+t0*t0)*(3*t0*(-(b1*B2) + S2*u0*v1)*(s1*s1) + s1*(3*b2*B2 + 5*b3*B3 - 
+u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t0*t0) + 2*(3*b2*B2 + b3*B3 - u0*(4*p 
++ 3*S2*v2 + S3*v3))*(s1*s1*s1) + 6*(-(b1*B2) + S2*u0*v1)*(t0*t0*t0)) 
++ sqrt(s1*s1 + t1*t1)*(3*t1*(b1*B2 - S2*u0*v1)*(s1*s1) + s1*(-3*b2*B2 
+- 5*b3*B3 + u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t1*t1) - 2*(3*b2*B2 + 
+b3*B3 - u0*(4*p + 3*S2*v2 + S3*v3))*(s1*s1*s1) + 6*(b1*B2 - 
+S2*u0*v1)*(t1*t1*t1)) + sqrt(s0*s0 + t1*t1)*(3*t1*(-(b1*B2) + 
+S2*u0*v1)*(s0*s0) + s0*(3*b2*B2 + 5*b3*B3 - u0*(8*p + 3*S2*v2 + 
+5*S3*v3))*(t1*t1) + 2*(3*b2*B2 + b3*B3 - u0*(4*p + 3*S2*v2 + 
+S3*v3))*(s0*s0*s0) + 6*(-(b1*B2) + S2*u0*v1)*(t1*t1*t1)) + 
+3*(-(b1*B2) + S2*u0*v1)*log(t0 + sqrt(s0*s0 + t0*t0))*(s0*s0*s0*s0) + 
+3*(b1*B2 - S2*u0*v1)*log(t1 + sqrt(s0*s0 + t1*t1))*(s0*s0*s0*s0) + 
+3*(b1*B2 - S2*u0*v1)*log(t0 + sqrt(s1*s1 + t0*t0))*(s1*s1*s1*s1) + 
+3*(-(b1*B2) + S2*u0*v1)*log(t1 + sqrt(s1*s1 + t1*t1))*(s1*s1*s1*s1) + 
+3*(b2*B2 - b3*B3 - S2*u0*v2 + S3*u0*v3)*log(s0 + sqrt(s0*s0 + 
+t0*t0))*(t0*t0*t0*t0) + 3*(-(b2*B2) + b3*B3 + S2*u0*v2 - 
+S3*u0*v3)*log(s1 + sqrt(s1*s1 + t0*t0))*(t0*t0*t0*t0) + 3*(-(b2*B2) + 
+b3*B3 + S2*u0*v2 - S3*u0*v3)*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + 3*(b2*B2 - b3*B3 - S2*u0*v2 + 
+S3*u0*v3)*log(s1 + sqrt(s1*s1 + t1*t1))*(t1*t1*t1*t1)))/(24.*u0));
+
+    U[S22] += dt * 
+(((f0 - f1)*(5*b3*B3*t0*(s0*s0)*sqrt(s0*s0 + t0*t0) - 
+8*p*t0*u0*(s0*s0)*sqrt(s0*s0 + t0*t0) - 
+5*S3*t0*u0*v3*(s0*s0)*sqrt(s0*s0 + t0*t0) - 
+5*b3*B3*t0*(s1*s1)*sqrt(s1*s1 + t0*t0) + 8*p*t0*u0*(s1*s1)*sqrt(s1*s1 
++ t0*t0) + 5*S3*t0*u0*v3*(s1*s1)*sqrt(s1*s1 + t0*t0) - 
+5*b3*B3*t1*(s0*s0)*sqrt(s0*s0 + t1*t1) + 8*p*t1*u0*(s0*s0)*sqrt(s0*s0 
++ t1*t1) + 5*S3*t1*u0*v3*(s0*s0)*sqrt(s0*s0 + t1*t1) + 
+5*b3*B3*t1*(s1*s1)*sqrt(s1*s1 + t1*t1) - 8*p*t1*u0*(s1*s1)*sqrt(s1*s1 
++ t1*t1) - 5*S3*t1*u0*v3*(s1*s1)*sqrt(s1*s1 + t1*t1) + 
+2*b3*B3*sqrt(s0*s0 + t0*t0)*(t0*t0*t0) - 8*p*u0*sqrt(s0*s0 + 
+t0*t0)*(t0*t0*t0) - 2*S3*u0*v3*sqrt(s0*s0 + t0*t0)*(t0*t0*t0) - 
+2*b3*B3*sqrt(s1*s1 + t0*t0)*(t0*t0*t0) + 8*p*u0*sqrt(s1*s1 + 
+t0*t0)*(t0*t0*t0) + 2*S3*u0*v3*sqrt(s1*s1 + t0*t0)*(t0*t0*t0) - 
+2*b3*B3*sqrt(s0*s0 + t1*t1)*(t1*t1*t1) + 8*p*u0*sqrt(s0*s0 + 
+t1*t1)*(t1*t1*t1) + 2*S3*u0*v3*sqrt(s0*s0 + t1*t1)*(t1*t1*t1) + 
+2*b3*B3*sqrt(s1*s1 + t1*t1)*(t1*t1*t1) - 8*p*u0*sqrt(s1*s1 + 
+t1*t1)*(t1*t1*t1) - 2*S3*u0*v3*sqrt(s1*s1 + t1*t1)*(t1*t1*t1) - 
+3*B1*(b2*(s0*(t0*t0*sqrt(s0*s0 + t0*t0) - t1*t1*sqrt(s0*s0 + t1*t1)) 
++ s1*(-(t0*t0*sqrt(s1*s1 + t0*t0)) + sqrt(s1*s1 + t1*t1)*(2*(s1*s1) + 
+t1*t1)) + 2*(sqrt(s0*s0 + t0*t0) - sqrt(s0*s0 + t1*t1))*(s0*s0*s0) - 
+2*sqrt(s1*s1 + t0*t0)*(s1*s1*s1)) + b1*(t0*(s1*s1)*sqrt(s1*s1 + 
+t0*t0) - t1*sqrt(s1*s1 + t1*t1)*(s1*s1 + 2*(t1*t1)) + 
+s0*s0*(-(t0*sqrt(s0*s0 + t0*t0)) + t1*sqrt(s0*s0 + t1*t1)) + 
+2*(-sqrt(s0*s0 + t0*t0) + sqrt(s1*s1 + t0*t0))*(t0*t0*t0) + 
+2*sqrt(s0*s0 + t1*t1)*(t1*t1*t1))) + 
+3*S1*u0*(v2*(s0*(t0*t0*sqrt(s0*s0 + t0*t0) - t1*t1*sqrt(s0*s0 + 
+t1*t1)) + s1*(-(t0*t0*sqrt(s1*s1 + t0*t0)) + sqrt(s1*s1 + 
+t1*t1)*(2*(s1*s1) + t1*t1)) + 2*(sqrt(s0*s0 + t0*t0) - sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0) - 2*sqrt(s1*s1 + t0*t0)*(s1*s1*s1)) + 
+v1*(t0*(s1*s1)*sqrt(s1*s1 + t0*t0) - t1*sqrt(s1*s1 + t1*t1)*(s1*s1 + 
+2*(t1*t1)) + s0*s0*(-(t0*sqrt(s0*s0 + t0*t0)) + t1*sqrt(s0*s0 + 
+t1*t1)) + 2*(-sqrt(s0*s0 + t0*t0) + sqrt(s1*s1 + t0*t0))*(t0*t0*t0) + 
+2*sqrt(s0*s0 + t1*t1)*(t1*t1*t1))) + 3*((-(b1*B1) + b3*B3 + S1*u0*v1 
+- S3*u0*v3)*log(t0 + sqrt(s0*s0 + t0*t0))*(s0*s0*s0*s0) + 
+b1*B1*log(t1 + sqrt(s0*s0 + t1*t1))*(s0*s0*s0*s0) - b3*B3*log(t1 + 
+sqrt(s0*s0 + t1*t1))*(s0*s0*s0*s0) - S1*u0*v1*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) + S3*u0*v3*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) + b1*B1*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) - b3*B3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) - S1*u0*v1*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + S3*u0*v3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + (-(b1*B1) + b3*B3 + S1*u0*v1 - 
+S3*u0*v3)*log(t1 + sqrt(s1*s1 + t1*t1))*(s1*s1*s1*s1) + (B1*b2 - 
+S1*u0*v2)*log(s0 + sqrt(s0*s0 + t0*t0))*(t0*t0*t0*t0) - B1*b2*log(s1 
++ sqrt(s1*s1 + t0*t0))*(t0*t0*t0*t0) + S1*u0*v2*log(s1 + sqrt(s1*s1 + 
+t0*t0))*(t0*t0*t0*t0) - B1*b2*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + S1*u0*v2*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + B1*b2*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1) - S1*u0*v2*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1))))/(24.*u0));
+
+      U[S33] += dt * 
+(-((f0 - f1)*(S1*u0*v3*(s0*(-5*(t0*t0)*sqrt(s0*s0 + t0*t0) + 
+5*(t1*t1)*sqrt(s0*s0 + t1*t1)) + s1*(5*(t0*t0)*sqrt(s1*s1 + t0*t0) - 
+5*(t1*t1)*sqrt(s1*s1 + t1*t1) + 2*(s1*s1)*(sqrt(s1*s1 + t0*t0) - 
+sqrt(s1*s1 + t1*t1))) + 2*(-sqrt(s0*s0 + t0*t0) + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0)) + B1*b3*(5*s0*(t0*t0*sqrt(s0*s0 + t0*t0) - 
+t1*t1*sqrt(s0*s0 + t1*t1)) + s1*(-5*(t0*t0)*sqrt(s1*s1 + t0*t0) + 
+sqrt(s1*s1 + t1*t1)*(2*(s1*s1) + 5*(t1*t1))) + 2*(sqrt(s0*s0 + t0*t0) 
+- sqrt(s0*s0 + t1*t1))*(s0*s0*s0) - 2*sqrt(s1*s1 + t0*t0)*(s1*s1*s1)) 
++ (B2*b3 - S2*u0*v3)*(-5*t0*(s1*s1)*sqrt(s1*s1 + t0*t0) + 
+t1*sqrt(s1*s1 + t1*t1)*(5*(s1*s1) + 2*(t1*t1)) + 
+5*(s0*s0)*(t0*sqrt(s0*s0 + t0*t0) - t1*sqrt(s0*s0 + t1*t1)) + 
+2*(sqrt(s0*s0 + t0*t0) - sqrt(s1*s1 + t0*t0))*(t0*t0*t0) - 
+2*sqrt(s0*s0 + t1*t1)*(t1*t1*t1)) + 3*((B2*b3 - S2*u0*v3)*log(t0 + 
+sqrt(s0*s0 + t0*t0))*(s0*s0*s0*s0) - B2*b3*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) + S2*u0*v3*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) - B2*b3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + S2*u0*v3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + (B2*b3 - S2*u0*v3)*log(t1 + sqrt(s1*s1 + 
+t1*t1))*(s1*s1*s1*s1) + (B1*b3 - S1*u0*v3)*log(s0 + sqrt(s0*s0 + 
+t0*t0))*(t0*t0*t0*t0) - B1*b3*log(s1 + sqrt(s1*s1 + 
+t0*t0))*(t0*t0*t0*t0) + S1*u0*v3*log(s1 + sqrt(s1*s1 + 
+t0*t0))*(t0*t0*t0*t0) - B1*b3*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + S1*u0*v3*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + B1*b3*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1) - S1*u0*v3*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1))))/(24.*u0));
+
+    return 0;
+  }
   else {
     MSG(FATAL, "invalid geometry");
     return 0;
