@@ -127,9 +127,6 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     const double t1 = x1[2];
     const double f0 = x0[3];
     const double f1 = x1[3];
-    const double dV = -((f0 - f1)*(s0 - s1)*
-			(s0 + s1)*(t0 - t1)*
-			(t0 + t1)*(s0*s0 + s1*s1 + t0*t0 + t1*t1))/8.;
     const double S1 = aux->momentum_density[1];
     const double S2 = aux->momentum_density[2];
     const double S3 = aux->momentum_density[3];
@@ -148,15 +145,6 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     const double B2 = b2 * u0 - b0 * u2;
     const double B3 = b3 * u0 - b0 * u3;
     const double p  = aux->gas_pressure + aux->magnetic_pressure;
-    const double s  = 0.5 * (s0 + s1);
-    const double t  = 0.5 * (t0 + t1);
-    const double f  = 0.5 * (f0 + f1);
-    /* 
-     * NOTE: these are not the exact volume integrations of the source terms,
-     * but the volume-weighted cell-centered source terms density. The exact
-     * integrals were just too much.
-     */
-
     U[S11] += dt * 
 (((-f0 + f1)*(sqrt(s0*s0 + t0*t0)*(3*t0*(b1*B2 - S2*u0*v1)*(s0*s0) + 
 s0*(-3*b2*B2 - 5*b3*B3 + u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t0*t0) - 
