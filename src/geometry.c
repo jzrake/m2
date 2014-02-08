@@ -101,9 +101,14 @@ double m2_area_measure(double x0[4], double x1[4], int geometry, int axis)
     const double t1 = x1[2];
     const double f1 = x1[3];
     switch (axis) {
-    case 1: return ((-f0 + f1)*s*sqrt(s*s)*(-(t0*t0*sqrt(1 + (t0*t0)/pow(s,2))) + t1*t1*sqrt(1 + (t1*t1)/pow(s,2)) + s*s*(-sqrt(1 + (t0*t0)/pow(s,2)) + sqrt(1 + (t1*t1)/pow(s,2)))))/3.;
-    case 2: return ((f0 - f1)*t*sqrt(t*t)*(s0*s0*sqrt(1 + (s0*s0)/pow(t,2)) + sqrt(1 + (s0*s0)/pow(t,2))*(t*t) - sqrt(1 + (s1*s1)/pow(t,2))*(s1*s1 + t*t)))/3.;
-    case 3: return ((s0 - s1)*(t0 - t1)*(s0*s1 + t0*t1 + s0*s0 + s1*s1 + t0*t0 + t1*t1))/3.;
+    case 1: return ((-f0 + f1)*s*sqrt(s*s)*(-(t0*t0*sqrt(1 + (t0*t0)/
+pow(s,2))) + t1*t1*sqrt(1 + (t1*t1)/pow(s,2)) + s*s*(-sqrt(1 + (t0*t0)/
+pow(s,2)) + sqrt(1 + (t1*t1)/pow(s,2)))))/3.;
+    case 2: return ((f0 - f1)*t*sqrt(t*t)*(s0*s0*sqrt(1 + (s0*s0)/pow(t,2)) +
+sqrt(1 + (s0*s0)/pow(t,2))*(t*t) - sqrt(1 + (s1*s1)/pow(t,2))*
+(s1*s1 + t*t)))/3.;
+    case 3: return ((s0 - s1)*(t0 - t1)*
+(s0*s1 + t0*t1 + s0*s0 + s1*s1 + t0*t0 + t1*t1))/3.;
     default: MSG(FATAL, "internal error"); return 0.0;
     }
     }
@@ -152,8 +157,12 @@ double m2_line_measure(double x0[4], double x1[4], int geometry, int axis)
     const double t1 = x1[2];
     const double f1 = x1[3];
     switch (axis) {
-    case 1: return ((-log(s0 + sqrt(s0*s0 + t*t)) + log(s1 + sqrt(s1*s1 + t*t)))*(t*t) - s0*sqrt(s0*s0 + t*t) + s1*sqrt(s1*s1 + t*t))/2.;
-    case 2: return (-(log(s + sqrt(s*s + t0*t0))*(t0*t0)) + log(s + sqrt(s*s + t1*t1))*(t1*t1) + s*(-sqrt(s*s + t0*t0) + sqrt(s*s + t1*t1)))/2.;
+    case 1: return ((-log(s0 + sqrt(s0*s0 + t*t)) +
+log(s1 + sqrt(s1*s1 + t*t)))*(t*t) - s0*sqrt(s0*s0 + t*t) +
+s1*sqrt(s1*s1 + t*t))/2.;
+    case 2: return (-(log(s + sqrt(s*s + t0*t0))*(t0*t0)) +
+log(s + sqrt(s*s + t1*t1))*(t1*t1) + s*(-sqrt(s*s + t0*t0) +
+sqrt(s*s + t1*t1)))/2.;
     case 3: return s*t*(f1 - f0);
     default: MSG(FATAL, "internal error"); return 0.0;
     }

@@ -156,11 +156,112 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
      * but the volume-weighted cell-centered source terms density. The exact
      * integrals were just too much.
      */
-    U[S11] += dt * dV * (((B2*b3 - S2*u0*v3)*pow(s*s + t*t,2.5) + cos(f)*((b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*(s*s)*(t*t)*sqrt(s*s + t*t) + sin(f)*(B2*(s*s + t*t)*(b2*(s*s*s) + b1*(t*t*t)) - u0*(S2*(s*s + t*t)*(v2*(s*s*s) + v1*(t*t*t)) + p*(t*t)*(s*s*s*s*s)))) + pow(sin(f),2)*(-(B1*(s*s + t*t)*(b2*(s*s*s) + b1*(t*t*t))) + u0*(S1*(s*s + t*t)*(v2*(s*s*s) + v1*(t*t*t)) + p*(s*s)*(t*t*t*t*t))))/(s*t*u0*pow(s*s + t*t,2.5)));
 
-    U[S22] += dt * dV * ((2*(b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*sin(f)*(s*s)*(t*t)*sqrt(s*s + t*t) - 2*(B1*b3 - S1*u0*v3)*pow(s*s + t*t,2.5) + sin(2*f)*(s*s + t*t)*((B1*b2 - S1*u0*v2)*(s*s*s) + (b1*B1 - S1*u0*v1)*(t*t*t)) + 2*pow(cos(f),2)*(-(B2*(s*s + t*t)*(b2*(s*s*s) + b1*(t*t*t))) + u0*(S2*(s*s + t*t)*(v2*(s*s*s) + v1*(t*t*t)) + p*(t*t)*(s*s*s*s*s))) - 2*p*u0*cos(f)*sin(f)*(s*s)*(t*t*t*t*t))/(2.*s*t*u0*pow(s*s + t*t,2.5)));
+    U[S11] += dt * 
+(((-f0 + f1)*(sqrt(s0*s0 + t0*t0)*(3*t0*(b1*B2 - S2*u0*v1)*(s0*s0) + 
+s0*(-3*b2*B2 - 5*b3*B3 + u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t0*t0) - 
+2*(3*b2*B2 + b3*B3 - u0*(4*p + 3*S2*v2 + S3*v3))*(s0*s0*s0) + 
+6*(b1*B2 - S2*u0*v1)*(t0*t0*t0)) + sqrt(s1*s1 + 
+t0*t0)*(3*t0*(-(b1*B2) + S2*u0*v1)*(s1*s1) + s1*(3*b2*B2 + 5*b3*B3 - 
+u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t0*t0) + 2*(3*b2*B2 + b3*B3 - u0*(4*p 
++ 3*S2*v2 + S3*v3))*(s1*s1*s1) + 6*(-(b1*B2) + S2*u0*v1)*(t0*t0*t0)) 
++ sqrt(s1*s1 + t1*t1)*(3*t1*(b1*B2 - S2*u0*v1)*(s1*s1) + s1*(-3*b2*B2 
+- 5*b3*B3 + u0*(8*p + 3*S2*v2 + 5*S3*v3))*(t1*t1) - 2*(3*b2*B2 + 
+b3*B3 - u0*(4*p + 3*S2*v2 + S3*v3))*(s1*s1*s1) + 6*(b1*B2 - 
+S2*u0*v1)*(t1*t1*t1)) + sqrt(s0*s0 + t1*t1)*(3*t1*(-(b1*B2) + 
+S2*u0*v1)*(s0*s0) + s0*(3*b2*B2 + 5*b3*B3 - u0*(8*p + 3*S2*v2 + 
+5*S3*v3))*(t1*t1) + 2*(3*b2*B2 + b3*B3 - u0*(4*p + 3*S2*v2 + 
+S3*v3))*(s0*s0*s0) + 6*(-(b1*B2) + S2*u0*v1)*(t1*t1*t1)) + 
+3*(-(b1*B2) + S2*u0*v1)*log(t0 + sqrt(s0*s0 + t0*t0))*(s0*s0*s0*s0) + 
+3*(b1*B2 - S2*u0*v1)*log(t1 + sqrt(s0*s0 + t1*t1))*(s0*s0*s0*s0) + 
+3*(b1*B2 - S2*u0*v1)*log(t0 + sqrt(s1*s1 + t0*t0))*(s1*s1*s1*s1) + 
+3*(-(b1*B2) + S2*u0*v1)*log(t1 + sqrt(s1*s1 + t1*t1))*(s1*s1*s1*s1) + 
+3*(b2*B2 - b3*B3 - S2*u0*v2 + S3*u0*v3)*log(s0 + sqrt(s0*s0 + 
+t0*t0))*(t0*t0*t0*t0) + 3*(-(b2*B2) + b3*B3 + S2*u0*v2 - 
+S3*u0*v3)*log(s1 + sqrt(s1*s1 + t0*t0))*(t0*t0*t0*t0) + 3*(-(b2*B2) + 
+b3*B3 + S2*u0*v2 - S3*u0*v3)*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + 3*(b2*B2 - b3*B3 - S2*u0*v2 + 
+S3*u0*v3)*log(s1 + sqrt(s1*s1 + t1*t1))*(t1*t1*t1*t1)))/(24.*u0));
 
-    U[S33] += dt * dV * (((-((B1*b2*s - b1*B1*t + p*t*u0 + S1*t*u0*v1 - s*S1*u0*v2)*cos(f)) + (-(b2*B2*s) + b1*B2*t + p*s*u0 - S2*t*u0*v1 + s*S2*u0*v2)*sin(f))*(s*s + t*t) + sqrt(s*s + t*t)*(b2*B3*(s*s*s) + b1*B3*(t*t*t) - S3*u0*(v2*(s*s*s) + v1*(t*t*t))))/(s*t*u0*pow(s*s + t*t,2)));
+    U[S22] += dt * 
+(((f0 - f1)*(5*b3*B3*t0*(s0*s0)*sqrt(s0*s0 + t0*t0) - 
+8*p*t0*u0*(s0*s0)*sqrt(s0*s0 + t0*t0) - 
+5*S3*t0*u0*v3*(s0*s0)*sqrt(s0*s0 + t0*t0) - 
+5*b3*B3*t0*(s1*s1)*sqrt(s1*s1 + t0*t0) + 8*p*t0*u0*(s1*s1)*sqrt(s1*s1 
++ t0*t0) + 5*S3*t0*u0*v3*(s1*s1)*sqrt(s1*s1 + t0*t0) - 
+5*b3*B3*t1*(s0*s0)*sqrt(s0*s0 + t1*t1) + 8*p*t1*u0*(s0*s0)*sqrt(s0*s0 
++ t1*t1) + 5*S3*t1*u0*v3*(s0*s0)*sqrt(s0*s0 + t1*t1) + 
+5*b3*B3*t1*(s1*s1)*sqrt(s1*s1 + t1*t1) - 8*p*t1*u0*(s1*s1)*sqrt(s1*s1 
++ t1*t1) - 5*S3*t1*u0*v3*(s1*s1)*sqrt(s1*s1 + t1*t1) + 
+2*b3*B3*sqrt(s0*s0 + t0*t0)*(t0*t0*t0) - 8*p*u0*sqrt(s0*s0 + 
+t0*t0)*(t0*t0*t0) - 2*S3*u0*v3*sqrt(s0*s0 + t0*t0)*(t0*t0*t0) - 
+2*b3*B3*sqrt(s1*s1 + t0*t0)*(t0*t0*t0) + 8*p*u0*sqrt(s1*s1 + 
+t0*t0)*(t0*t0*t0) + 2*S3*u0*v3*sqrt(s1*s1 + t0*t0)*(t0*t0*t0) - 
+2*b3*B3*sqrt(s0*s0 + t1*t1)*(t1*t1*t1) + 8*p*u0*sqrt(s0*s0 + 
+t1*t1)*(t1*t1*t1) + 2*S3*u0*v3*sqrt(s0*s0 + t1*t1)*(t1*t1*t1) + 
+2*b3*B3*sqrt(s1*s1 + t1*t1)*(t1*t1*t1) - 8*p*u0*sqrt(s1*s1 + 
+t1*t1)*(t1*t1*t1) - 2*S3*u0*v3*sqrt(s1*s1 + t1*t1)*(t1*t1*t1) - 
+3*B1*(b2*(s0*(t0*t0*sqrt(s0*s0 + t0*t0) - t1*t1*sqrt(s0*s0 + t1*t1)) 
++ s1*(-(t0*t0*sqrt(s1*s1 + t0*t0)) + sqrt(s1*s1 + t1*t1)*(2*(s1*s1) + 
+t1*t1)) + 2*(sqrt(s0*s0 + t0*t0) - sqrt(s0*s0 + t1*t1))*(s0*s0*s0) - 
+2*sqrt(s1*s1 + t0*t0)*(s1*s1*s1)) + b1*(t0*(s1*s1)*sqrt(s1*s1 + 
+t0*t0) - t1*sqrt(s1*s1 + t1*t1)*(s1*s1 + 2*(t1*t1)) + 
+s0*s0*(-(t0*sqrt(s0*s0 + t0*t0)) + t1*sqrt(s0*s0 + t1*t1)) + 
+2*(-sqrt(s0*s0 + t0*t0) + sqrt(s1*s1 + t0*t0))*(t0*t0*t0) + 
+2*sqrt(s0*s0 + t1*t1)*(t1*t1*t1))) + 
+3*S1*u0*(v2*(s0*(t0*t0*sqrt(s0*s0 + t0*t0) - t1*t1*sqrt(s0*s0 + 
+t1*t1)) + s1*(-(t0*t0*sqrt(s1*s1 + t0*t0)) + sqrt(s1*s1 + 
+t1*t1)*(2*(s1*s1) + t1*t1)) + 2*(sqrt(s0*s0 + t0*t0) - sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0) - 2*sqrt(s1*s1 + t0*t0)*(s1*s1*s1)) + 
+v1*(t0*(s1*s1)*sqrt(s1*s1 + t0*t0) - t1*sqrt(s1*s1 + t1*t1)*(s1*s1 + 
+2*(t1*t1)) + s0*s0*(-(t0*sqrt(s0*s0 + t0*t0)) + t1*sqrt(s0*s0 + 
+t1*t1)) + 2*(-sqrt(s0*s0 + t0*t0) + sqrt(s1*s1 + t0*t0))*(t0*t0*t0) + 
+2*sqrt(s0*s0 + t1*t1)*(t1*t1*t1))) + 3*((-(b1*B1) + b3*B3 + S1*u0*v1 
+- S3*u0*v3)*log(t0 + sqrt(s0*s0 + t0*t0))*(s0*s0*s0*s0) + 
+b1*B1*log(t1 + sqrt(s0*s0 + t1*t1))*(s0*s0*s0*s0) - b3*B3*log(t1 + 
+sqrt(s0*s0 + t1*t1))*(s0*s0*s0*s0) - S1*u0*v1*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) + S3*u0*v3*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) + b1*B1*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) - b3*B3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) - S1*u0*v1*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + S3*u0*v3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + (-(b1*B1) + b3*B3 + S1*u0*v1 - 
+S3*u0*v3)*log(t1 + sqrt(s1*s1 + t1*t1))*(s1*s1*s1*s1) + (B1*b2 - 
+S1*u0*v2)*log(s0 + sqrt(s0*s0 + t0*t0))*(t0*t0*t0*t0) - B1*b2*log(s1 
++ sqrt(s1*s1 + t0*t0))*(t0*t0*t0*t0) + S1*u0*v2*log(s1 + sqrt(s1*s1 + 
+t0*t0))*(t0*t0*t0*t0) - B1*b2*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + S1*u0*v2*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + B1*b2*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1) - S1*u0*v2*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1))))/(24.*u0));
+
+      U[S33] += dt * 
+(-((f0 - f1)*(S1*u0*v3*(s0*(-5*(t0*t0)*sqrt(s0*s0 + t0*t0) + 
+5*(t1*t1)*sqrt(s0*s0 + t1*t1)) + s1*(5*(t0*t0)*sqrt(s1*s1 + t0*t0) - 
+5*(t1*t1)*sqrt(s1*s1 + t1*t1) + 2*(s1*s1)*(sqrt(s1*s1 + t0*t0) - 
+sqrt(s1*s1 + t1*t1))) + 2*(-sqrt(s0*s0 + t0*t0) + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0)) + B1*b3*(5*s0*(t0*t0*sqrt(s0*s0 + t0*t0) - 
+t1*t1*sqrt(s0*s0 + t1*t1)) + s1*(-5*(t0*t0)*sqrt(s1*s1 + t0*t0) + 
+sqrt(s1*s1 + t1*t1)*(2*(s1*s1) + 5*(t1*t1))) + 2*(sqrt(s0*s0 + t0*t0) 
+- sqrt(s0*s0 + t1*t1))*(s0*s0*s0) - 2*sqrt(s1*s1 + t0*t0)*(s1*s1*s1)) 
++ (B2*b3 - S2*u0*v3)*(-5*t0*(s1*s1)*sqrt(s1*s1 + t0*t0) + 
+t1*sqrt(s1*s1 + t1*t1)*(5*(s1*s1) + 2*(t1*t1)) + 
+5*(s0*s0)*(t0*sqrt(s0*s0 + t0*t0) - t1*sqrt(s0*s0 + t1*t1)) + 
+2*(sqrt(s0*s0 + t0*t0) - sqrt(s1*s1 + t0*t0))*(t0*t0*t0) - 
+2*sqrt(s0*s0 + t1*t1)*(t1*t1*t1)) + 3*((B2*b3 - S2*u0*v3)*log(t0 + 
+sqrt(s0*s0 + t0*t0))*(s0*s0*s0*s0) - B2*b3*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) + S2*u0*v3*log(t1 + sqrt(s0*s0 + 
+t1*t1))*(s0*s0*s0*s0) - B2*b3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + S2*u0*v3*log(t0 + sqrt(s1*s1 + 
+t0*t0))*(s1*s1*s1*s1) + (B2*b3 - S2*u0*v3)*log(t1 + sqrt(s1*s1 + 
+t1*t1))*(s1*s1*s1*s1) + (B1*b3 - S1*u0*v3)*log(s0 + sqrt(s0*s0 + 
+t0*t0))*(t0*t0*t0*t0) - B1*b3*log(s1 + sqrt(s1*s1 + 
+t0*t0))*(t0*t0*t0*t0) + S1*u0*v3*log(s1 + sqrt(s1*s1 + 
+t0*t0))*(t0*t0*t0*t0) - B1*b3*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + S1*u0*v3*log(s0 + sqrt(s0*s0 + 
+t1*t1))*(t1*t1*t1*t1) + B1*b3*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1) - S1*u0*v3*log(s1 + sqrt(s1*s1 + 
+t1*t1))*(t1*t1*t1*t1))))/(24.*u0));
 
     return 0;
   }
