@@ -44,18 +44,17 @@ double m2_volume_measure(double x0[4], double x1[4], int geometry)
   case M2_SPHERICAL: dV = -1.0/3.0 * (x1[1]*x1[1]*x1[1] - x0[1]*x0[1]*x0[1]) *
       (cos(x1[2]) - cos(x0[2])) * (x1[3] - x0[3]);
     break;
-  case M2_PARABOLIC: 
-    {
-      const double s0 = x0[1];
-      const double s1 = x1[1];
-      const double t0 = x0[2];
-      const double t1 = x1[2];
-      const double f0 = x0[3];
-      const double f1 = x1[3];
-      dV = -((f0 - f1)*(s0 - s1)*
-	     (s0 + s1)*(t0 - t1)*
-	     (t0 + t1)*(s0*s0 + s1*s1 + t0*t0 + t1*t1))/8.;
-    }
+  case M2_PARABOLIC: {
+    const double s0 = x0[1];
+    const double s1 = x1[1];
+    const double t0 = x0[2];
+    const double t1 = x1[2];
+    const double f0 = x0[3];
+    const double f1 = x1[3];
+    dV = -((f0 - f1)*(s0 - s1)*
+	   (s0 + s1)*(t0 - t1)*
+	   (t0 + t1)*(s0*s0 + s1*s1 + t0*t0 + t1*t1))/8.;
+  }
     break;
   default:
     MSG(FATAL, "internal error");

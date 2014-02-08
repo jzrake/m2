@@ -152,12 +152,16 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     const double t  = 0.5 * (t0 + t1);
     const double f  = 0.5 * (f0 + f1);
     /* 
-     * NOTE: these are not the exact integrals of the source terms, but the
-     * cell-centered source terms density. The integrals were just too much.
+     * NOTE: these are not the exact volume integrations of the source terms,
+     * but the volume-weighted cell-centered source terms density. The exact
+     * integrals were just too much.
      */
-    U[S11] += dt * dV * ((s*t*(s*t*(s*s + t*t)*(p*s*u0*sqrt(s*s*(t*t))*(1 + t*t) + 2*(B2*b3 - S2*u0*v3)*sqrt(s*s + t*t)) - B1*sqrt(s*s*(t*t))*(b1*t*(2*(s*s) + t*t) + b2*(2*s*(t*t) + s*s*s)) + S1*u0*sqrt(s*s*(t*t))*(t*v1*(2*(s*s) + t*t) + v2*(2*s*(t*t) + s*s*s)) + sqrt(s*s*(t*t))*(2*s*t*(b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*cos(f) + cos(2*f)*(B1*(b2*(s*s*s) + b1*(t*t*t)) - u0*(p*t*(s*s)*(-1 + t*t)*(s*s + t*t) + S1*(v2*(s*s*s) + v1*(t*t*t)))) + sin(2*f)*(B2*(b2*(s*s*s) + b1*(t*t*t)) - u0*(p*s*(-1 + s*s)*(t*t)*(s*s + t*t) + S2*(v2*(s*s*s) + v1*(t*t*t)))))))/(2.*u0*pow(s*s*(t*t),1.5)*pow(s*s + t*t,1.5)));
-    U[S22] += dt * dV * ((s*t*(s*t*(s*s + t*t)*(p*t*u0*(1 + s*s)*sqrt(s*s*(t*t)) + 2*(-(B1*b3) + S1*u0*v3)*sqrt(s*s + t*t)) - B2*sqrt(s*s*(t*t))*(b1*t*(2*(s*s) + t*t) + b2*(2*s*(t*t) + s*s*s)) + S2*u0*sqrt(s*s*(t*t))*(t*v1*(2*(s*s) + t*t) + v2*(2*s*(t*t) + s*s*s)) + sqrt(s*s*(t*t))*(2*s*t*(b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*sin(f) + sin(2*f)*(B1*(b2*(s*s*s) + b1*(t*t*t)) - u0*(p*t*(s*s)*(-1 + t*t)*(s*s + t*t) + S1*(v2*(s*s*s) + v1*(t*t*t)))) + cos(2*f)*(-(B2*(b2*(s*s*s) + b1*(t*t*t))) + u0*(p*s*(-1 + s*s)*(t*t)*(s*s + t*t) + S2*(v2*(s*s*s) + 			     v1*(t*t*t)))))))/(2.*u0*pow(s*s*(t*t),1.5)*pow(s*s + t*t,1.5)));
-    U[S33] += dt * dV * ((-(b1*B3*s) - b2*B3*t + s*S3*u0*v1 + S3*t*u0*v2 + sin(f)*(-(b2*B2*s) + b1*B2*t - S2*t*u0*v1 + s*S2*u0*v2 + p*s*u0*(t*t) + p*u0*(s*s*s)) - cos(f)*(B1*(b2*s - b1*t) + u0*(S1*t*v1 - s*S1*v2 + p*t*(s*s) + p*(t*t*t))))/(u0*pow(s*s + t*t,1.5)));
+    U[S11] += dt * dV * (((B2*b3 - S2*u0*v3)*pow(s*s + t*t,2.5) + cos(f)*((b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*(s*s)*(t*t)*sqrt(s*s + t*t) + sin(f)*(B2*(s*s + t*t)*(b2*(s*s*s) + b1*(t*t*t)) - u0*(S2*(s*s + t*t)*(v2*(s*s*s) + v1*(t*t*t)) + p*(t*t)*(s*s*s*s*s)))) + pow(sin(f),2)*(-(B1*(s*s + t*t)*(b2*(s*s*s) + b1*(t*t*t))) + u0*(S1*(s*s + t*t)*(v2*(s*s*s) + v1*(t*t*t)) + p*(s*s)*(t*t*t*t*t))))/(s*t*u0*pow(s*s + t*t,2.5)));
+
+    U[S22] += dt * dV * ((2*(b2*B3*s - b1*B3*t + S3*t*u0*v1 - s*S3*u0*v2)*sin(f)*(s*s)*(t*t)*sqrt(s*s + t*t) - 2*(B1*b3 - S1*u0*v3)*pow(s*s + t*t,2.5) + sin(2*f)*(s*s + t*t)*((B1*b2 - S1*u0*v2)*(s*s*s) + (b1*B1 - S1*u0*v1)*(t*t*t)) + 2*pow(cos(f),2)*(-(B2*(s*s + t*t)*(b2*(s*s*s) + b1*(t*t*t))) + u0*(S2*(s*s + t*t)*(v2*(s*s*s) + v1*(t*t*t)) + p*(t*t)*(s*s*s*s*s))) - 2*p*u0*cos(f)*sin(f)*(s*s)*(t*t*t*t*t))/(2.*s*t*u0*pow(s*s + t*t,2.5)));
+
+    U[S33] += dt * dV * (((-((B1*b2*s - b1*B1*t + p*t*u0 + S1*t*u0*v1 - s*S1*u0*v2)*cos(f)) + (-(b2*B2*s) + b1*B2*t + p*s*u0 - S2*t*u0*v1 + s*S2*u0*v2)*sin(f))*(s*s + t*t) + sqrt(s*s + t*t)*(b2*B3*(s*s*s) + b1*B3*(t*t*t) - S3*u0*(v2*(s*s*s) + v1*(t*t*t))))/(s*t*u0*pow(s*s + t*t,2)));
+
     return 0;
   }
   else {
