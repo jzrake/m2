@@ -625,12 +625,12 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 	VC = m2->volumes + M2_IND(i, j, k);
-	V1 = (i == 0) ? VC : m2->volumes + M2_IND(i-1, j, k);
-	V2 = (j == 0) ? VC : m2->volumes + M2_IND(i, j-1, k);
-	V3 = (k == 0) ? VC : m2->volumes + M2_IND(i, j, k-1);
-	VC->prim.B1 = 0.5 * (VC->Bflux1A/VC->area1 + V1->Bflux1A/V1->area1);
-	VC->prim.B2 = 0.5 * (VC->Bflux2A/VC->area2 + V2->Bflux2A/V2->area2);
-	VC->prim.B3 = 0.5 * (VC->Bflux3A/VC->area3 + V3->Bflux3A/V3->area3);
+	V1 = M2_VOL(i-1, j, k);
+	V2 = M2_VOL(i, j-1, k);
+	V3 = M2_VOL(i, j, k-1);
+	VC->prim.B1 = 0.5*(VC->Bflux1A/VC->area1+(V1?V1->Bflux1A/V1->area1:0));
+	VC->prim.B2 = 0.5*(VC->Bflux2A/VC->area2+(V2?V2->Bflux2A/V2->area2:0));
+	VC->prim.B3 = 0.5*(VC->Bflux3A/VC->area3+(V3?V3->Bflux3A/V3->area3:0));
       }
     }
   }
