@@ -23,7 +23,14 @@ m2sim *m2sim_new()
   m2->local_grid_size[1] = 0;
   m2->local_grid_size[2] = 0;
   m2->local_grid_size[3] = 0;
-  m2->number_guard_zones = 2;
+  m2->number_guard_zones0[0] = 0;
+  m2->number_guard_zones0[1] = 0;
+  m2->number_guard_zones0[2] = 0;
+  m2->number_guard_zones0[3] = 0;
+  m2->number_guard_zones1[0] = 0;
+  m2->number_guard_zones1[1] = 0;
+  m2->number_guard_zones1[2] = 0;
+  m2->number_guard_zones1[3] = 0;
   m2->volumes = NULL;
 
   /* solver and physics configuration */
@@ -63,10 +70,6 @@ void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3)
   m2->domain_resolution[1] = n1;
   m2->domain_resolution[2] = n2;
   m2->domain_resolution[3] = n3;
-}
-void m2sim_set_guard_zones(m2sim *m2, int ng)
-{
-  m2->number_guard_zones = ng;
 }
 void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3)
 {
@@ -116,13 +119,17 @@ void m2sim_initialize(m2sim *m2)
 {
   int *N = m2->domain_resolution;
   int *L = m2->local_grid_size;
-  int ng = m2->number_guard_zones;
+  int *ng0 = m2->number_guard_zones0;
+  int *ng1 = m2->number_guard_zones1;
   int i, j, k, d;
   double I0[4], I1[4], x0[4], x1[4];
   m2vol *V;
-  L[1] = N[1] + 2*ng*(N[1] > 1);
-  L[2] = N[2] + 2*ng*(N[2] > 1);
-  L[3] = N[3] + 2*ng*(N[3] > 1);
+  if (N[1] == 1) ng0[1] = ng1[1] = 0; /* don't allow guard zones if symmetric */
+  if (N[2] == 1) ng0[2] = ng1[2] = 0;
+  if (N[3] == 1) ng0[3] = ng1[3] = 0;
+  L[1] = N[1] + ng0[1] + ng1[1];
+  L[2] = N[2] + ng0[2] + ng1[2];
+  L[3] = N[3] + ng0[3] + ng1[3];
   L[0] = L[1] * L[2] * L[3];
   m2->volumes = (m2vol*) malloc(L[0] * sizeof(m2vol));
   for (i=0; i<L[1]; ++i) {
@@ -135,9 +142,9 @@ void m2sim_initialize(m2sim *m2)
 	/* ----------------------- */
 	for (d=1; d<=3; ++d) {
 	  V->global_index[0] = M2_IND(i,j,k);
-	  V->global_index[1] = i - ng * (N[1] > 1);
-	  V->global_index[2] = j - ng * (N[2] > 1);
-	  V->global_index[3] = k - ng * (N[3] > 1);
+	  V->global_index[1] = i - ng0[1] * (N[1] > 1);
+	  V->global_index[2] = j - ng0[2] * (N[2] > 1);
+	  V->global_index[3] = k - ng0[3] * (N[3] > 1);
 	}
 	/* ----------------------- */
 	/* cache cell volumes      */
@@ -411,11 +418,11 @@ void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
   int i = global_index[1];
   int j = global_index[2];
   int k = global_index[3];
-  int ng = m2->number_guard_zones;
+  int *ng0 = m2->number_guard_zones0;
   I[0] = global_index[0];
-  I[1] = i + ng * (G[1] > 1);
-  I[2] = j + ng * (G[2] > 1);
-  I[3] = k + ng * (G[3] > 1);
+  I[1] = i + ng0[1];
+  I[2] = j + ng0[2];
+  I[3] = k + ng0[3];
 }
 void m2sim_run_analysis(m2sim *m2)
 {

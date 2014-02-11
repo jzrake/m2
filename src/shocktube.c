@@ -49,7 +49,6 @@ static void boundary_conditions(m2sim *m2)
 void initialize_problem_shocktube(m2sim *m2)
 {
   m2sim_set_resolution(m2, 256, 1, 1);
-  m2sim_set_guard_zones(m2, 2);
   m2sim_set_extent0(m2, 0.0, 0.0, 0.0);
   m2sim_set_extent1(m2, 1.0, 1.0, 1.0);
   m2sim_set_geometry(m2, M2_CARTESIAN);
@@ -59,6 +58,8 @@ void initialize_problem_shocktube(m2sim *m2)
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);
 
+  m2->number_guard_zones0[1] = 2;
+  m2->number_guard_zones1[1] = 2;
   m2->plm_parameter = 2.00;
   m2->cfl_parameter = 0.40;
   m2->simple_eigenvalues = 1;

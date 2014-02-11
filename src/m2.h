@@ -145,7 +145,8 @@ struct m2sim
   double domain_extent_upper[4];
   int domain_resolution[4];
   int local_grid_size[4];
-  int number_guard_zones;
+  int number_guard_zones0[4];
+  int number_guard_zones1[4];
   int coordinate_scaling1; /* logarithmic, linear, etc */
   int coordinate_scaling2;
   int coordinate_scaling3;
@@ -189,7 +190,6 @@ void m2vol_to_interpolated(m2vol *V, double *y, int stride);
 m2sim *m2sim_new();
 void m2sim_del(m2sim *m2);
 void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3);
-void m2sim_set_guard_zones(m2sim *m2, int ng);
 void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_extent1(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_geometry(m2sim *m2, int geometry);

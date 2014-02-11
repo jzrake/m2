@@ -122,8 +122,8 @@ void myGlutIdle(void)
   glutPostRedisplay();
   glui->sync_live();
   if (sim_controller->AutoAdvance) {
-    //m2sim_drive(M2);
-    load_next_frame();
+    m2sim_drive(M2);
+    //load_next_frame();
     sim_controller->refresh();
   }
 }

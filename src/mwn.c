@@ -192,7 +192,6 @@ static void analysis(m2sim *m2)
 void initialize_problem_mwn(m2sim *m2)
 {
   m2sim_set_resolution(m2, 256/1, (128+64)/1, 1);
-  m2sim_set_guard_zones(m2, 0);
   m2sim_set_extent0(m2, 1e0, 0.0  , 0.0    );
   m2sim_set_extent1(m2, 5e2, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
