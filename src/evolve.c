@@ -27,6 +27,14 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
   double xR = m2vol_coordinate_centroid(VR, axis);
   double n[4] = { 0.0, 0.0, 0.0, 0.0 };
 
+  if (VL->zone_type != M2_ZONE_TYPE_FULL ||
+      VR->zone_type != M2_ZONE_TYPE_FULL) {
+    for (q=0; q<8; ++q) {
+      F[q] = 0.0;
+    }
+    return;
+  }
+
   n[axis] = 1.0;
   m2vol_to_interpolated(VL, yl, 1);
   m2vol_to_interpolated(VR, yr, 1);
@@ -305,7 +313,8 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[0] = M2_VOL(i-1, j, k);
 	V[1] = M2_VOL(i+0, j, k);
 	V[2] = M2_VOL(i+1, j, k);
-	if (V[0] && V[2] && ENABLE_PLM) {
+	if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL && 
+	    V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 1);
 	  }
@@ -329,7 +338,8 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[0] = M2_VOL(i, j-1, k);
 	V[1] = M2_VOL(i, j+0, k);
 	V[2] = M2_VOL(i, j+1, k);
-	if (V[0] && V[2] && ENABLE_PLM) {
+	if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL && 
+	    V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 2);
 	  }
@@ -353,7 +363,8 @@ void m2sim_calculate_gradient(m2sim *m2)
 	V[0] = M2_VOL(i, j, k-1);
 	V[1] = M2_VOL(i, j, k+0);
 	V[2] = M2_VOL(i, j, k+1);
-	if (V[0] && V[2] && ENABLE_PLM) {
+	if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL && 
+	    V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
 	  for (n=0; n<3; ++n) {
 	    x[n] = m2vol_coordinate_centroid(V[n], 3);
 	  }
@@ -388,7 +399,6 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
-  char scheme = m2->ct_scheme;
 #ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,V3,j,k,q) default(shared)
 #endif
@@ -396,51 +406,7 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
-	if ((m2->physics & M2_MAGNETIZED) && scheme == M2_CT_OUTOFPAGE3) {
-	  /* special case of 2d simulation with symmetry and B-field in the
-	     3-direction */
-	  if (m2->geometry != M2_CARTESIAN) {
-	    MSG(WARNING, "M2_CT_OUTOFPAGE3 requires a geometrical"
-		"source term that is not implemented");
-	  }
-	  double dB3 = 0.0;
-
-	  V0 = M2_VOL(i+0, j+0, k);
-	  V1 = M2_VOL(i-1, j+0, k);
-	  V2 = M2_VOL(i+0, j-1, k);
-
-	  if (V0) dB3 -= dt * V0->flux1[B33] * V0->area1;
-	  if (V1) dB3 += dt * V1->flux1[B33] * V1->area1;
-	  if (V0) dB3 -= dt * V0->flux2[B33] * V0->area2;
-	  if (V2) dB3 += dt * V2->flux2[B33] * V2->area2;
-
-	  dB3 /= V0->volume;
-	  dB3 *= V0->area3;
-
-	  V0->Bflux3A += dB3;
-	}
-	if ((m2->physics & M2_MAGNETIZED) && scheme == M2_CT_TRANSVERSE1B3) {
-	  /* special case of 1d simulation with symmetry along y and z, B-field
-	     along z */
-	  if (m2->geometry != M2_CARTESIAN) {
-	    MSG(WARNING, "M2_CT_TRANSVERSE1B3 requires a geometrical "
-		"source term that is not implemented");
-	  }
-	  double dB3 = 0.0;
-
-	  V0 = M2_VOL(i+0, j+0, k);
-	  V1 = M2_VOL(i-1, j+0, k);
-
-	  if (V0) dB3 -= dt * V0->flux1[B33] * V0->area1;
-	  if (V1) dB3 += dt * V1->flux1[B33] * V1->area1;
-
-	  dB3 /= V0->volume;
-	  dB3 *= V0->area3;
-
-	  V0->Bflux3A += dB3;
-	}
-	if ((m2->physics & M2_MAGNETIZED) && scheme == M2_CT_FULL3D) {
-
+	if (m2->physics & M2_MAGNETIZED) {
 	  /* --------------- */
 	  /* x-directed face */
 	  /* --------------- */
@@ -539,27 +505,18 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
 {
   int n;
   int *L = m2->local_grid_size;
-  int *G = m2->domain_resolution;
-  int *I;
   m2vol *V;
 #ifdef _OPENMP
 #pragma omp parallel for private(V,I) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+      continue;
+    }
     V->x0[0] = 0.0;
     V->x1[0] = dt;
-    I = V->global_index;
-    if (I[1] < 0 ||
-	I[2] < 0 ||
-	I[3] < 0 ||
-	I[1] >= G[1] ||
-	I[2] >= G[2] ||
-	I[3] >= G[3]) {
-    }
-    else {
-      m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
-    }
+    m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
   }
 }
 
@@ -574,6 +531,9 @@ void m2sim_cache_conserved(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+      continue;
+    }
     memcpy(V->consB, V->consA, 5 * sizeof(double));
     V->Bflux1B = V->Bflux1A;
     V->Bflux2B = V->Bflux2A;
@@ -592,6 +552,9 @@ void m2sim_average_runge_kutta(m2sim *m2, double b)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+      continue;
+    }
     for (q=0; q<5; ++q) {
       V->consA[q] = b * V->consA[q] + (1.0 - b) * V->consB[q];
     }
@@ -611,21 +574,33 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
  */
 {
   int i, j, k;
+  int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   m2vol *VC, *V1, *V2, *V3;
+  double A1L, A2L, A3L;
+  double A1R, A2R, A3R;
 #ifdef _OPENMP
 #pragma omp parallel for private(VC,V1,V2,V3,j,k) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-	VC = m2->volumes + M2_IND(i, j, k);
-	V1 = (i == 0) ? VC : m2->volumes + M2_IND(i-1, j, k);
-	V2 = (j == 0) ? VC : m2->volumes + M2_IND(i, j-1, k);
-	V3 = (k == 0) ? VC : m2->volumes + M2_IND(i, j, k-1);
-	VC->prim.B1 = 0.5 * (VC->Bflux1A/VC->area1 + V1->Bflux1A/V1->area1);
-	VC->prim.B2 = 0.5 * (VC->Bflux2A/VC->area2 + V2->Bflux2A/V2->area2);
-	VC->prim.B3 = 0.5 * (VC->Bflux3A/VC->area3 + V3->Bflux3A/V3->area3);
+
+	VC = M2_VOL(i, j, k);
+	V1 = (G[1] > 1) ? M2_VOL(i-1, j, k) : VC;
+	V2 = (G[2] > 1) ? M2_VOL(i, j-1, k) : VC;
+	V3 = (G[3] > 1) ? M2_VOL(i, j, k-1) : VC;
+
+	A1R = (VC && VC->area1 > 1e-12) ? VC->area1 : 1.0;
+	A2R = (VC && VC->area2 > 1e-12) ? VC->area2 : 1.0;
+	A3R = (VC && VC->area3 > 1e-12) ? VC->area3 : 1.0;
+	A1L = (V1 && V1->area1 > 1e-12) ? V1->area1 : 1.0;
+	A2L = (V2 && V2->area2 > 1e-12) ? V2->area2 : 1.0;
+	A3L = (V3 && V3->area3 > 1e-12) ? V3->area3 : 1.0;
+
+	VC->prim.B1 = V1 ? 0.5 * (VC->Bflux1A/A1R + V1->Bflux1A/A1L) : 0.0;
+	VC->prim.B2 = V2 ? 0.5 * (VC->Bflux2A/A2R + V2->Bflux2A/A2L) : 0.0;
+	VC->prim.B3 = V3 ? 0.5 * (VC->Bflux3A/A3R + V3->Bflux3A/A3L) : 0.0;
       }
     }
   }
@@ -643,6 +618,9 @@ int m2sim_from_conserved_all(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+      continue;
+    }
     /* assume fields have been averaged from faces to center (prim) */
     B[0] = 0.0;
     B[1] = V->prim.B1;
@@ -674,6 +652,9 @@ int m2sim_from_primitive_all(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+      continue;
+    }
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
 			 V->consA, &V->aux);
   }
@@ -697,6 +678,9 @@ double m2sim_minimum_courant_time(m2sim *m2)
 #endif
     for (n=0; n<L[0]; ++n) {
       V = m2->volumes + n;
+      if (V->zone_type != M2_ZONE_TYPE_FULL) {
+	continue;
+      }
       dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux);
       if (dt < mindt || mindt < 0.0) {
 	mindt = dt;

@@ -53,7 +53,6 @@ void initialize_problem_shocktube(m2sim *m2)
   m2sim_set_extent1(m2, 1.0, 1.0, 1.0);
   m2sim_set_geometry(m2, M2_CARTESIAN);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
-  m2sim_set_ct_scheme(m2, M2_CT_FULL3D);
   m2sim_set_analysis(m2, NULL);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);

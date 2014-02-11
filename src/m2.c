@@ -39,7 +39,6 @@ m2sim *m2sim_new()
   m2->coordinate_scaling3 = M2_LINEAR;
   m2->geometry = M2_CARTESIAN;
   m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
-  m2->ct_scheme = M2_CT_FULL3D;
   m2->rk_order = 2;
   m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE;
@@ -91,10 +90,6 @@ void m2sim_set_physics(m2sim *m2, int modes)
 {
   m2->physics = modes;
 }
-void m2sim_set_ct_scheme(m2sim *m2, int mode)
-{
-  m2->ct_scheme = mode;
-}
 void m2sim_set_rk_order(m2sim *m2, int order)
 {
   m2->rk_order = order;
@@ -142,9 +137,22 @@ void m2sim_initialize(m2sim *m2)
 	/* ----------------------- */
 	for (d=1; d<=3; ++d) {
 	  V->global_index[0] = M2_IND(i,j,k);
-	  V->global_index[1] = i - ng0[1] * (N[1] > 1);
-	  V->global_index[2] = j - ng0[2] * (N[2] > 1);
-	  V->global_index[3] = k - ng0[3] * (N[3] > 1);
+	  V->global_index[1] = i - ng0[1];
+	  V->global_index[2] = j - ng0[2];
+	  V->global_index[3] = k - ng0[3];
+	}
+	if (V->global_index[1] == -1 ||
+	    V->global_index[2] == -1 ||
+	    V->global_index[3] == -1) {
+	  V->zone_type = M2_ZONE_TYPE_SHELL;
+	}
+	else if (V->global_index[1] >= 0 && V->global_index[1] < N[1] &&
+		 V->global_index[2] >= 0 && V->global_index[2] < N[2] &&
+		 V->global_index[3] >= 0 && V->global_index[3] < N[3]) {
+	  V->zone_type = M2_ZONE_TYPE_FULL;
+	}
+	else {
+	  V->zone_type = M2_ZONE_TYPE_GUARD;
 	}
 	/* ----------------------- */
 	/* cache cell volumes      */
@@ -159,7 +167,12 @@ void m2sim_initialize(m2sim *m2)
 	I1[3] = V->global_index[3] + 0.5;
 	m2sim_index_to_position(m2, I0, x0);
 	m2sim_index_to_position(m2, I1, x1);
-	V->volume = m2_volume_measure(x0, x1, m2->geometry);
+	if (V->zone_type == M2_ZONE_TYPE_FULL) {
+	  V->volume = m2_volume_measure(x0, x1, m2->geometry);
+	}
+	else {
+	  V->volume = 0.0;
+	}
 	memcpy(V->x0, x0, 4 * sizeof(double));
 	memcpy(V->x1, x1, 4 * sizeof(double));
 	/* ------------------------ */
@@ -393,14 +406,11 @@ double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
 {
   m2vol *V;
   int *L = m2->local_grid_size;
-  int *G = m2->domain_resolution;
   int n;
   double y = 0.0;
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->global_index[1] < 0 || (V->global_index[1] >= G[1] && G[1] > 1) ||
-	V->global_index[2] < 0 || (V->global_index[2] >= G[2] && G[2] > 1) ||
-	V->global_index[3] < 0 || (V->global_index[3] >= G[3] && G[3] > 1)) {
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
       continue;
     }
     else if (cut_cb) {
@@ -414,7 +424,6 @@ double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
 }
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
 {
-  int *G = m2->domain_resolution;
   int i = global_index[1];
   int j = global_index[2];
   int k = global_index[3];

@@ -8,6 +8,7 @@
 #define M2_NONRELATIVISTIC 0
 #define M2_UNMAGNETIZED 0
 
+
 /* ------------------------------------------------------------------
  * M2 PUBLIC API
  * --------------------------------------------------------------- */
@@ -64,6 +65,11 @@ enum m2flag {
   M2_CT_OUTOFPAGE3,
   M2_CT_TRANSVERSE1B3,
   M2_CT_FULL3D,
+
+  /* Zone types */
+  M2_ZONE_TYPE_FULL,
+  M2_ZONE_TYPE_GUARD,
+  M2_ZONE_TYPE_SHELL, /* indicates that only faces and edges are used */
 } ;
 
 /* indices into cons[AB] and flux[123] arrays */
@@ -126,6 +132,7 @@ struct m2vol
   double emf1; /* line integral of electric field along (+1/2, +1/2) edges */
   double emf2;
   double emf3;
+  char zone_type;
   m2aux aux;
   m2sim *m2;
 } ;
@@ -152,7 +159,6 @@ struct m2sim
   int coordinate_scaling3;
   int geometry;
   int physics;
-  int ct_scheme;
   int rk_order;
   int simple_eigenvalues; /* fix outer characteristics to plus/minus c */
   int interpolation_fields;
@@ -166,7 +172,8 @@ struct m2sim
   m2vol_operator initial_data;
   m2vol *volumes;
 } ;
-#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#iiiiiiiiiifff$(ffii))",m2,4,4,4,4)
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiifff$(ffii))",	\
+			      m2,4,4,4,4,4,4)
 
 
 void m2_self_test();
@@ -194,7 +201,6 @@ void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_extent1(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_geometry(m2sim *m2, int geometry);
 void m2sim_set_physics(m2sim *m2, int modes);
-void m2sim_set_ct_scheme(m2sim *m2, int mode);
 void m2sim_set_rk_order(m2sim *m2, int order);
 void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis);
 void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc);

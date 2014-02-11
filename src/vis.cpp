@@ -474,20 +474,38 @@ void DatasetController::refresh()
   VertexData = (GLfloat*) realloc(VertexData, L[0]*3*4*sizeof(GLfloat));
   ColorData = (GLfloat*) realloc(ColorData, L[0]*3*sizeof(GLfloat));
   if (AutoRange) {
+    DataRange[0] = +1e10;
+    DataRange[1] = -1e10;
     for (int n=0; n<L[0]; ++n) {
-      y = get_scalar(M2->volumes + n);
-      if (n == 0) {
-	DataRange[0] = y;
-	DataRange[1] = y;
+      V = M2->volumes + n;
+      if (V->zone_type != M2_ZONE_TYPE_FULL) {
+	continue;
       }
-      else {
-	if (y < DataRange[0]) DataRange[0] = y;
-	if (y > DataRange[1]) DataRange[1] = y;
-      }
+      y = get_scalar(V);
+      if (y < DataRange[0]) DataRange[0] = y;
+      if (y > DataRange[1]) DataRange[1] = y;
     }
   }
   for (int n=0; n<L[0]; ++n) {
     V = M2->volumes + n;
+    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+      VertexData[4*3*n + 0*3 + 0] = 0.0;
+      VertexData[4*3*n + 0*3 + 1] = 0.0;
+      VertexData[4*3*n + 0*3 + 2] = 0.0;
+      VertexData[4*3*n + 1*3 + 0] = 0.0;
+      VertexData[4*3*n + 1*3 + 1] = 0.0;
+      VertexData[4*3*n + 1*3 + 2] = 0.0;
+      VertexData[4*3*n + 2*3 + 0] = 0.0;
+      VertexData[4*3*n + 2*3 + 1] = 0.0;
+      VertexData[4*3*n + 2*3 + 2] = 0.0;
+      VertexData[4*3*n + 3*3 + 0] = 0.0;
+      VertexData[4*3*n + 3*3 + 1] = 0.0;
+      VertexData[4*3*n + 3*3 + 2] = 0.0;
+      ColorData[3*n + 0] = 0.0;
+      ColorData[3*n + 1] = 0.0;
+      ColorData[3*n + 2] = 0.0;
+      continue;
+    }
     x00[1] = V->x0[1];
     x00[2] = V->x0[2];
     x00[3] = V->x0[3] + AngularOffset;

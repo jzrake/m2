@@ -196,7 +196,6 @@ void initialize_problem_mwn(m2sim *m2)
   m2sim_set_extent1(m2, 5e2, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_RELATIVISTIC | M2_MAGNETIZED);
-  m2sim_set_ct_scheme(m2, M2_CT_FULL3D);
   m2sim_set_rk_order(m2, 2);
   m2sim_set_analysis(m2, analysis);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
