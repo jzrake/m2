@@ -305,7 +305,7 @@ void SimulationController::draw()
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  glTranslated(0.0, -0.5, -1.0);
+  glTranslated(0.0, 0.0, -1.0);
   glRotatef(rotationX, 1.0, 0.0, 0.0);
   glRotatef(rotationY, 0.0, 1.0, 0.0);
   glRotated(-90.0, 1.0, 0.0, 0.0);

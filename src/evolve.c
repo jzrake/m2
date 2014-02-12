@@ -588,7 +588,6 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-
 	VC = M2_VOL(i, j, k);
 	V1 = (G[1] > 1) ? M2_VOL(i-1, j, k) : VC;
 	V2 = (G[2] > 1) ? M2_VOL(i, j-1, k) : VC;

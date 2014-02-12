@@ -67,8 +67,8 @@ int nrmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     return 1;
   }
   if (pg < 0.0) {
-    MSGF(WARNING, "got negative pressure: E=%f Ek=%f Eb=%f (Ek + Eb = %f)",
-	 T0, Ek, Eb, Ek + Eb);
+    /* MSGF(WARNING, "got negative pressure: E=%f Ek=%f Eb=%f (Ek + Eb = %f)", */
+    /* 	 T0, Ek, Eb, Ek + Eb); */
 
     T0 = (Ek + Eb) * 1.01;
     U[TAU] = T0 * dV;

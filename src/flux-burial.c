@@ -4,7 +4,7 @@
 
 static void initial_data(m2vol *V)
 {
-  double m = 0.1;
+  double m = 0.5;
   double face1[4] = {0.0,
 		     V->global_index[1] + 0.5,
 		     V->global_index[2],
@@ -21,8 +21,8 @@ static void initial_data(m2vol *V)
   double R2 = x2[1];
   double T1 = x1[2];
   double T2 = x2[2];
-  V->prim.d = 1.00;
-  V->prim.p = 0.001;
+  V->prim.d = 1.00 * (1 - 0.0*sin(0.5*(T1 + T2)));
+  V->prim.p = 0.005;
   V->prim.v1 = 0.0;
   V->prim.v2 = 0.0;
   V->prim.v3 = 0.0;
@@ -95,9 +95,9 @@ static void add_physical_source_terms(m2vol *V)
 
 void initialize_problem_flux_burial(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 128, 512, 1);
+  m2sim_set_resolution(m2, 64*2, 128*2, 1);
   m2sim_set_extent0(m2, 1.0, 0.0, 0.0);
-  m2sim_set_extent1(m2, 2.0, M2_PI, 2*M2_PI);
+  m2sim_set_extent1(m2, 4.0, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_rk_order(m2, 2);
