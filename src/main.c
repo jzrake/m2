@@ -3,22 +3,24 @@
 #include <stdio.h>
 #include "m2.h"
 
-
-void initialize_problem_mwn(m2sim *m2);
 void initialize_problem_shocktube(m2sim *m2);
+void initialize_problem_mwn(m2sim *m2);
+void initialize_problem_jet(m2sim *m2);
 void initialize_problem_flux_burial(m2sim *m2);
-
 
 int main(int argc, char **argv)
 {
   int opt_vis = 0;
   int opt_self_test = 0;
   int n;
-
+  char *restart_file = NULL;
   for (n=1; n<argc; ++n) {
     if (argv[n][0] == '-' && argv[n][1] == '-') {
       if (strcmp(argv[n], "--self-test") == 0) opt_self_test = 1;
       else if (strcmp(argv[n], "--vis") == 0) opt_vis = 1;
+      else if (strncmp(argv[n], "--restart=", 10) == 0) {
+	restart_file = &argv[n][10];
+      }
       else {
 	printf("[m2]: unrecognized option '%s'\n", argv[n]);
 	return 0;
@@ -34,13 +36,17 @@ int main(int argc, char **argv)
   m2sim *m2 = m2sim_new();
 
   initialize_problem_flux_burial(m2);
-  //initialize_problem_mwn(m2);
-  //initialize_problem_shocktube(m2);
 
   m2sim_initialize(m2);
-  m2sim_run_initial_data(m2);
-  m2sim_magnetic_flux_to_cell_center(m2);
-  m2sim_from_primitive_all(m2);
+  if (restart_file) {
+    if (m2sim_load_checkpoint(m2, restart_file)) {
+      MSG(FATAL, "checkpoint load failed");
+    }
+  }
+  else {
+    m2sim_run_initial_data(m2);
+    m2sim_from_primitive_all(m2);
+  }
 
   printf("[m2]: astrophysical MHD code\n");
   printf("[m2]: memory usage %d MB\n", m2sim_memory_usage(m2));
@@ -50,7 +56,7 @@ int main(int argc, char **argv)
     m2sim_visualize(m2, argc, argv);
   }
   else {
-    while (m2->status.time_simulation < 5.0) {
+    while (m2->status.time_simulation < 500.0) {
       m2sim_drive(m2);
     }
   }

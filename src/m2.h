@@ -17,6 +17,7 @@ enum m2flag {
   M2_CARTESIAN,
   M2_CYLINDRICAL,
   M2_SPHERICAL,
+  M2_PARABOLIC,
   M2_LINEAR,
   M2_LOGARITHMIC,
 
@@ -170,6 +171,7 @@ struct m2sim
   m2sim_operator boundary_conditions;
   m2sim_operator boundary_conditions_gradient;
   m2vol_operator initial_data;
+  m2vol_operator add_physical_source_terms;
   m2vol *volumes;
 } ;
 #define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiifff$(ffii))",	\
@@ -220,8 +222,8 @@ void m2sim_average_runge_kutta(m2sim *m2, double b);
 void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
 void m2sim_enforce_boundary_condition(m2sim *m2);
 void m2sim_print(m2sim *m2);
-void m2sim_save_checkpoint(m2sim *m2, const char *fname);
-void m2sim_load_checkpoint(m2sim *m2, const char *fname);
+int m2sim_save_checkpoint(m2sim *m2, const char *fname);
+int m2sim_load_checkpoint(m2sim *m2, const char *fname);
 void m2sim_write_ascii_1d(m2sim *m2, char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, char *fname);
 void m2sim_run_analysis(m2sim *m2);

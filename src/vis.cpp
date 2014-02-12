@@ -16,6 +16,9 @@ static int main_window=0;
 static float xy_aspect=1.0;
 
 
+#define VIS_MAGNETIC_PITCH 100001
+
+
 class SimulationController
 {
 public:
@@ -87,7 +90,7 @@ std::map<int, DatasetController*> DatasetController::instances;
 static SimulationController *sim_controller = NULL;
 static m2sim *M2;
 static void color_map(double val, GLfloat rgb[3], int ct);
-static void load_next_frame();
+//static void load_next_frame();
 
 
 
@@ -262,9 +265,9 @@ void SimulationController::action_cb(int action_id)
     sim_controller->take_screenshot();
     break;
   case ACTION_RESET_VIEW:
-    sim_controller->ZoomLevel = 0.0;
-    sim_controller->rotationX = 0.0;
-    sim_controller->rotationY = 0.0;
+    sim_controller->ZoomLevel = -1.0;
+    sim_controller->rotationX =  0.0;
+    sim_controller->rotationY =  0.0;
     break;
   case ACTION_STEP:
     m2sim_drive(M2);
@@ -302,7 +305,7 @@ void SimulationController::draw()
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  glTranslatef(0.0, 0.0, -1.0f);
+  glTranslated(0.0, -0.5, -1.0);
   glRotatef(rotationX, 1.0, 0.0, 0.0);
   glRotatef(rotationY, 0.0, 1.0, 0.0);
   glRotated(-90.0, 1.0, 0.0, 0.0);
@@ -384,6 +387,7 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   obj_keys.push_back(M2_MAGNETIC1);
   obj_keys.push_back(M2_MAGNETIC2);
   obj_keys.push_back(M2_MAGNETIC3);
+  obj_keys.push_back(VIS_MAGNETIC_PITCH);
 
   GLUI_RadioGroup *radio = new GLUI_RadioGroup(parent, &DataMember,
 					       user_id, refresh_cb);
@@ -405,6 +409,7 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   new GLUI_RadioButton(radio, "B1");
   new GLUI_RadioButton(radio, "B2");
   new GLUI_RadioButton(radio, "B3");
+  new GLUI_RadioButton(radio, "B-pitch");
   new GLUI_Separator(parent);
   new GLUI_Checkbox(parent, "draw mesh", &DrawMesh, user_id, refresh_cb);
   new GLUI_Checkbox(parent, "log scale", &LogScale, user_id, refresh_cb);
@@ -441,7 +446,11 @@ double DatasetController::get_scalar(m2vol *V)
   int mem = obj_keys[DataMember];
   double rhat[4] = { 0.0, 1.0, 0.0, 0.0 };
   double y;
-  if (mem == M2_MACH_ALFVEN ||
+  if (mem == VIS_MAGNETIC_PITCH) {
+    y = atan(m2aux_get(&V->aux, M2_MAGNETIC3)/
+	     m2aux_get(&V->aux, M2_MAGNETIC1)) * 180 / M2_PI;
+  }
+  else if (mem == M2_MACH_ALFVEN ||
       mem == M2_MACH_FAST ||
       mem == M2_MACH_SLOW) {
     y = m2aux_mach(&V->aux, rhat, mem);

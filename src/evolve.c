@@ -507,7 +507,7 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   m2vol *V;
 #ifdef _OPENMP
-#pragma omp parallel for private(V,I) default(shared)
+#pragma omp parallel for private(V) default(shared)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
@@ -517,6 +517,9 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
     V->x0[0] = 0.0;
     V->x1[0] = dt;
     m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
+    if (m2->add_physical_source_terms) {
+      m2->add_physical_source_terms(V);
+    }
   }
 }
 
