@@ -6,6 +6,7 @@ extern "C" {
 
 #include <string>
 #include <map>
+#include <list>
 #include <cmath>
 #include "glui/glui.h"
 
@@ -65,6 +66,7 @@ private:
   double AngularOffset;
   int user_id;
   std::vector<int> obj_keys;
+  std::list< std::vector<GLfloat> > field_lines;
 
   /* live variables */
   int DrawMesh;
@@ -428,7 +430,7 @@ void DatasetController::draw()
   if (!Visible) return;
   for (int n=0; n<M2->local_grid_size[0]; ++n) {
     if (DrawMesh) {
-      glBegin(GL_LINE_LOOP);
+      glBegin(GL_LINE_STRIP);
     }
     else {
       glBegin(GL_QUADS);
@@ -439,6 +441,17 @@ void DatasetController::draw()
     glVertex3fv(&VertexData[4*3*n + 2*3]);
     glVertex3fv(&VertexData[4*3*n + 3*3]);
     glEnd();
+  }
+
+  std::list< std::vector<GLfloat> >::iterator it = field_lines.begin();
+  while (it != field_lines.end()) {
+    glBegin(GL_LINE_STRIP);
+    glColor3d(1.0, 1.0, 1.0);
+    for (unsigned n=0; n<it->size(); n+=3) {
+      glVertex3fv(&(*it)[n]);
+    }
+    glEnd();
+    ++it;
   }
 }
 double DatasetController::get_scalar(m2vol *V)
@@ -547,6 +560,52 @@ void DatasetController::refresh()
     y -= DataRange[0];
     y /= DataRange[1] - DataRange[0];
     color_map(y, &ColorData[3*n], ColorMap);
+  }
+
+  field_lines.clear();
+
+  for (int line_num=0; line_num<50; ++line_num) {
+    std::vector<GLfloat> line;
+    double x[4] = {0.0,
+		   M2->domain_extent_lower[1] + 1.0,
+		   M2_PI * (line_num+0.5) / 100,
+		   0.0};
+    double xc[4];
+    while (x[0] < 40.0) {
+      m2sim_volume_at_position(M2, x, &V, NULL);
+      if (V == NULL) break;
+
+      double v1 = V->prim.B1;
+      double v2 = V->prim.B2;
+      double v3 = V->prim.B3;
+      double v0 = sqrt(v1*v1 + v2*v2 + v3*v3);
+      double ds = 0.01;
+      if (fabs(v0) < 1e-10) v0 = 1.0;
+
+      // if (line_num > 25) {
+      // 	v1 *= -1.0;
+      // 	v2 *= -1.0;
+      // 	v3 *= -1.0;
+      // }
+
+      /* correct velocity for scale factors (spherical hard-coded for now) */
+      v1 /= v0 * 1.0;
+      v2 /= v0 * x[1];
+      v3 /= v0 * x[1] * sin(x[2]);
+
+      x[0] += ds;
+      x[1] += v1 * ds;
+      x[2] += v2 * ds;
+      x[3] += v3 * ds;
+
+      x[3] += AngularOffset;
+      m2_to_cartesian(x, xc, M2->geometry);
+      line.push_back(xc[1]);
+      line.push_back(xc[2] - 0.01);
+      line.push_back(xc[3]);
+      x[3] -= AngularOffset;
+    }
+    field_lines.push_back(line);
   }
 }
 void DatasetController::refresh_cb(int user_id)

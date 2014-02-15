@@ -205,3 +205,45 @@ void m2sim_index_to_position(m2sim *m2, double index[4], double x[4])
     }
   }
 }
+
+
+void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4])
+{
+  double *x0 = m2->domain_extent_lower;
+  double *x1 = m2->domain_extent_upper;
+  int *N = m2->domain_resolution;
+  int *L = m2->local_grid_size;
+  int d;
+  double index[4] = { 0, 0, 0 };
+  int scale[4] = { 0,
+		   m2->coordinate_scaling1,
+		   m2->coordinate_scaling2,
+		   m2->coordinate_scaling3 };
+  for (d=1; d<=3; ++d) {
+    switch (scale[d]) {
+    case M2_LINEAR:
+      index[d] = (x[d] - x0[d]) / ((x1[d] - x0[d]) / N[d]) - 0.5;
+      break;
+    case M2_LOGARITHMIC:
+      index[d] = log(x[d]/x0[d]) / log(x1[d]/x0[d]) * N[d] - 0.5;
+      break;
+    default:
+      MSG(FATAL, "unknown coordinate scaling");
+      break;
+    }
+  }
+  int IG[4] = { 0, (int)index[1], (int)index[2], (int)index[3] };
+  int IL[4];
+  m2sim_index_global_to_local(m2, IG, IL);
+  *V = M2_VOL(IL[1], IL[2], IL[3]);
+  if (dx && *V) {
+    dx[1] = x[1] - 0.5 * ((*V)->x1[1] + (*V)->x0[1]);
+    dx[2] = x[2] - 0.5 * ((*V)->x1[2] + (*V)->x0[2]);
+    dx[3] = x[3] - 0.5 * ((*V)->x1[3] + (*V)->x0[3]);
+  }
+}
+
+void m2sim_primitive_at_position(m2sim *m2, double x[4], m2prim *P)
+{
+
+}

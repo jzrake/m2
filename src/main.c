@@ -7,6 +7,7 @@ void initialize_problem_shocktube(m2sim *m2);
 void initialize_problem_mwn(m2sim *m2);
 void initialize_problem_jet(m2sim *m2);
 void initialize_problem_flux_burial(m2sim *m2);
+void initialize_problem_spheromak(m2sim *m2);
 
 int main(int argc, char **argv)
 {
@@ -35,7 +36,9 @@ int main(int argc, char **argv)
 
   m2sim *m2 = m2sim_new();
 
-  initialize_problem_flux_burial(m2);
+  initialize_problem_spheromak(m2);
+  //initialize_problem_flux_burial(m2);
+  //initialize_problem_jet(m2);
 
   m2sim_initialize(m2);
   if (restart_file) {

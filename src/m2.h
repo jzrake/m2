@@ -210,6 +210,8 @@ void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg);
 void m2sim_set_initial_data(m2sim *m2, m2vol_operator id);
 void m2sim_initialize(m2sim *m2);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
+void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4]);
+void m2sim_primitive_at_position(m2sim *m2, double x[4], m2prim *P);
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4]);
 void m2sim_calculate_gradient(m2sim *m2);
 void m2sim_calculate_conserved(m2sim *m2);

@@ -2,13 +2,14 @@
 #include <string.h>
 #include "m2.h"
 
+
 static double Bfield(double r, double t, double f, int a)
 {
-  double m = 0.1;
+  double m = 10.0;
   switch (a) {
-  case 1: return m / pow(r, 3) * 2 * cos(t);
-  case 2: return m / pow(r, 3) * 1 * sin(t);
-  case 3: return 0.0;
+  case 1: return m/(1*r*r*r) * cos(t) * (r*cos(r) - sin(r));
+  case 2: return m/(2*r*r*r) * sin(t) * (r*cos(r) + sin(r) * (r*r - 1));
+  case 3: return m/(2*r*r  ) * sin(t) * (r*cos(r) - sin(r));
   }
   return 0.0;
 }
@@ -81,23 +82,11 @@ static void boundary_conditions(m2sim *m2)
 }
 
 
-static void add_physical_source_terms(m2vol *V)
-{
-  double r = m2vol_coordinate_centroid(V, 1);
-  double dt = V->x1[0] - V->x0[0];
-  double dV = V->volume;
-  double vr = V->prim.v1;
-  double d0 = V->prim.d;
-  double Fr = -1.0 / (r*r);
-  V->consA[S11] += dt * dV * d0 * Fr;
-  V->consA[TAU] += dt * dV * d0 * Fr * vr;
-}
-
-void initialize_problem_flux_burial(m2sim *m2)
+void initialize_problem_spheromak(m2sim *m2)
 {
   m2sim_set_resolution(m2, 64*2, 128*2, 1);
-  m2sim_set_extent0(m2, 1.0, 0.0, 0.0);
-  m2sim_set_extent1(m2, 4.0, M2_PI, 2*M2_PI);
+  m2sim_set_extent0(m2, 4.49341, 0.0, 0.0);
+  m2sim_set_extent1(m2, 7.72525, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_rk_order(m2, 2);
@@ -106,7 +95,6 @@ void initialize_problem_flux_burial(m2sim *m2)
 
   m2->number_guard_zones0[1] = 1;
   m2->number_guard_zones0[2] = 1;
-  m2->add_physical_source_terms = add_physical_source_terms;
   m2->plm_parameter = 1.25;
   m2->cfl_parameter = 0.30;
   m2->simple_eigenvalues = 0;
