@@ -829,7 +829,7 @@ void     GLUI_TextBox::draw_insertion_pt( void )
                                           between the text and the box       **/
   
   curr_x += substring_width(sol,insertion_pt-1);
-  if ((insertion_pt == text.length() && text[text.length()-1] == '\n')
+  if ((insertion_pt == (int)text.length() && text[text.length()-1] == '\n')
       || curr_x-this->x_abs > (w - 2 - GLUI_TEXTBOX_BOXINNERMARGINX)) { // Insert on the next line 
     curr_x = this->x_abs + GLUI_TEXTBOX_BOXINNERMARGINX;
     line++;
@@ -960,11 +960,11 @@ int    GLUI_TextBox::special_handler( int key,int modifiers )
     sel_start = sel_end = insertion_pt;
   
 
-  CLAMP( insertion_pt, 0, text.length()); /* Make sure insertion_pt 
+  CLAMP( insertion_pt, 0, (int)text.length()); /* Make sure insertion_pt 
                            is in bounds */
-  CLAMP( sel_start, 0, text.length()); /* Make sure insertion_pt 
+  CLAMP( sel_start, 0, (int)text.length()); /* Make sure insertion_pt 
                         is in bounds */
-  CLAMP( sel_end, 0, text.length()); /* Make sure insertion_pt 
+  CLAMP( sel_end, 0, (int)text.length()); /* Make sure insertion_pt 
                           is in bounds */
 
   /******** Now redraw text ***********/

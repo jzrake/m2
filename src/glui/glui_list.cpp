@@ -199,8 +199,8 @@ void    GLUI_List::deactivate( void )
 
 void    GLUI_List::draw( int x, int y )
 {
+  //int box_width;
   int line = 0;
-  int box_width;
   GLUI_List_Item *item;
  
   GLUI_DRAWINGSENTINAL_IDIOM
@@ -245,7 +245,7 @@ void    GLUI_List::draw( int x, int y )
   }
 
   /* Figure out how wide the box is */
-  box_width = get_box_width();
+  //box_width = get_box_width();
 
   /* Figure out which lines are visible*/
 

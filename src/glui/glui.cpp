@@ -750,12 +750,7 @@ void    GLUI_Main::special(int key, int x, int y)
 
 void    GLUI_Main::mouse(int button, int state, int x, int y)
 {
-  int callthrough;
   GLUI_Control *control;
-
-  /*  printf( "MOUSE: %d %d\n", button, state );          */
-
-  callthrough = true;
 
   curr_modifiers = glutGetModifiers();
 
@@ -769,7 +764,7 @@ void    GLUI_Main::mouse(int button, int state, int x, int y)
     {
       /** We just released the mouse, which was depressed at some control **/
 
-      callthrough = active_control->
+      active_control->
         mouse_up_handler( x, y, control==active_control);
       glutSetCursor( GLUT_CURSOR_LEFT_ARROW );
 
@@ -795,7 +790,7 @@ void    GLUI_Main::mouse(int button, int state, int x, int y)
 
           if ( control->enabled ) {
             activate_control( control, GLUI_ACTIVATE_MOUSE );
-            callthrough    = control->mouse_down_handler( x, y );
+	    control->mouse_down_handler( x, y );
           }
         }
       }
@@ -806,14 +801,6 @@ void    GLUI_Main::mouse(int button, int state, int x, int y)
     else if ( state == GLUT_UP )
       mouse_button_down = false;
   }
-
-  /**
-    NO CALLTHROUGH NEEDED FOR MOUSE EVENTS
-    if ( callthrough AND glut_mouse_CB )
-    glut_mouse_CB( button, state, x, y );
-    **/
-
-  //  callthrough=callthrough; /* To get rid of compiler warnings */
 }
 
 
@@ -821,28 +808,11 @@ void    GLUI_Main::mouse(int button, int state, int x, int y)
 
 void    GLUI_Main::motion(int x, int y)
 {
-  int           callthrough;
   GLUI_Control *control;
-
-  /*  printf( "MOTION: %d %d\n", x, y );          */
-
-  callthrough = true;
-
   control = find_control(x,y);
-  
   if ( mouse_button_down AND active_control != NULL ) {
-    callthrough = 
-      active_control->mouse_held_down_handler(x,y,control==active_control);
+    active_control->mouse_held_down_handler(x,y,control==active_control);
   }
-  
-  /**
-    NO CALLTHROUGH NEEDED FOR MOUSE EVENTS
-
-    if ( callthrough AND glut_motion_CB )
-    glut_motion_CB(x,y);
-    **/
-
-  //  callthrough=callthrough; /* To get rid of compiler warnings */
 }
 
 
