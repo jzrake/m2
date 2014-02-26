@@ -168,8 +168,14 @@ struct m2sim
   double gamma_law_index;
   m2sim_status status;
   m2sim_operator analysis;
-  m2sim_operator boundary_conditions;
   m2sim_operator boundary_conditions_gradient;
+  m2sim_operator boundary_conditions;
+  m2vol_operator boundary_conditions_flux1;
+  m2vol_operator boundary_conditions_flux2;
+  m2vol_operator boundary_conditions_flux3;
+  m2vol_operator boundary_conditions_emf1;
+  m2vol_operator boundary_conditions_emf2;
+  m2vol_operator boundary_conditions_emf3;
   m2vol_operator initial_data;
   m2vol_operator add_physical_source_terms;
   m2vol *volumes;

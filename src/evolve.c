@@ -125,6 +125,7 @@ void m2sim_calculate_flux(m2sim *m2)
 {
   int i, j, k, q;
   int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
   m2vol *V0, *V1, *V2, *V3;
 #ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,V3,j,k,q)
@@ -138,14 +139,64 @@ void m2sim_calculate_flux(m2sim *m2)
 	V2 = M2_VOL(i+0, j+1, k+0);
 	V3 = M2_VOL(i+0, j+0, k+1);
 
-	if (V1) riemann_hll(V0, V1, 1, V0->flux1);
-	else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
+	/* -----------------------------------------
+	 * axis 1
+	 * ----------------------------------------- */
+	if (V0->global_index[1] == -1 ||
+	    V0->global_index[1] == G[1] - 1) {
+	  if (m2->boundary_conditions_flux1) {
+	    m2->boundary_conditions_flux1(V0);
+	  }
+	  else {
+	    for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
+	  }
+	}
+	else if (V1 == NULL) {
+	  for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
+	}
+	else {
+	  riemann_hll(V0, V1, 1, V0->flux1);
+	}
 
-	if (V2) riemann_hll(V0, V2, 2, V0->flux2);
-	else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
 
-	if (V3) riemann_hll(V0, V3, 3, V0->flux3);
-	else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
+	/* -----------------------------------------
+	 * axis 2
+	 * ----------------------------------------- */
+	if (V0->global_index[2] == -1 ||
+	    V0->global_index[2] == G[2] - 1) {
+	  if (m2->boundary_conditions_flux2) {
+	    m2->boundary_conditions_flux2(V0);
+	  }
+	  else {
+	    for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
+	  }
+	}
+	else if (V2 == NULL) {
+	  for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
+	}
+	else {
+	  riemann_hll(V0, V2, 2, V0->flux2);
+	}
+
+
+	/* -----------------------------------------
+	 * axis 3
+	 * ----------------------------------------- */
+	if (V0->global_index[3] == -1 ||
+	    V0->global_index[3] == G[3] - 1) {
+	  if (m2->boundary_conditions_flux3) {
+	    m2->boundary_conditions_flux3(V0);
+	  }
+	  else {
+	    for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
+	  }
+	}
+	else if (V3 == NULL) {
+	  for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
+	}
+	else {
+	  riemann_hll(V0, V3, 3, V0->flux3);
+	}
       }
     }
   }

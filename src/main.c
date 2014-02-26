@@ -36,9 +36,9 @@ int main(int argc, char **argv)
 
   m2sim *m2 = m2sim_new();
 
-  initialize_problem_spheromak(m2);
+  //initialize_problem_spheromak(m2);
   //initialize_problem_flux_burial(m2);
-  //initialize_problem_jet(m2);
+  initialize_problem_jet(m2);
 
   m2sim_initialize(m2);
   if (restart_file) {

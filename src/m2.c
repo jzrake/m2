@@ -49,6 +49,13 @@ m2sim *m2sim_new()
   /* callback functions */
   m2->analysis = NULL;
   m2->boundary_conditions = NULL;
+  m2->boundary_conditions_flux1 = NULL;
+  m2->boundary_conditions_flux2 = NULL;
+  m2->boundary_conditions_flux3 = NULL;
+  m2->boundary_conditions_emf1 = NULL;
+  m2->boundary_conditions_emf2 = NULL;
+  m2->boundary_conditions_emf3 = NULL;
+
   m2->boundary_conditions_gradient = NULL;
   m2->initial_data = NULL;
   m2->add_physical_source_terms = NULL;
