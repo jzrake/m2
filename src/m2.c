@@ -57,8 +57,11 @@ m2sim *m2sim_new()
   m2->boundary_conditions_emf3 = NULL;
 
   m2->boundary_conditions_gradient = NULL;
-  m2->initial_data = NULL;
   m2->add_physical_source_terms = NULL;
+  m2->initial_data = NULL;
+  m2->initial_data_cell = NULL;
+  m2->initial_data_face = NULL;
+  m2->initial_data_edge = NULL;
 
   /* status initializer */
   m2->status.time_simulation = 0.0;
@@ -453,13 +456,101 @@ void m2sim_run_analysis(m2sim *m2)
 void m2sim_run_initial_data(m2sim *m2)
 {
   int *L = m2->local_grid_size;
-  int n;
+  int n, q;
+  double X[4];
+  double N[4]; /* unit vector for faces and edges */
+  double prim[5], Bfield, Efield;
+  m2vol *V;
+
+  for (n=0; n<L[0]; ++n) {
+
+    V = m2->volumes + n;
+
+    for (q=0; q<5; ++q) {
+      V->flux1[q] = 0.0;
+      V->flux2[q] = 0.0;
+      V->flux3[q] = 0.0;
+    }
+
+    if (m2->initial_data_cell) {
+      X[0] = 0.0;
+      X[1] = 0.5 * (V->x1[1] + V->x0[1]);
+      X[2] = 0.5 * (V->x1[2] + V->x0[2]);
+      X[3] = 0.5 * (V->x1[3] + V->x0[3]);
+      m2->initial_data_cell(m2, X, NULL, prim);
+      V->prim.d  = prim[RHO];
+      V->prim.p  = prim[PRE];
+      V->prim.v1 = prim[V11];
+      V->prim.v2 = prim[V22];
+      V->prim.v3 = prim[V33];
+    }
+    if (m2->initial_data_face) {
+      N[1] = 1.0; X[1] =        V->x1[1];
+      N[2] = 0.0; X[2] = 0.5 * (V->x1[2] + V->x0[2]);
+      N[3] = 0.0; X[3] = 0.5 * (V->x1[3] + V->x0[3]);
+      m2->initial_data_face(m2, X, N, &Bfield);
+      V->Bflux1A = Bfield * V->area1;
+
+      N[1] = 0.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
+      N[2] = 1.0; X[2] =        V->x1[2];
+      N[3] = 0.0; X[3] = 0.5 * (V->x1[3] + V->x0[3]);
+      m2->initial_data_face(m2, X, N, &Bfield);
+      V->Bflux2A = Bfield * V->area2;
+
+      N[1] = 0.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
+      N[2] = 0.0; X[2] = 0.5 * (V->x1[2] + V->x0[2]);
+      N[3] = 1.0; X[3] =        V->x1[3];
+      m2->initial_data_face(m2, X, N, &Bfield);
+      V->Bflux3A = Bfield * V->area3;
+    }
+    else {
+      V->Bflux1A = 0.0;
+      V->Bflux2A = 0.0;
+      V->Bflux3A = 0.0;
+    }
+    if (m2->initial_data_edge) {
+      N[1] = 1.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
+      N[2] = 0.0; X[2] =        V->x1[2];
+      N[3] = 0.0; X[3] =        V->x1[3];
+      m2->initial_data_edge(m2, X, N, &Efield);
+      V->emf1 = Efield * V->line1;
+
+      N[1] = 0.0; X[1] =        V->x1[1];
+      N[2] = 1.0; X[2] = 0.5 * (V->x1[2] + V->x0[2]);
+      N[3] = 0.0; X[3] =        V->x1[3];
+      m2->initial_data_edge(m2, X, N, &Efield);
+      V->emf2 = Efield * V->line2;
+
+      N[1] = 0.0; X[1] =        V->x1[1];
+      N[2] = 0.0; X[2] =        V->x1[2];
+      N[3] = 1.0; X[3] = 0.5 * (V->x1[3] + V->x0[3]);
+      m2->initial_data_edge(m2, X, N, &Efield);
+      V->emf3 = Efield * V->line3;
+    }
+    else {
+      V->emf1 = 0.0;
+      V->emf2 = 0.0;
+      V->emf3 = 0.0;
+    }
+  }
+
+
+  /* appends to face-centered B data with curl(A), where A is the emf data on
+     the edges */
+  m2sim_exchange_flux(m2, 1.0);
+  m2sim_magnetic_flux_to_cell_center(m2);
+  m2sim_from_primitive_all(m2);
+
+
+  /******************************/
+  /* initial_data is deprecated */
+  /******************************/
   if (m2->initial_data) {
     for (n=0; n<L[0]; ++n) {
       m2->initial_data(m2->volumes + n);
     }
   }
   else {
-    MSG(FATAL, "no initial data function supplied");
+    //MSG(FATAL, "no initial data function supplied");
   }
 }

@@ -99,6 +99,7 @@ int m2sim_load_checkpoint(m2sim *m2, const char *fname)
   }
   m2sim_load_header(m2, of);
   m2sim_load_volumes(m2, of);
+  m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_primitive_all(m2);
   fclose(of);
   return 0;

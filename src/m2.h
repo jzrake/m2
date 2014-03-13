@@ -75,6 +75,8 @@ enum m2flag {
 
 /* indices into cons[AB] and flux[123] arrays */
 enum { TAU, S11, S22, S33, DDD, B11, B22, B33 };
+/* indices into prim array if not m2prim struct */
+enum { RHO, PRE, V11, V22, V33 };
 
 typedef struct m2sim m2sim;
 typedef struct m2vol m2vol;
@@ -83,6 +85,7 @@ typedef struct m2prim m2prim;
 typedef struct m2sim_status m2sim_status;
 typedef void (*m2vol_operator)(m2vol *vol);
 typedef void (*m2sim_operator)(m2sim *m2);
+typedef void (*m2crd_function)(m2sim *m2, double X[4], double N[4], double *Y);
 
 struct m2prim
 {
@@ -177,6 +180,9 @@ struct m2sim
   m2vol_operator boundary_conditions_emf2;
   m2vol_operator boundary_conditions_emf3;
   m2vol_operator initial_data;
+  m2crd_function initial_data_cell;
+  m2crd_function initial_data_face;
+  m2crd_function initial_data_edge;
   m2vol_operator add_physical_source_terms;
   m2vol *volumes;
 } ;

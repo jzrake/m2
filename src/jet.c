@@ -17,6 +17,20 @@ static void initial_data(m2vol *V)
   V->Bflux3A = V->prim.B3 * V->area3;
 }
 
+static void initial_data_cell(m2sim *m2, double X[4], double N[4], double *prim)
+{
+  prim[RHO] = 0.01;
+  prim[PRE] = 0.0001;
+  prim[V11] = 0.0;
+  prim[V22] = 0.0;
+  prim[V33] = 0.0;
+}
+
+static void initial_data_edge(m2sim *m2, double X[4], double N[4], double *E)
+{
+  *E = 0.0;
+}
+
 static void boundary_conditions(m2sim *m2)
 {
   int *L = m2->local_grid_size;
@@ -78,8 +92,8 @@ static void boundary_conditions_flux1(m2vol *V)
   int q;
   double t = m2vol_coordinate_centroid(V, 2);
   for (q=0; q<8; ++q) V->flux1[q] = 0.0;
-  V->flux1[DDD] =  0.1 * (t<0.2);
-  V->flux1[S11] = 10.0 * (t<0.2);
+  V->flux1[DDD] =  1.0 * (t<0.2);
+  V->flux1[S11] =  1.0 * (t<0.2);
   V->flux1[TAU] = 10.0 * (t<0.2);
 }
 static void boundary_conditions_flux2(m2vol *V)
@@ -101,13 +115,17 @@ void initialize_problem_jet(m2sim *m2)
   m2->coordinate_scaling1 = M2_LOGARITHMIC;
   m2->physics = M2_RELATIVISTIC | M2_MAGNETIZED;
   m2->rk_order = 2;
-  m2->initial_data = initial_data;
+
   m2->boundary_conditions = boundary_conditions;
   m2->boundary_conditions_flux1 = boundary_conditions_flux1;
   m2->boundary_conditions_flux2 = boundary_conditions_flux2;
   m2->boundary_conditions_emf1 = boundary_conditions_emf1;
   m2->boundary_conditions_emf2 = boundary_conditions_emf2;
   m2->boundary_conditions_emf3 = boundary_conditions_emf3;
+
+  m2->initial_data_cell = initial_data_cell;
+  m2->initial_data_edge = initial_data_edge;
+  //m2->initial_data = initial_data;
 
   m2->plm_parameter = 1.25;
   m2->cfl_parameter = 0.30;

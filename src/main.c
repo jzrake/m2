@@ -48,7 +48,6 @@ int main(int argc, char **argv)
   }
   else {
     m2sim_run_initial_data(m2);
-    m2sim_from_primitive_all(m2);
   }
 
   printf("[m2]: astrophysical MHD code\n");
