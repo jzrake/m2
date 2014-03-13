@@ -29,9 +29,6 @@ static void riemann_hll(m2vol *VL, m2vol *VR, int axis, double *F)
 
   if (VL->zone_type != M2_ZONE_TYPE_FULL ||
       VR->zone_type != M2_ZONE_TYPE_FULL) {
-    for (q=0; q<8; ++q) {
-      F[q] = 0.0;
-    }
     return;
   }
 
@@ -139,24 +136,17 @@ void m2sim_calculate_flux(m2sim *m2)
 	V2 = M2_VOL(i+0, j+1, k+0);
 	V3 = M2_VOL(i+0, j+0, k+1);
 
+
 	/* -----------------------------------------
 	 * axis 1
 	 * ----------------------------------------- */
 	if (V0->global_index[1] == -1 ||
 	    V0->global_index[1] == G[1] - 1) {
-	  if (m2->boundary_conditions_flux1) {
-	    m2->boundary_conditions_flux1(V0);
-	  }
-	  else {
-	    for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
-	  }
+	  if (m2->boundary_conditions_flux1) m2->boundary_conditions_flux1(V0);
+	  else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
 	}
-	else if (V1 == NULL) {
-	  for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
-	}
-	else {
-	  riemann_hll(V0, V1, 1, V0->flux1);
-	}
+	else if (V1 == NULL) for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
+	else riemann_hll(V0, V1, 1, V0->flux1);
 
 
 	/* -----------------------------------------
@@ -164,19 +154,11 @@ void m2sim_calculate_flux(m2sim *m2)
 	 * ----------------------------------------- */
 	if (V0->global_index[2] == -1 ||
 	    V0->global_index[2] == G[2] - 1) {
-	  if (m2->boundary_conditions_flux2) {
-	    m2->boundary_conditions_flux2(V0);
-	  }
-	  else {
-	    for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
-	  }
+	  if (m2->boundary_conditions_flux2) m2->boundary_conditions_flux2(V0);
+	  else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
 	}
-	else if (V2 == NULL) {
-	  for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
-	}
-	else {
-	  riemann_hll(V0, V2, 2, V0->flux2);
-	}
+	else if (V2 == NULL) for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
+	else riemann_hll(V0, V2, 2, V0->flux2);
 
 
 	/* -----------------------------------------
@@ -184,19 +166,11 @@ void m2sim_calculate_flux(m2sim *m2)
 	 * ----------------------------------------- */
 	if (V0->global_index[3] == -1 ||
 	    V0->global_index[3] == G[3] - 1) {
-	  if (m2->boundary_conditions_flux3) {
-	    m2->boundary_conditions_flux3(V0);
-	  }
-	  else {
-	    for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
-	  }
+	  if (m2->boundary_conditions_flux3) m2->boundary_conditions_flux3(V0);
+	  else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
 	}
-	else if (V3 == NULL) {
-	  for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
-	}
-	else {
-	  riemann_hll(V0, V3, 3, V0->flux3);
-	}
+	else if (V3 == NULL) for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
+	else riemann_hll(V0, V3, 3, V0->flux3);
       }
     }
   }
@@ -210,136 +184,79 @@ void m2sim_calculate_emf(m2sim *m2)
   int *L = m2->local_grid_size;
   int *I;
   m2vol *V0, *V1, *V2;
+
+#define EMF(a1,a2,a3,B1,B2,B3,f1,f2,f3,line,emf)			\
+  do {									\
+    if (G[a2] == 1 && G[a3] == 1) {					\
+      V0->emf = 0.0;							\
+    }									\
+    else if (G[a2] == 1) {						\
+      if (I[a3] == -1 || I[a3] == G[a3] - 1) {				\
+	if (m2->boundary_conditions_##emf){m2->boundary_conditions_##emf(V0);} \
+	else V0->emf = 0.0;						\
+      }									\
+      else if (V1 == NULL) V0->emf = 0.0; /* processor boundary */	\
+      else {								\
+	V0->emf = 0.50 * (+V0->f3[B2]*V0->line				\
+			  +V1->f3[B2]*V0->line);			\
+      }									\
+    }									\
+    else if (G[a3] == 1) {						\
+      if (I[a2] == -1 || I[a2] == G[a2] - 1) {				\
+	if (m2->boundary_conditions_##emf){m2->boundary_conditions_##emf(V0);} \
+	else V0->emf = 0.0;						\
+      }									\
+      else if (V2 == NULL) V0->emf = 0.0; /* processor boundary */	\
+      else {								\
+	V0->emf = 0.50 * (-V0->f2[B3]*V0->line				\
+			  -V2->f2[B3]*V0->line);			\
+      }									\
+    }									\
+    else {								\
+      if (I[a2] == -1 || I[a2] == G[a2] - 1 ||				\
+	  I[a3] == -1 || I[a3] == G[a3] - 1) {				\
+	if (m2->boundary_conditions_##emf){m2->boundary_conditions_##emf(V0);} \
+	else V0->emf = 0.0;						\
+      }									\
+      else if (V1 == NULL || V2 == NULL) { /* processor boundary */	\
+	V0->emf = 0.0;							\
+      }									\
+      else {								\
+	V0->emf = 0.25 * (-V0->f2[B3]*V0->line				\
+			  -V2->f2[B3]*V0->line				\
+			  +V0->f3[B2]*V0->line				\
+			  +V1->f3[B2]*V0->line);			\
+      }									\
+    }									\
+  }									\
+  while (0)								\
+
 #ifdef _OPENMP
 #pragma omp parallel for private(V0,V1,V2,j,k) default(shared)
 #endif
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-
 	I = M2_VOL(i, j, k)->global_index;
 
-	/* ---------------------- */
-	/* EMF in the x-direction */
-	/* ---------------------- */
 	V0 = M2_VOL(i, j+0, k+0);
-	V1 = M2_VOL(i, j+1, k+0); V1 = V1 ? V1 : V0;
-	V2 = M2_VOL(i, j+0, k+1); V2 = V2 ? V2 : V0;
-	if (G[2] == 1 && G[3] == 1) {
-	  V0->emf1 = 0.0;
-	}
-	else if (G[2] == 1) {
-	  if (I[3] >= G[3] - 1) {
-	    V0->emf1 = 0.0;
-	  }
-	  else {
-	    V0->emf1 = 0.50 * (+V0->flux3[B22]*V0->line1
-			       +V1->flux3[B22]*V0->line1);
-	  }
-	}
-	else if (G[3] == 1) {
-	  if (I[2] >= G[2] - 1) {
-	    V0->emf1 = 0.0;
-	  }
-	  else {
-	    V0->emf1 = 0.50 * (-V0->flux2[B33]*V0->line1
-			       -V2->flux2[B33]*V0->line1);
-	  }
-	}
-	else {
-	  if (I[2] >= G[2] - 1 || I[3] >= G[3] - 1) {
-	    V0->emf1 = 0.0;
-	  }
-	  else {
-	    V0->emf1 = 0.25 * (-V0->flux2[B33]*V0->line1
-			       -V2->flux2[B33]*V0->line1
-			       +V0->flux3[B22]*V0->line1
-			       +V1->flux3[B22]*V0->line1);
-	  }
-	}
+	V1 = M2_VOL(i, j+1, k+0);
+	V2 = M2_VOL(i, j+0, k+1);
+	EMF(1,2,3,B11,B22,B33,flux1,flux2,flux3,line1,emf1);
 
-
-	/* ---------------------- */
-	/* EMF in the y-direction */
-	/* ---------------------- */
 	V0 = M2_VOL(i+0, j, k+0);
-	V1 = M2_VOL(i+0, j, k+1); V1 = V1 ? V1 : V0;
-	V2 = M2_VOL(i+1, j, k+0); V2 = V2 ? V2 : V0;
-	if (G[3] == 1 && G[1] == 1) {
-	  V0->emf2 = 0.0;
-	}
-	else if (G[3] == 1) {
-	  if (I[1] >= G[1] - 1) {
-	    V0->emf2 = 0.0;
-	  }
-	  else {
-	    V0->emf2 = 0.50 * (+V0->flux1[B33]*V0->line2
-			       +V1->flux1[B33]*V0->line2);
-	  }
-	}
-	else if (G[1] == 1) {
-	  if (I[3] >= G[3] - 1) {
-	    V0->emf2 = 0.0;
-	  }
-	  else {
-	    V0->emf2 = 0.50 * (-V0->flux3[B11]*V0->line2
-			       -V2->flux3[B11]*V0->line2);
-	  }
-	}
-	else {
-	  if (I[3] >= G[3] - 1 || I[1] >= G[1] - 1) {
-	    V0->emf2 = 0.0;
-	  }
-	  else {
-	    V0->emf2 = 0.25 * (-V0->flux3[B11]*V0->line2
-			       -V2->flux3[B11]*V0->line2
-			       +V0->flux1[B33]*V0->line2
-			       +V1->flux1[B33]*V0->line2);
-	  }
-	}
+	V1 = M2_VOL(i+0, j, k+1);
+	V2 = M2_VOL(i+1, j, k+0);
+	EMF(2,3,1,B22,B33,B11,flux2,flux3,flux1,line2,emf2);
 
-
-	/* ---------------------- */
-	/* EMF in the z-direction */
-	/* ---------------------- */
 	V0 = M2_VOL(i+0, j+0, k);
-	V1 = M2_VOL(i+1, j+0, k); V1 = V1 ? V1 : V0;
-	V2 = M2_VOL(i+0, j+1, k); V2 = V2 ? V2 : V0;
-	if (G[1] == 1 && G[2] == 1) {
-	  V0->emf3 = 0.0;
-	}
-	else if (G[1] == 1) {
-	  if (I[2] >= G[2] - 1) {
-	    V0->emf3 = 0.0;
-	  }
-	  else {
-	    V0->emf3 = 0.50 * (+V0->flux2[B11]*V0->line3
-			       +V1->flux2[B11]*V0->line3);
-	  }
-	}
-	else if (G[2] == 1) {
-	  if (I[1] >= G[1] - 1) {
-	    V0->emf3 = 0.0;
-	  }
-	  else {
-	    V0->emf3 = 0.50 * (-V0->flux1[B22]*V0->line3
-			       -V2->flux1[B22]*V0->line3);
-	  }
-	}
-	else {
-	  if (I[1] >= G[1] - 1 || I[2] >= G[2] - 1) {
-	    V0->emf3 = 0.0;
-	  }
-	  else {
-	    V0->emf3 = 0.25 * (-V0->flux1[B22]*V0->line3
-			       -V2->flux1[B22]*V0->line3
-			       +V0->flux2[B11]*V0->line3
-			       +V1->flux2[B11]*V0->line3);
-	  }
-	}
+	V1 = M2_VOL(i+1, j+0, k);
+	V2 = M2_VOL(i+0, j+1, k);
+	EMF(3,1,2,B33,B11,B22,flux3,flux1,flux2,line3,emf3);
       }
     }
   }
+#undef EMF
 }
 
 
