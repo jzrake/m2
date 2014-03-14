@@ -554,3 +554,13 @@ void m2sim_run_initial_data(m2sim *m2)
     //MSG(FATAL, "no initial data function supplied");
   }
 }
+
+m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)
+{
+  m2sim *m2 = V->m2;
+  int *L = m2->local_grid_size;
+  int I[4];
+  m2sim_index_global_to_local(m2, V->global_index, I);
+  I[axis] += dist;
+  return M2_VOL(I[1], I[2], I[3]);
+}

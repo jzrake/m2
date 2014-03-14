@@ -205,6 +205,7 @@ double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);
 void m2vol_coordinate_centroid_3d(m2vol *V, double x[4]);
 void m2vol_to_interpolated(m2vol *V, double *y, int stride);
+m2vol *m2vol_neighbor(m2vol *V, int axis, int dist);
 
 
 /* sim */

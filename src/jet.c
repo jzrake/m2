@@ -4,8 +4,8 @@
 
 static void initial_data(m2vol *V)
 {
-  V->prim.d = 0.01;
-  V->prim.p = 0.0001;
+  V->prim.d = 0.1;
+  V->prim.p = 0.1;
   V->prim.v1 = 0.0;
   V->prim.v2 = 0.0;
   V->prim.v3 = 0.0;
@@ -19,8 +19,8 @@ static void initial_data(m2vol *V)
 
 static void initial_data_cell(m2sim *m2, double X[4], double N[4], double *prim)
 {
-  prim[RHO] = 0.01;
-  prim[PRE] = 0.0001;
+  prim[RHO] = 0.1;
+  prim[PRE] = 0.1;
   prim[V11] = 0.0;
   prim[V22] = 0.0;
   prim[V33] = 0.0;
@@ -28,7 +28,13 @@ static void initial_data_cell(m2sim *m2, double X[4], double N[4], double *prim)
 
 static void initial_data_edge(m2sim *m2, double X[4], double N[4], double *E)
 {
-  *E = 0.0;
+  double n = 0.75; /* nu parameter */
+  double r = X[1];
+  double t = X[2];
+  double R = r * sin(t);
+  double P = 0.1 * pow(r, n) * (1.0 - cos(t));
+  double Af = P / (R + 0.01); /* A_phi */
+  *E = -Af * N[3];
 }
 
 static void boundary_conditions(m2sim *m2)
@@ -44,7 +50,7 @@ static void boundary_conditions(m2sim *m2)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-	V0 = M2_VOL(i+0, j, k);
+	V0 = M2_VOL(i, j, k);
 	I = V0->global_index;
 	if (I[1] == 0) {
 	  /* initial_data(V0); */
@@ -89,17 +95,21 @@ static void boundary_conditions_emf3(m2vol *V)
 }
 static void boundary_conditions_flux1(m2vol *V)
 {
-  int q;
-  double t = m2vol_coordinate_centroid(V, 2);
-  for (q=0; q<8; ++q) V->flux1[q] = 0.0;
-  V->flux1[DDD] =  1.0 * (t<0.2);
-  V->flux1[S11] =  1.0 * (t<0.2);
-  V->flux1[TAU] = 10.0 * (t<0.2);
+  double n[4] = {0.0, 1.0, 0.0, 0.0};
+  m2vol *V1 = V->global_index[1] == -1 ? m2vol_neighbor(V, 1, 1) : V;
+  m2aux_fluxes(&V1->aux, n, V->flux1);
+  V->flux1[B11] = 0.0;
+  V->flux1[B22] = 0.0;
+  V->flux1[B33] = 0.0;
 }
 static void boundary_conditions_flux2(m2vol *V)
 {
-  int q;
-  for (q=0; q<8; ++q) V->flux2[q] = 0.0;
+  double n[4] = {0.0, 0.0, 1.0, 0.0};
+  m2vol *V1 = V->global_index[2] == -1 ? m2vol_neighbor(V, 2, 1) : V;
+  m2aux_fluxes(&V1->aux, n, V->flux2);
+  V->flux2[B11] = 0.0;
+  V->flux2[B22] = 0.0;
+  V->flux2[B33] = 0.0;
 }
 
 void initialize_problem_jet(m2sim *m2)
