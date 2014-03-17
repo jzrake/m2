@@ -374,6 +374,10 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
+	if (M2_VOL(i, j, k)->zone_type != M2_ZONE_TYPE_FULL) {
+	  continue;
+	}
+
 	if (m2->physics & M2_MAGNETIZED) {
 	  /* --------------- */
 	  /* x-directed face */
