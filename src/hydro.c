@@ -319,9 +319,5 @@ double m2aux_maximum_wavespeed(m2aux *aux)
   }
   m2aux_eigenvalues(aux, n, evals);
   a = fabs(evals[0]) > fabs(evals[7]) ? fabs(evals[0]) : fabs(evals[7]);
-  if (a != a) {
-    m2_print_state(NULL, aux, NULL);
-    MSG(FATAL, "got NAN max wavespeed");
-  }
   return a;
 }

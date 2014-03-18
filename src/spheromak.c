@@ -81,6 +81,31 @@ static void boundary_conditions(m2sim *m2)
   }
 }
 
+static void boundary_conditions_emf1(m2vol *V)
+{
+  V->emf1 = 0.0;
+}
+static void boundary_conditions_emf2(m2vol *V)
+{
+  V->emf2 = 0.0;
+}
+static void boundary_conditions_emf3(m2vol *V)
+{
+  V->emf3 = 0.0;
+}
+static void boundary_conditions_flux1(m2vol *V)
+{
+  double n[4] = {0.0, 1.0, 0.0, 0.0};
+  m2vol *V1 = V->global_index[1] == -1 ? m2vol_neighbor(V, 1, 1) : V;
+  m2aux_fluxes(&V1->aux, n, V->flux1);
+}
+static void boundary_conditions_flux2(m2vol *V)
+{
+  double n[4] = {0.0, 0.0, 1.0, 0.0};
+  m2vol *V1 = V->global_index[2] == -1 ? m2vol_neighbor(V, 2, 1) : V;
+  m2aux_fluxes(&V1->aux, n, V->flux2);
+}
+
 
 void initialize_problem_spheromak(m2sim *m2)
 {
@@ -90,8 +115,14 @@ void initialize_problem_spheromak(m2sim *m2)
   m2sim_set_geometry(m2, M2_SPHERICAL);
   m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_rk_order(m2, 2);
-  m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);
+
+  m2->boundary_conditions = boundary_conditions;
+  m2->boundary_conditions_flux1 = boundary_conditions_flux1;
+  m2->boundary_conditions_flux2 = boundary_conditions_flux2;
+  m2->boundary_conditions_emf1 = boundary_conditions_emf1;
+  m2->boundary_conditions_emf2 = boundary_conditions_emf2;
+  m2->boundary_conditions_emf3 = boundary_conditions_emf3;
 
   m2->number_guard_zones0[1] = 1;
   m2->number_guard_zones0[2] = 1;

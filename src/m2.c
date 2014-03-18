@@ -534,14 +534,6 @@ void m2sim_run_initial_data(m2sim *m2)
     }
   }
 
-
-  /* appends to face-centered B data with curl(A), where A is the emf data on
-     the edges */
-  m2sim_exchange_flux(m2, 1.0);
-  m2sim_magnetic_flux_to_cell_center(m2);
-  m2sim_from_primitive_all(m2);
-
-
   /******************************/
   /* initial_data is deprecated */
   /******************************/
@@ -553,6 +545,13 @@ void m2sim_run_initial_data(m2sim *m2)
   else {
     //MSG(FATAL, "no initial data function supplied");
   }
+
+
+  /* appends to face-centered B data with curl(A), where A is the emf data on
+     the edges */
+  m2sim_exchange_flux(m2, 1.0);
+  m2sim_magnetic_flux_to_cell_center(m2);
+  m2sim_from_primitive_all(m2);
 }
 
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)

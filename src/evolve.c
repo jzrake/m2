@@ -656,6 +656,13 @@ double m2sim_minimum_courant_time(m2sim *m2)
 	continue;
       }
       dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux);
+      if (dt != dt) {
+	m2_print_state(&V->prim, &V->aux, NULL);
+	MSGF(FATAL, "got NAN max wavespeed at global index [%d %d %d]",
+	     V->global_index[1],
+	     V->global_index[2],
+	     V->global_index[3]);
+      }
       if (dt < mindt || mindt < 0.0) {
 	mindt = dt;
       }
