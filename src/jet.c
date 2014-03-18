@@ -2,10 +2,13 @@
 #include <string.h>
 #include "m2.h"
 
+#define AMBIENT_DENSITY  0.010
+#define AMBIENT_PRESSURE 0.001
+
 static void initial_data(m2vol *V)
 {
-  V->prim.d = 0.1;
-  V->prim.p = 0.1;
+  V->prim.d = AMBIENT_DENSITY;
+  V->prim.p = AMBIENT_PRESSURE;
   V->prim.v1 = 0.0;
   V->prim.v2 = 0.0;
   V->prim.v3 = 0.0;
@@ -19,8 +22,8 @@ static void initial_data(m2vol *V)
 
 static void initial_data_cell(m2sim *m2, double X[4], double N[4], double *prim)
 {
-  prim[RHO] = 0.1;
-  prim[PRE] = 0.1;
+  prim[RHO] = AMBIENT_DENSITY;
+  prim[PRE] = AMBIENT_PRESSURE;
   prim[V11] = 0.0;
   prim[V22] = 0.0;
   prim[V33] = 0.0;
@@ -33,7 +36,7 @@ static void initial_data_edge(m2sim *m2, double X[4], double N[4], double *E)
   double t = X[2];
   double R = r * sin(t);
   double P = 0.1 * pow(r, n) * (1.0 - cos(t));
-  double Af = P / (R + 0.01); /* A_phi */
+  double Af = P / (R + 0.1); /* A_phi */
   *E = -Af * N[3];
 }
 
@@ -53,12 +56,19 @@ static void boundary_conditions(m2sim *m2)
 	V0 = M2_VOL(i, j, k);
 	I = V0->global_index;
 	if (I[1] == 0) {
-	  /* initial_data(V0); */
-	  /* m2sim_from_primitive(m2, */
-	  /* 		       &V0->prim, NULL, NULL, */
-	  /* 		       V0 ->volume, */
-	  /* 		       V0 ->consA, */
-	  /* 		       &V0->aux); */
+	  double t = m2vol_coordinate_centroid(V0, 2);
+	  double s = M2_PI / 16.0;
+	  double f = exp(-pow(t/s,4));
+	  V0->prim.v1 = 0.20 * f;
+	  V0->prim.v2 = 0.00 * f;
+	  V0->prim.v3 = 0.10 * f;
+	  V0->prim.p = 0.10 * f + (1 - f) * AMBIENT_PRESSURE;
+	  V0->prim.d = 1.00 * f + (1 - f) * AMBIENT_DENSITY;
+	  m2sim_from_primitive(m2,
+			       &V0->prim, NULL, NULL,
+			       V0 ->volume,
+			       V0 ->consA,
+			       &V0->aux);
 	}
 	else if (I[1] == G[1] - 1) {
 	  initial_data(V0);
@@ -69,12 +79,12 @@ static void boundary_conditions(m2sim *m2)
 			       &V0->aux);
 	}
 	if (I[2] == G[2] - 1) {
-	  initial_data(V0);
-	  m2sim_from_primitive(m2,
-			       &V0->prim, NULL, NULL,
-			       V0 ->volume,
-			       V0 ->consA,
-			       &V0->aux);
+	  /* initial_data(V0); */
+	  /* m2sim_from_primitive(m2, */
+	  /* 		       &V0->prim, NULL, NULL, */
+	  /* 		       V0 ->volume, */
+	  /* 		       V0 ->consA, */
+	  /* 		       &V0->aux); */
 	}
       }
     }
@@ -98,23 +108,17 @@ static void boundary_conditions_flux1(m2vol *V)
   double n[4] = {0.0, 1.0, 0.0, 0.0};
   m2vol *V1 = V->global_index[1] == -1 ? m2vol_neighbor(V, 1, 1) : V;
   m2aux_fluxes(&V1->aux, n, V->flux1);
-  V->flux1[B11] = 0.0;
-  V->flux1[B22] = 0.0;
-  V->flux1[B33] = 0.0;
 }
 static void boundary_conditions_flux2(m2vol *V)
 {
   double n[4] = {0.0, 0.0, 1.0, 0.0};
   m2vol *V1 = V->global_index[2] == -1 ? m2vol_neighbor(V, 2, 1) : V;
   m2aux_fluxes(&V1->aux, n, V->flux2);
-  V->flux2[B11] = 0.0;
-  V->flux2[B22] = 0.0;
-  V->flux2[B33] = 0.0;
 }
 
 void initialize_problem_jet(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 128, 64, 1);
+  m2sim_set_resolution(m2, 64, 32, 1);
   m2sim_set_extent0(m2, 1.0, 0.0, 0.0);
   m2sim_set_extent1(m2, 10.0, 0.5*M2_PI, 2.0*M2_PI);
 
