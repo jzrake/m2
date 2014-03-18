@@ -145,7 +145,6 @@ void m2sim_calculate_flux(m2sim *m2)
 	  if (m2->boundary_conditions_flux1) m2->boundary_conditions_flux1(V0);
 	  else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
 	}
-	else if (V1 == NULL) for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
 	else riemann_hll(V0, V1, 1, V0->flux1);
 
 
@@ -157,7 +156,6 @@ void m2sim_calculate_flux(m2sim *m2)
 	  if (m2->boundary_conditions_flux2) m2->boundary_conditions_flux2(V0);
 	  else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
 	}
-	else if (V2 == NULL) for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
 	else riemann_hll(V0, V2, 2, V0->flux2);
 
 
@@ -169,7 +167,6 @@ void m2sim_calculate_flux(m2sim *m2)
 	  if (m2->boundary_conditions_flux3) m2->boundary_conditions_flux3(V0);
 	  else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
 	}
-	else if (V3 == NULL) for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
 	else riemann_hll(V0, V3, 3, V0->flux3);
       }
     }
@@ -195,10 +192,11 @@ void m2sim_calculate_emf(m2sim *m2)
 	if (m2->boundary_conditions_##emf){m2->boundary_conditions_##emf(V0);} \
 	else V0->emf = 0.0;						\
       }									\
-      else if (V1 == NULL) V0->emf = 0.0; /* processor boundary */	\
       else {								\
-	V0->emf = 0.50 * (+V0->f3[B2]*V0->line				\
-			  +V1->f3[B2]*V0->line);			\
+	V0->emf = +V0->f3[B2] * V0->line;				\
+	if (V2 != NULL) {						\
+	  V0->emf -= 0.5*(V0->f2[B3] + V2->f2[B3]) * V0->line;		\
+	}								\
       }									\
     }									\
     else if (G[a3] == 1) {						\
@@ -206,10 +204,11 @@ void m2sim_calculate_emf(m2sim *m2)
 	if (m2->boundary_conditions_##emf){m2->boundary_conditions_##emf(V0);} \
 	else V0->emf = 0.0;						\
       }									\
-      else if (V2 == NULL) V0->emf = 0.0; /* processor boundary */	\
       else {								\
-	V0->emf = 0.50 * (-V0->f2[B3]*V0->line				\
-			  -V2->f2[B3]*V0->line);			\
+	V0->emf = -V0->f2[B3] * V0->line;				\
+	if (V1 != NULL) {						\
+	  V0->emf += 0.5*(V0->f3[B2] + V1->f3[B2]) * V0->line;		\
+	}								\
       }									\
     }									\
     else {								\
@@ -455,17 +454,17 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
 
 
 	V0 = M2_VOL(i+0, j+0, k+0);
-	V1 = M2_VOL(i-1, j+0, k+0);
-	V2 = M2_VOL(i+0, j-1, k+0);
-	V3 = M2_VOL(i+0, j+0, k-1);
+	V1 = M2_VOL(i-1, j+0, k+0); V1 = V1 ? V1 : V0;
+	V2 = M2_VOL(i+0, j-1, k+0); V2 = V2 ? V2 : V0;
+	V3 = M2_VOL(i+0, j+0, k-1); V3 = V3 ? V3 : V0;
 
 	for (q=0; q<5; ++q) {
 	  V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
 	  V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
 	  V0->consA[q] -= dt * V0->area3 * V0->flux3[q];
-	  if (V1) V0->consA[q] += dt * V1->area1 * V1->flux1[q];
-	  if (V2) V0->consA[q] += dt * V2->area2 * V2->flux2[q];
-	  if (V3) V0->consA[q] += dt * V3->area3 * V3->flux3[q];
+	  V0->consA[q] += dt * V1->area1 * V1->flux1[q];
+	  V0->consA[q] += dt * V2->area2 * V2->flux2[q];
+	  V0->consA[q] += dt * V3->area3 * V3->flux3[q];
 	}
       }
     }
