@@ -2,7 +2,7 @@
 #include "hydro.h"
 #include "srmhd-c2p.h"
 
-#define gamma_law_index (m2 ? m2->gamma_law_index : 4./3.)
+#define gamma_law_index (m2 ? m2->gamma_law_index : 5./3.)
 
 
 int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -23,12 +23,12 @@ int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
   double b2 = (P->B2 + b0 * u2) / u0;
   double b3 = (P->B3 + b0 * u3) / u0;
   double bb = b1*b1 + b2*b2 + b3*b3 - b0*b0;
-  double d0 = P->d;
+  double dg = P->d;
   double pg = P->p;
   double ug = pg / (gamma_law_index - 1.0);
   double pb = 0.5 * bb;
   double ub = 0.5 * bb;
-  double H0 = d0 + (ug + ub) + (pg + pb);
+  double H0 = dg + (ug + ub) + (pg + pb);
 
   if (aux) {
     aux->velocity_four_vector[0] = u0;
@@ -43,14 +43,14 @@ int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
     aux->momentum_density[1] = H0 * u0 * u1 - b0 * b1;
     aux->momentum_density[2] = H0 * u0 * u2 - b0 * b2;
     aux->momentum_density[3] = H0 * u0 * u3 - b0 * b3;
-    aux->comoving_mass_density = d0;
+    aux->comoving_mass_density = dg;
     aux->gas_pressure = pg;
     aux->magnetic_pressure = pb;
     aux->m2 = m2;
   }
   if (U) {
-    U[DDD] = dV * (d0 * u0);
-    U[TAU] = dV * (H0 * u0 * u0 - b0 * b0 - (pg + pb) - d0 * u0);
+    U[DDD] = dV * (dg * u0);
+    U[TAU] = dV * (H0 * u0 * u0 - b0 * b0 - (pg + pb) - dg * u0);
     U[S11] = dV * (H0 * u0 * u1 - b0 * b1);
     U[S22] = dV * (H0 * u0 * u2 - b0 * b2);
     U[S33] = dV * (H0 * u0 * u3 - b0 * b3);
@@ -112,12 +112,12 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double b2 = (B2 + b0 * u2) / u0;
   double b3 = (B3 + b0 * u3) / u0;
   double bb = -b0*b0 + b1*b1 + b2*b2 + b3*b3;
-  double d0 = Pin[0];
+  double dg = Pin[0];
   double pg = Pin[1];
   double ug = pg / (gamma_law_index - 1.0);
   double pb = 0.5 * bb;
   double ub = 0.5 * bb;
-  double H0 = d0 + (ug + ub) + (pg + pb);
+  double H0 = dg + (ug + ub) + (pg + pb);
 
   if (aux) {
     aux->velocity_four_vector[0] = u0;
@@ -132,7 +132,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     aux->momentum_density[1] = H0 * u0 * u1 - b0 * b1;
     aux->momentum_density[2] = H0 * u0 * u2 - b0 * b2;
     aux->momentum_density[3] = H0 * u0 * u3 - b0 * b3;
-    aux->comoving_mass_density = d0;
+    aux->comoving_mass_density = dg;
     aux->gas_pressure = pg;
     aux->magnetic_pressure = pb;
     aux->m2 = m2;
@@ -144,7 +144,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->B1 = B1;
     P->B2 = B2;
     P->B3 = B3;
-    P->d = d0;
+    P->d = dg;
     P->p = pg;
   }
 
@@ -188,10 +188,10 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   const double bb = b1*b1 + b2*b2 + b3*b3 - b0*b0;
   const double bn = b1*n1 + b2*n2 + b3*n3;
   const double vn = v1*n1 + v2*n2 + v3*n3;
-  const double d0 = aux->comoving_mass_density;
+  const double dg = aux->comoving_mass_density;
   const double pg = aux->gas_pressure;
   const double ug = pg / (gamma_law_index - 1.0);
-  const double Hg = d0 + ug + pg; /* gas enthalpy density */
+  const double Hg = dg + ug + pg; /* gas enthalpy density */
   const double cs2 = gamma_law_index * pg / Hg; /* sound speed squared */
   const double C = Hg + bb; /* constant in Alfven wave expression */
 
@@ -244,20 +244,20 @@ double srmhd_measure(m2aux *aux, int flag)
   double v1 = aux->velocity_four_vector[1] / u0;
   double v2 = aux->velocity_four_vector[2] / u0;
   double v3 = aux->velocity_four_vector[3] / u0;
-  double d0 = aux->comoving_mass_density;
+  double dg = aux->comoving_mass_density;
   double pg = aux->gas_pressure;
   double pb = aux->magnetic_pressure;
   double vv = v1*v1 + v2*v2 + v3*v3;
   double v0 = sqrt(vv);
   double ug = pg / (gamma_law_index - 1.0);
-  double Hg = d0 + ug + pg; /* gas enthalpy density */
-  double eg = Hg*u0*u0 - pg - u0*d0; /* gas energy density */
-  double ek = d0*u0*(u0 - 1.0);
-  double cs = sqrt(gamma_law_index * pg / d0);
+  double Hg = dg + ug + pg; /* gas enthalpy density */
+  double eg = Hg*u0*u0 - pg - u0*dg; /* gas energy density */
+  double ek = dg*u0*(u0 - 1.0);
+  double cs = sqrt(gamma_law_index * pg / dg);
 
   switch (flag) {
   case M2_SIGMA: return pb / eg;
-  case M2_SOUND_SPEED: return sqrt(gamma_law_index * pg / d0);
+  case M2_SOUND_SPEED: return sqrt(gamma_law_index * pg / dg);
   case M2_MACH_NUMBER: return (v0/sqrt(1.0 - v0*v0)) / (cs/sqrt(1.0 - cs*cs));
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
   case M2_KINETIC_ENERGY_DENSITY: return ek;

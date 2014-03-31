@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include "m2-cfg.h"
 
-#define M2_NONRELATIVISTIC 0
-#define M2_UNMAGNETIZED 0
-
 
 /* ------------------------------------------------------------------
  * M2 PUBLIC API
@@ -20,10 +17,6 @@ enum m2flag {
   M2_PARABOLIC,
   M2_LINEAR,
   M2_LOGARITHMIC,
-
-  /* physics */
-  M2_RELATIVISTIC=(1<<1),
-  M2_MAGNETIZED=(1<<2),
 
   /* may have many uses including interpolation variables */
   M2_CONSERVED,
@@ -66,6 +59,10 @@ enum m2flag {
   M2_CT_OUTOFPAGE3,
   M2_CT_TRANSVERSE1B3,
   M2_CT_FULL3D,
+
+  /* Riemann solvers */
+  M2_RIEMANN_HLLE,
+  M2_RIEMANN_HLLC,
 
   /* Zone types */
   M2_ZONE_TYPE_FULL,
@@ -145,9 +142,14 @@ struct m2vol
 struct m2sim_status
 {
   double time_simulation;
-  double checkpoint_cadence;
+  double time_step;
+  double time_last_checkpoint_hdf5;
+  double time_last_checkpoint_tpl;
+  double time_last_analysis;
   int iteration_number;
-  int checkpoint_number;
+  int checkpoint_number_tpl;
+  int checkpoint_number_hdf5;
+  char message[1024];
 } ;
 
 struct m2sim
@@ -162,17 +164,19 @@ struct m2sim
   int coordinate_scaling2;
   int coordinate_scaling3;
   int geometry;
-  int physics;
+  int relativistic;
+  int magnetized;
   int rk_order;
   int simple_eigenvalues; /* fix outer characteristics to plus/minus c */
   int interpolation_fields;
+  int riemann_solver;
   double plm_parameter;
   double cfl_parameter;
   double gamma_law_index;
   m2sim_status status;
   m2sim_operator analysis;
   m2sim_operator boundary_conditions_gradient;
-  m2sim_operator boundary_conditions;
+  m2sim_operator boundary_conditions_cell;
   m2vol_operator boundary_conditions_flux1;
   m2vol_operator boundary_conditions_flux2;
   m2vol_operator boundary_conditions_flux3;
@@ -185,6 +189,10 @@ struct m2sim
   m2crd_function initial_data_edge;
   m2vol_operator add_physical_source_terms;
   m2vol *volumes;
+  void *user_struct;
+  double cadence_checkpoint_hdf5;
+  double cadence_checkpoint_tpl;
+  double cadence_analysis;
 } ;
 #define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiifff$(ffii))",	\
 			      m2,4,4,4,4,4,4)
@@ -200,22 +208,23 @@ int m2_solve_quartic_equation(double d4, double d3,
 			      double d2, double d1, double d0,
 			      double roots[4]);
 
+
 /* vol */
 double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);
 void m2vol_coordinate_centroid_3d(m2vol *V, double x[4]);
 void m2vol_to_interpolated(m2vol *V, double *y, int stride);
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist);
+int m2vol_from_primitive(m2vol *V);
 
 
 /* sim */
-m2sim *m2sim_new();
+void m2sim_new(m2sim *m2);
 void m2sim_del(m2sim *m2);
 void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3);
 void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_extent1(m2sim *m2, double x1, double x2, double x3);
 void m2sim_set_geometry(m2sim *m2, int geometry);
-void m2sim_set_physics(m2sim *m2, int modes);
 void m2sim_set_rk_order(m2sim *m2, int order);
 void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis);
 void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc);
@@ -227,7 +236,6 @@ void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4]);
 void m2sim_primitive_at_position(m2sim *m2, double x[4], m2prim *P);
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4]);
 void m2sim_calculate_gradient(m2sim *m2);
-void m2sim_calculate_conserved(m2sim *m2);
 void m2sim_calculate_flux(m2sim *m2);
 void m2sim_calculate_emf(m2sim *m2);
 void m2sim_exchange_flux(m2sim *m2, double dt);
@@ -237,10 +245,10 @@ void m2sim_average_runge_kutta(m2sim *m2, double b);
 void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
 void m2sim_enforce_boundary_condition(m2sim *m2);
 void m2sim_print(m2sim *m2);
-int m2sim_save_checkpoint(m2sim *m2, const char *fname);
-int m2sim_load_checkpoint(m2sim *m2, const char *fname);
-void m2sim_write_ascii_1d(m2sim *m2, char *fname);
-void m2sim_write_ascii_2d(m2sim *m2, char *fname);
+int m2sim_save_checkpoint_tpl(m2sim *m2, const char *fname);
+int m2sim_load_checkpoint_tpl(m2sim *m2, const char *fname);
+void m2sim_write_ascii_1d(m2sim *m2, const char *fname);
+void m2sim_write_ascii_2d(m2sim *m2, const char *fname);
 void m2sim_run_analysis(m2sim *m2);
 void m2sim_run_initial_data(m2sim *m2);
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P);
@@ -260,7 +268,7 @@ void m2sim_visualize(m2sim *m2, int argc, char **argv);
 
 
 /* aux */
-double m2aux_maximum_wavespeed(m2aux *aux);
+double m2aux_maximum_wavespeed(m2aux *aux, int *err);
 int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);
 int m2aux_fluxes(m2aux *aux, double n[4], double *F);
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],

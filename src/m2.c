@@ -4,9 +4,8 @@
 #include "m2.h"
 
 
-m2sim *m2sim_new()
+void m2sim_new(m2sim *m2)
 {
-  m2sim *m2 = (m2sim*) malloc(sizeof(m2sim));
   m2->domain_extent_lower[0] = 0.0;
   m2->domain_extent_lower[1] = 0.0;
   m2->domain_extent_lower[2] = 0.0;
@@ -37,18 +36,20 @@ m2sim *m2sim_new()
   m2->coordinate_scaling1 = M2_LINEAR;
   m2->coordinate_scaling2 = M2_LINEAR;
   m2->coordinate_scaling3 = M2_LINEAR;
-  m2->geometry = M2_CARTESIAN;
-  m2->physics = M2_NONRELATIVISTIC | M2_UNMAGNETIZED;
+  m2->geometry = M2_CARTESIAN; 
+  m2->relativistic = 0;
+  m2->magnetized = 0;
   m2->rk_order = 2;
   m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE;
+  m2->riemann_solver = M2_RIEMANN_HLLE;
   m2->plm_parameter = 1.5;
   m2->cfl_parameter = 0.4;
   m2->gamma_law_index = 4./3;
 
   /* callback functions */
   m2->analysis = NULL;
-  m2->boundary_conditions = NULL;
+  m2->boundary_conditions_cell = NULL;
   m2->boundary_conditions_flux1 = NULL;
   m2->boundary_conditions_flux2 = NULL;
   m2->boundary_conditions_flux3 = NULL;
@@ -63,17 +64,23 @@ m2sim *m2sim_new()
   m2->initial_data_face = NULL;
   m2->initial_data_edge = NULL;
 
+  m2->cadence_checkpoint_hdf5 = 0.0;
+  m2->cadence_checkpoint_tpl = 0.0;
+  m2->cadence_analysis = 0.0;
+
   /* status initializer */
-  m2->status.time_simulation = 0.0;
   m2->status.iteration_number = 0;
-  m2->status.checkpoint_cadence = 1.0;
-  m2->status.checkpoint_number = 0;
-  return m2;
+  m2->status.time_simulation = 0.0;
+  m2->status.time_last_checkpoint_hdf5 = 0.0;
+  m2->status.time_last_checkpoint_tpl = 0.0;
+  m2->status.time_last_analysis = 0.0;
+  m2->status.checkpoint_number_hdf5 = 0;
+  m2->status.checkpoint_number_tpl = 0;
 }
 void m2sim_del(m2sim *m2)
 {
   free(m2->volumes);
-  free(m2);
+  m2->volumes = NULL;
 }
 void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3)
 {
@@ -97,10 +104,6 @@ void m2sim_set_geometry(m2sim *m2, int geometry)
 {
   m2->geometry = geometry;
 }
-void m2sim_set_physics(m2sim *m2, int modes)
-{
-  m2->physics = modes;
-}
 void m2sim_set_rk_order(m2sim *m2, int order)
 {
   m2->rk_order = order;
@@ -111,7 +114,7 @@ void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis)
 }
 void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc)
 {
-  m2->boundary_conditions = bc;
+  m2->boundary_conditions_cell = bc;
 }
 void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg)
 {
@@ -137,12 +140,13 @@ void m2sim_initialize(m2sim *m2)
   L[2] = N[2] + ng0[2] + ng1[2];
   L[3] = N[3] + ng0[3] + ng1[3];
   L[0] = L[1] * L[2] * L[3];
-  m2->volumes = (m2vol*) malloc(L[0] * sizeof(m2vol));
+  m2->volumes = (m2vol*) realloc(m2->volumes, L[0] * sizeof(m2vol));
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 	V = m2->volumes + M2_IND(i,j,k);
 	V->m2 = m2;
+	V->aux.m2 = m2;
 	/* ----------------------- */
 	/* cache cell global index */
 	/* ----------------------- */
@@ -277,8 +281,13 @@ void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
     P->p  = y[7];
     break;
   case M2_PRIMITIVE_AND_FOUR_VELOCITY:
-    /* gamma * beta = {y[0], y[1], y[2]} */
-    u0 = sqrt(1.0 + y[0]*y[0] + y[1]*y[1] + y[2]*y[2]);
+    if (m2->relativistic) {
+      /* gamma * beta = {y[0], y[1], y[2]} */
+      u0 = sqrt(1.0 + y[0]*y[0] + y[1]*y[1] + y[2]*y[2]);
+    }
+    else {
+      u0 = 1.0;
+    }
     P->v1 = y[0] / u0;
     P->v2 = y[1] / u0;
     P->v3 = y[2] / u0;
@@ -403,7 +412,7 @@ double m2aux_mach(m2aux *aux, double n[4], int mode)
     ap = evals[5];
     break;
   }
-  if (aux->m2->physics & M2_RELATIVISTIC) {
+  if (aux->m2->relativistic) {
     up = ap / sqrt(1.0 - ap*ap);
     um = am / sqrt(1.0 - am*am);
   }
@@ -552,6 +561,16 @@ void m2sim_run_initial_data(m2sim *m2)
   m2sim_exchange_flux(m2, 1.0);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_primitive_all(m2);
+}
+
+m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)
+{
+  m2sim *m2 = V->m2;
+  int *L = m2->local_grid_size;
+  int I[4];
+  m2sim_index_global_to_local(m2, V->global_index, I);
+  I[axis] += dist;
+  return M2_VOL(I[1], I[2], I[3]);
 }
 
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)

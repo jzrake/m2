@@ -128,6 +128,7 @@ void myGlutIdle(void)
   glui->sync_live();
   if (sim_controller->AutoAdvance) {
     m2sim_drive(M2);
+    printf("%s\n", M2->status.message);
     //load_next_frame();
     sim_controller->refresh();
   }
@@ -257,10 +258,10 @@ void SimulationController::action_cb(int action_id)
 {
   switch (action_id) {
   case ACTION_SAVE_FILE:
-    m2sim_save_checkpoint(M2, sim_controller->chkptname_field->get_text());
+    m2sim_save_checkpoint_tpl(M2, sim_controller->chkptname_field->get_text());
     break;
   case ACTION_LOAD_FILE:
-    m2sim_load_checkpoint(M2, sim_controller->chkptload_browser->get_file());
+    m2sim_load_checkpoint_tpl(M2, sim_controller->chkptload_browser->get_file());
     sim_controller->refresh();
     break;
   case ACTION_TAKE_SCREENSHOT:
@@ -273,6 +274,7 @@ void SimulationController::action_cb(int action_id)
     break;
   case ACTION_STEP:
     m2sim_drive(M2);
+    printf("%s\n", M2->status.message);
     sim_controller->refresh();
     break;
   case ACTION_QUIT:
@@ -626,7 +628,7 @@ void load_next_frame()
     checkpoint_number += 1;
   }
   snprintf(fname, 256, "sgrbA/chkpt.%04d.m2", checkpoint_number);
-  m2sim_load_checkpoint(M2, fname);
+  m2sim_load_checkpoint_tpl(M2, fname);
   sim_controller->refresh();
 
   if (M2->status.time_simulation < 100.0) {

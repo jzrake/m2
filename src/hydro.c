@@ -5,16 +5,16 @@
 #define SYSTEM_CHOICE(m2,E)						\
   do {									\
     if (0) { }								\
-    else if (m2->physics == (M2_RELATIVISTIC | M2_MAGNETIZED)) {	\
+    else if (m2->relativistic == 1 && m2->magnetized == 1) {		\
       return srmhd_##E;							\
     }									\
-    else if (m2->physics == (M2_RELATIVISTIC | M2_UNMAGNETIZED)) {	\
+    else if (m2->relativistic == 1 && m2->magnetized == 0) {		\
       return srhyd_##E;							\
     }									\
-    else if (m2->physics == (M2_NONRELATIVISTIC | M2_MAGNETIZED)) {	\
+    else if (m2->relativistic == 0 && m2->magnetized == 1) {		\
       return nrmhd_##E;							\
     }									\
-    else if (m2->physics == (M2_NONRELATIVISTIC | M2_UNMAGNETIZED)) {	\
+    else if (m2->relativistic == 0 && m2->magnetized == 0) {		\
       return nrhyd_##E;							\
     }									\
     else {								\
@@ -46,6 +46,16 @@ int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals)
 double m2aux_measure(m2aux *aux, int flag)
 {
   SYSTEM_CHOICE(aux->m2, measure(aux, flag));
+}
+int m2vol_from_primitive(m2vol *V)
+{
+  m2sim *m2 = V->m2;
+  m2prim *P = &V->prim;
+  m2aux  *A = &V->aux;
+  double *B = &V->prim.B1 - 1;
+  double *U = V->consA;
+  double dV = V->volume;
+  SYSTEM_CHOICE(m2, from_primitive(m2, P, B, NULL, dV, U, A));
 }
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
 				       double *U)
@@ -260,6 +270,7 @@ t1*t1))*(t1*t1*t1*t1))))/(24.*u0));
 }
 int m2aux_fluxes(m2aux *aux, double n[4], double *F)
 {
+  const double SR = aux->m2->relativistic != 0;
   const double u0 = aux->velocity_four_vector[0];
   const double u1 = aux->velocity_four_vector[1];
   const double u2 = aux->velocity_four_vector[2];
@@ -268,7 +279,7 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   const double b1 = aux->magnetic_four_vector[1];
   const double b2 = aux->magnetic_four_vector[2];
   const double b3 = aux->magnetic_four_vector[3];
-  const double S0 = aux->momentum_density[0]; /* T^{0,0} = tau + D */
+  const double S0 = aux->momentum_density[0]; /* T^{0,0} = tau + D + pg + pb */
   const double S1 = aux->momentum_density[1];
   const double S2 = aux->momentum_density[2];
   const double S3 = aux->momentum_density[3];
@@ -279,13 +290,13 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   const double n1 = n[1];
   const double n2 = n[2];
   const double n3 = n[3];
-  const double T0 = S0 - D0; /* tau */
+  const double T0 = S0 - (D0 + pg + pb); /* tau */
   const double v1 = u1 / u0;
   const double v2 = u2 / u0;
   const double v3 = u3 / u0;
-  const double B1 = b1 * u0 - b0 * u1;
-  const double B2 = b2 * u0 - b0 * u2;
-  const double B3 = b3 * u0 - b0 * u3;
+  const double B1 = b1 * u0 - b0 * u1 * SR;
+  const double B2 = b2 * u0 - b0 * u2 * SR;
+  const double B3 = b3 * u0 - b0 * u3 * SR;
   const double Bn = B1*n1 + B2*n2 + B3*n3;
   const double vn = v1*n1 + v2*n2 + v3*n3;
   F[DDD] = D0 * vn;
@@ -298,7 +309,7 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   F[B33] = B3 * vn - Bn * v3;
   return 0;
 }
-double m2aux_maximum_wavespeed(m2aux *aux)
+double m2aux_maximum_wavespeed(m2aux *aux, int *err)
 {
   double evals[8];
   double n[4] = { 0.0,
@@ -319,5 +330,10 @@ double m2aux_maximum_wavespeed(m2aux *aux)
   }
   m2aux_eigenvalues(aux, n, evals);
   a = fabs(evals[0]) > fabs(evals[7]) ? fabs(evals[0]) : fabs(evals[7]);
+  if (a != a) {
+    *err = 1;
+    return 0.0;
+  }
+  *err = 0;
   return a;
 }

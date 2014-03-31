@@ -28,9 +28,7 @@ int m2_solve_quartic_equation(double d4, double d3,
   Complex Q = cpow(X,3);
   Complex S = csqrt(-4*Q + cpow(P,2));
   Complex T = -8*a1 + 4*a2*a3 - a3*a3*a3;
-  //  Complex B = cpow(2,W)*X/V; /* V cannot be zero because of above check */
   Complex B = cabs(P + S) < 1e-15 ? 0.0 : (cpow(2,W)*X)/(3.*cpow(P + S,W));
-  //Complex B = (cpow(2,W)*X)/(3.*cpow(P + S,W));
   Complex U = (-2*a2)/3. + (a3*a3)/4. + B;
   Complex C = csqrt(U + cpow(P + S,W)/(3.*cpow(2,W)))/2.;
   Complex D = cpow(P + S,W)/(3.*cpow(2,W));

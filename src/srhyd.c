@@ -2,7 +2,7 @@
 #include "hydro.h"
 
 
-#define gamma_law_index (m2 ? m2->gamma_law_index : 4./3.)
+#define gamma_law_index (m2 ? m2->gamma_law_index : 5./3.)
 
 
 int srhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -42,7 +42,6 @@ int srhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
     U[S22] = dV * (H * u0 * u2);
     U[S33] = dV * (H * u0 * u3);
   }
-
   return 0;
 }
 

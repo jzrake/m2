@@ -15,8 +15,8 @@ void m2sim_print(m2sim *m2)
 	 m2->domain_resolution[1],
 	 m2->domain_resolution[2],
 	 m2->domain_resolution[3]);
-  printf("magnetized: %s\n", m2->physics & M2_MAGNETIZED ? "yes" : "no");
-  printf("relativistic: %s\n", m2->physics & M2_RELATIVISTIC ? "yes" : "no");
+  printf("magnetized: %s\n", m2->magnetized ? "yes" : "no");
+  printf("relativistic: %s\n", m2->relativistic ? "yes" : "no");
 }
 
 void m2sim_save_header(m2sim *m2, FILE *of)
@@ -79,9 +79,9 @@ void m2sim_load_volumes(m2sim *m2, FILE *of)
   tpl_free(tpl);
 }
 
-int m2sim_save_checkpoint(m2sim *m2, const char *fname)
+int m2sim_save_checkpoint_tpl(m2sim *m2, const char *fname)
 {
-  printf("[save checkpoint: %s]\n", fname);
+  printf("[save tpl checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "w");
   m2sim_save_header(m2, of);
   m2sim_save_volumes(m2, of);
@@ -89,9 +89,9 @@ int m2sim_save_checkpoint(m2sim *m2, const char *fname)
   return 0;
 }
 
-int m2sim_load_checkpoint(m2sim *m2, const char *fname)
+int m2sim_load_checkpoint_tpl(m2sim *m2, const char *fname)
 {
-  printf("[load checkpoint: %s]\n", fname);
+  printf("[load tpl checkpoint: %s]\n", fname);
   FILE *of = fopen(fname, "r");
   if (of == NULL) {
     MSGF(ERROR, "no such file: %s", fname);
@@ -105,7 +105,7 @@ int m2sim_load_checkpoint(m2sim *m2, const char *fname)
   return 0;
 }
 
-void m2sim_write_ascii_1d(m2sim *m2, char *fname)
+void m2sim_write_ascii_1d(m2sim *m2, const char *fname)
 {
   printf("[write ascii 1d: %s]\n", fname);
   FILE *outfile = fopen(fname, "w");
@@ -126,7 +126,7 @@ void m2sim_write_ascii_1d(m2sim *m2, char *fname)
   fclose(outfile);
 }
 
-void m2sim_write_ascii_2d(m2sim *m2, char *fname)
+void m2sim_write_ascii_2d(m2sim *m2, const char *fname)
 {
   printf("[write ascii 2d: %s]\n", fname);
   FILE *outfile = fopen(fname, "w");

@@ -1,6 +1,5 @@
 #ifndef M2_HYDRO_HEADER
 #define M2_HYDRO_HEADER
-
 #include "m2.h"
 
 

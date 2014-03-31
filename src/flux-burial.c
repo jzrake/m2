@@ -99,11 +99,12 @@ void initialize_problem_flux_burial(m2sim *m2)
   m2sim_set_extent0(m2, 1.0, 0.0, 0.0);
   m2sim_set_extent1(m2, 4.0, M2_PI, 2*M2_PI);
   m2sim_set_geometry(m2, M2_SPHERICAL);
-  m2sim_set_physics(m2, M2_NONRELATIVISTIC | M2_MAGNETIZED);
   m2sim_set_rk_order(m2, 2);
   m2sim_set_boundary_conditions(m2, boundary_conditions);
   m2sim_set_initial_data(m2, initial_data);
 
+  m2->relativistic = 0;
+  m2->magnetized = 1;
   m2->number_guard_zones0[1] = 1;
   m2->number_guard_zones0[2] = 1;
   m2->add_physical_source_terms = add_physical_source_terms;

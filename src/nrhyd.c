@@ -2,7 +2,7 @@
 #include "hydro.h"
 
 
-#define gamma_law_index (m2 ? m2->gamma_law_index : 4./3.)
+#define gamma_law_index (m2 ? m2->gamma_law_index : 5./3.)
 
 
 int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
@@ -11,9 +11,10 @@ int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
   double v1 = P->v1;
   double v2 = P->v2;
   double v3 = P->v3;
-  double d = P->d;
-  double p = P->p;
-  double u = p / (gamma_law_index - 1.0);
+  double vv = v1*v1 + v2*v2 + v3*v3;
+  double dg = P->d;
+  double pg = P->p;
+  double ug = pg / (gamma_law_index - 1.0);
 
   if (aux) {
     aux->velocity_four_vector[0] = 1.0;
@@ -24,21 +25,21 @@ int nrhyd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
     aux->magnetic_four_vector[1] = 0.0;
     aux->magnetic_four_vector[2] = 0.0;
     aux->magnetic_four_vector[3] = 0.0;
-    aux->momentum_density[0] = d * 0.5 * (v1*v1 + v2*v2 + v3*v3) + u + d;
-    aux->momentum_density[1] = d * v1;
-    aux->momentum_density[2] = d * v2;
-    aux->momentum_density[3] = d * v3;
-    aux->comoving_mass_density = d;
-    aux->gas_pressure = p;
+    aux->momentum_density[0] = dg * 0.5 * vv + ug + (dg + pg);
+    aux->momentum_density[1] = dg * v1;
+    aux->momentum_density[2] = dg * v2;
+    aux->momentum_density[3] = dg * v3;
+    aux->comoving_mass_density = dg;
+    aux->gas_pressure = pg;
     aux->magnetic_pressure = 0.0;
     aux->m2 = m2;
   }
   if (U) {
-    U[DDD] = dV * (d);
-    U[TAU] = dV * (d * 0.5 * (v1*v1 + v2*v2 + v3*v3) + u);
-    U[S11] = dV * (d * v1);
-    U[S22] = dV * (d * v2);
-    U[S33] = dV * (d * v3);
+    U[DDD] = dV * (dg);
+    U[TAU] = dV * (dg * vv * 0.5 + ug);
+    U[S11] = dV * (dg * v1);
+    U[S22] = dV * (dg * v2);
+    U[S33] = dV * (dg * v3);
   }
 
   return 0;
@@ -68,7 +69,7 @@ int nrhyd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     aux->magnetic_four_vector[1] = 0.0;
     aux->magnetic_four_vector[2] = 0.0;
     aux->magnetic_four_vector[3] = 0.0;
-    aux->momentum_density[0] = T0 + D0; /* odd for Newtonian, see fluxes */
+    aux->momentum_density[0] = T0 + D0 + pg; /* odd for Newtonian, see fluxes */
     aux->momentum_density[1] = S1;
     aux->momentum_density[2] = S2;
     aux->momentum_density[3] = S3;

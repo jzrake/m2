@@ -4,9 +4,9 @@
 ifneq ($(strip $(MAKEFILE_IN)),)
 # use value of MAKEFILE_IN if provided on the command line
 else ifeq ($(shell test -e Makefile.in && echo 1), 1)
-MAKEFILE_IN = Makefile.in
+MAKEFILE_IN = $(shell pwd)/Makefile.in
 else
-MAKEFILE_IN = Makefile.in.template
+MAKEFILE_IN = $(shell pwd)/Makefile.in.template
 endif
 include $(MAKEFILE_IN)
 
@@ -29,9 +29,23 @@ SRC2 = $(wildcard *.cpp)
 OBJ = $(SRC1:.c=.o) $(SRC2:.cpp=.o)
 DEP = $(SRC1:.c=.dep) $(SRC2:.cpp=.dep)
 
-ifeq ($(HAVE_GLUT), 1)
+
+LUA_L  = $(LUA_LIB)
+ZULU_L = zulu/libzulu.a
 GLUI_L = glui/libglui.a
+INC = -Izulu -Ilua -Iglui
+
+LIB += $(LUA_L)
+LIB += $(ZULU_L)
+
+ifeq ($(HAVE_GLUT), 1)
+LIB += $(GLUT_L) $(GLUI_L)
 endif
+
+ifeq ($(HAVE_HDF5), 1)
+LIB += -L$(HDF5_HOME)/lib -lhdf5
+endif
+
 
 
 # build rules
@@ -39,15 +53,15 @@ endif
 default : $(EXE)
 
 vis.o : vis.cpp m2-cfg.h $(MAKEFILE_IN)
-	@$(CC) -MM $< > $(<:.cpp=.dep) $(GLUT_I)
-	$(CC) $(CFLAGS) $< -c $(GLUT_I)
+	@$(CC) -MM $< $(INC) $(GLUT_I) > $(<:.cpp=.dep)
+	$(CC) $(CFLAGS) $(INC) $< -c $(GLUT_I)
 
 %.o : %.c m2-cfg.h $(MAKEFILE_IN)
-	@$(CC) -MM $< > $(<:.c=.dep)
-	$(CC) $(CFLAGS) $< -c
+	@$(CC) -MM $< $(INC) > $(<:.c=.dep)
+	$(CC) $(CFLAGS) $(INC) $< -c
 
-m2 : $(OBJ) $(GLUI_L)
-	$(CXX) $(CFLAGS) $(OBJ) $(CLIBS) $(GLUT_L) $(GLUI_L) -o $@
+$(EXE) : $(OBJ) $(GLUI_L) $(LUA_L) $(ZULU_L)
+	$(CXX) $(CFLAGS) $(OBJ) $(LIB) -o $@
 
 m2-cfg.h : .FORCE
 	@$(RM) $(TMP_H)
@@ -67,13 +81,25 @@ show :
 	@echo "OBJ: $(OBJ)"
 	@echo "SRC: $(SRC1) $(SRC2)"
 	@echo "DEP: $(DEP)"
+	@echo "#define M2_HAVE_MPI $(HAVE_MPI)"
+	@echo "#define M2_HAVE_GLUT $(HAVE_GLUT)"
+	@echo "#define M2_GIT_SHA \"$(GIT_SHA)\""
+	@echo "#define M2_DEBUG_FILE $(DEBUG_FILE)"
 
 clean :
+	$(MAKE) -C lua clean
+	$(MAKE) -C zulu clean
 	$(MAKE) -C glui clean
 	$(RM) $(OBJ) $(DEP) $(EXE)
 
-glui/libglui.a : .FORCE
-	$(MAKE) -C glui lib MAKEFILE_IN=$(PWD)/src/$(MAKEFILE_IN)
+$(LUA_L) : .FORCE
+	$(MAKE) -C lua $(PLAT)
+
+$(ZULU_L) : .FORCE
+	$(MAKE) -C zulu lib MAKEFILE_IN=$(MAKEFILE_IN)
+
+$(GLUI_L) : .FORCE
+	$(MAKE) -C glui lib MAKEFILE_IN=$(MAKEFILE_IN)
 
 .FORCE :
 .PHONY : show clean

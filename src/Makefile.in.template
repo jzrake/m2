@@ -9,13 +9,22 @@ AR = ar rcu
 RANLIB = ranlib
 
 
+# aix ansi bsd freebsd generic linux macosx mingw posix solaris
+PLAT = generic
+
+
 # ----------------------------------------------------------
 # Dependencies (set to 1 if available) and other flags
 # ----------------------------------------------------------
 HAVE_MPI = 0
-HAVE_OMP = 0
+HAVE_HDF5 = 0
 HAVE_GLUT = 0
 DEBUG_FILE = NULL
+
+
+LUA_EXE = $(PWD)/lua/lua
+LUA_INC = $(PWD)/lua
+HDF5_HOME = /usr/local
 
 
 # ----------------------------------------------------------
