@@ -79,7 +79,7 @@ function TestProblem:run(user_config_callback)
    m2.status.checkpoint_number_hdf5 = 1
 
    if runtime_cfg.vis then
-      m2:visualize(step)
+      m2:visualize()
    end
 
    while m2.status.time_simulation < runtime_cfg.tmax do
@@ -364,9 +364,9 @@ function MagnetarWind:set_runtime_defaults(runtime_cfg)
    runtime_cfg.tmax = 2.0
 end
 function MagnetarWind:build_m2(runtime_cfg)
-   local build_args = {lower={ 1.0, 0.0, 0.0},
-		       upper={10.0, math.pi, 2*math.pi},
-		       resolution={64,64,1},
+   local build_args = {lower={  1.0, 0.0, 0.0},
+		       upper={300.0, math.pi, 2*math.pi},
+		       resolution={256,128,1},
 		       scaling={'logarithmic', 'linear', 'linear'},
 		       relativistic=true,
 		       magnetized=true,

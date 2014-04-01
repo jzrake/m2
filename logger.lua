@@ -13,7 +13,7 @@ function CommandLineLogger:log_message(funcname, msg, indent)
       print(colors(string.rep('  ', indent or 0)..
 		   '%{magenta}[%{green}'..(self._class_name or '')..
 		   '%{cyan}'..sep..'%{underline}'..funcname..
-		   '%{reset}%{magenta}]%{white} '..msg))
+		   '%{reset}%{magenta}]%{black} '..msg))
    else
       print(string.rep('  ', indent or 0)..
 	    '['..(self._class_name or '')..sep..funcname..'] '..msg)

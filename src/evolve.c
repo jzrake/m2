@@ -126,7 +126,7 @@ static double plm_gradient(double *xs, double *fs, double plm)
 
 void m2sim_calculate_flux(m2sim *m2)
 {
-  int i, j, k, q;
+  int i, j, k;
   int *L = m2->local_grid_size;
   int *G = m2->domain_resolution;
   m2vol *V0, *V1, *V2, *V3;
@@ -135,9 +135,9 @@ void m2sim_calculate_flux(m2sim *m2)
   double n2[4] = { 0.0, 0.0, 1.0, 0.0 };
   double n3[4] = { 0.0, 0.0, 0.0, 1.0 };
 
-/* #ifdef _OPENMP */
-/* #pragma omp parallel for private(V0,V1,V2,V3,j,k,q) */
-/* #endif */
+#ifdef _OPENMP
+#pragma omp parallel for private(V0,V1,V2,V3,j,k)
+#endif
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
@@ -147,55 +147,41 @@ void m2sim_calculate_flux(m2sim *m2)
 	V2 = M2_VOL(i+0, j+1, k+0);
 	V3 = M2_VOL(i+0, j+0, k+1);
 
-
-	/* -----------------------------------------
-	 * axis 1
-	 * ----------------------------------------- */
-	if (V0->global_index[1] == -1 ||
-	    V0->global_index[1] == G[1] - 1) {
-	  if (m2->boundary_conditions_flux1) m2->boundary_conditions_flux1(V0);
-	  else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
-	}
-	else if (V1 == NULL) {
-	  //for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
-	  m2aux_fluxes(&V0->aux, n1, V0->flux1);
-	}
+	if (V1 == NULL) m2aux_fluxes(&V0->aux, n1, V0->flux1);
 	else riemann_solver(V0, V1, 1, V0->flux1);
 
-
-	/* -----------------------------------------
-	 * axis 2
-	 * ----------------------------------------- */
-	if (V0->global_index[2] == -1 ||
-	    V0->global_index[2] == G[2] - 1) {
-	  if (m2->boundary_conditions_flux2) m2->boundary_conditions_flux2(V0);
-	  else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
-	}
-	else if (V2 == NULL) {
-	  //for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
-	  m2aux_fluxes(&V0->aux, n2, V0->flux2);
-	}
+	if (V2 == NULL) m2aux_fluxes(&V0->aux, n2, V0->flux2);
 	else riemann_solver(V0, V2, 2, V0->flux2);
 
-
-	/* -----------------------------------------
-	 * axis 3
-	 * ----------------------------------------- */
-	if (V0->global_index[3] == -1 ||
-	    V0->global_index[3] == G[3] - 1) {
-	  if (m2->boundary_conditions_flux3) m2->boundary_conditions_flux3(V0);
-	  else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
-	}
-	else if (V3 == NULL) {
-	  //for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
-	  m2aux_fluxes(&V0->aux, n3, V0->flux3);
-	}
+	if (V3 == NULL) m2aux_fluxes(&V0->aux, n3, V0->flux3);
 	else riemann_solver(V0, V3, 3, V0->flux3);
       }
     }
   }
-}
 
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
+	V0 = M2_VOL(i, j, k);
+	if ((V0->global_index[1] == -1 ||
+	     V0->global_index[1] == G[1] - 1) &&
+	    (m2->boundary_conditions_flux1)) {
+	  m2->boundary_conditions_flux1(V0);
+	}
+	if ((V0->global_index[2] == -1 ||
+	     V0->global_index[2] == G[2] - 1) &&
+	    (m2->boundary_conditions_flux2)) {
+	  m2->boundary_conditions_flux2(V0);
+	}
+	if ((V0->global_index[3] == -1 ||
+	     V0->global_index[3] == G[3] - 1) &&
+	    (m2->boundary_conditions_flux3)) {
+	  m2->boundary_conditions_flux3(V0);
+	}
+      }
+    }
+  }
+}
 
 void m2sim_calculate_gradient(m2sim *m2)
 {

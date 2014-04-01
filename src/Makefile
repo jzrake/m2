@@ -1,4 +1,3 @@
-
 # if there is no Makefile.in then use the template
 # --------------------------------------------------
 ifneq ($(strip $(MAKEFILE_IN)),)
