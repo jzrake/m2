@@ -2,14 +2,22 @@
 # Compiler configuration
 # ----------------------------------------------------------
 CC = cc
-CXX = c++
-CFLAGS = -Wall -O0 -g
+CXX = cxx
+CFLAGS = -Wall -O2 -g
 CLIBS = -lm
 AR = ar rcu
 RANLIB = ranlib
 
 
-# aix ansi bsd freebsd generic linux macosx mingw posix solaris
+# ----------------------------------------------------------
+# Lua executable, library, and include (default is local)
+# ----------------------------------------------------------
+LUA_EXE = $(PWD)/src/lua/lua
+LUA_LIB = $(PWD)/src/lua/liblua.a
+LUA_INC = $(PWD)/src/lua
+
+
+# one of: aix ansi bsd freebsd generic linux macosx mingw posix solaris
 PLAT = generic
 
 
@@ -22,8 +30,6 @@ HAVE_GLUT = 0
 DEBUG_FILE = NULL
 
 
-LUA_EXE = $(PWD)/lua/lua
-LUA_INC = $(PWD)/lua
 HDF5_HOME = /usr/local
 
 
