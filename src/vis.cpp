@@ -566,6 +566,7 @@ void DatasetController::refresh()
 
   field_lines.clear();
 
+  return;
   for (int line_num=0; line_num<50; ++line_num) {
     std::vector<GLfloat> line;
     double x[4] = {0.0,

@@ -376,31 +376,40 @@ static void _calculate_emf2(m2sim *m2)
 {
   int i, j, n;
   int *L = m2->local_grid_size;
+  int bnd;
   m2vol *vols[4];
   m2emf_descr emfs[4];
 
-  for (i=0; i<L[1]-1; ++i) {
-    for (j=0; j<L[2]-1; ++j) {
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
 
       vols[0] = M2_VOL(i,   j,   0);
       vols[1] = M2_VOL(i+1, j,   0);
       vols[2] = M2_VOL(i,   j+1, 0);
       vols[3] = M2_VOL(i+1, j+1, 0);
 
-      for (n=0; n<4; ++n) {
-	emfs[n].F1 = vols[n]->flux1;
-	emfs[n].F2 = vols[n]->flux2;
-	emfs[n].x0 = vols[n]->x0;
-	emfs[n].x1 = vols[n]->x1;
-	emfs[n].v1 = vols[n]->prim.v1;
-	emfs[n].v2 = vols[n]->prim.v2;
-	emfs[n].B1 = vols[n]->prim.B1;
-	emfs[n].B2 = vols[n]->prim.B2;
+      if (vols[1] == NULL ||
+	  vols[2] == NULL ||
+	  vols[3] == NULL) {
+	bnd = 1;
+      }
+      else {
+	for (n=0; n<4; ++n) {
+	  emfs[n].F1 = vols[n]->flux1;
+	  emfs[n].F2 = vols[n]->flux2;
+	  emfs[n].x0 = vols[n]->x0;
+	  emfs[n].x1 = vols[n]->x1;
+	  emfs[n].v1 = vols[n]->prim.v1;
+	  emfs[n].v2 = vols[n]->prim.v2;
+	  emfs[n].B1 = vols[n]->prim.B1;
+	  emfs[n].B2 = vols[n]->prim.B2;
+	}
+	bnd = 0;
       }
 
       vols[0]->emf1 = -vols[0]->flux2[B33] * vols[0]->line1;
       vols[0]->emf2 = +vols[0]->flux1[B33] * vols[0]->line2;
-      vols[0]->emf3 = _calculate_emf_single(emfs, 3) * vols[0]->line3;
+      vols[0]->emf3 = bnd?0.0:_calculate_emf_single(emfs, 3) * vols[0]->line3;
     }
   }
 }

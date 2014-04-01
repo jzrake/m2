@@ -347,8 +347,67 @@ end
 
 
 
-return {RyuJones    = RyuJones,
-	BrioWu      = BrioWu,
-	ContactWave = ContactWave,
-	BlastMHD    = BlastMHD,
-	Jet         = Jet}
+local MagnetarWind = class.class('MagnetarWind', TestProblem)
+MagnetarWind.explanation = [[
+--------------------------------------------------------------------------------
+-- Relativistic toroidally magnetized wind injected through a spherical inner
+-- boundary
+--
+-- 
+--------------------------------------------------------------------------------]]
+function MagnetarWind:__init__()
+   self.initial_data_cell = function(x)
+      return {1.0, 0.1, 0.0, 0.0, 0.0}
+   end
+end
+function MagnetarWind:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 2.0
+end
+function MagnetarWind:build_m2(runtime_cfg)
+   local build_args = {lower={ 1.0, 0.0, 0.0},
+		       upper={10.0, math.pi, 2*math.pi},
+		       resolution={64,64,1},
+		       scaling={'logarithmic', 'linear', 'linear'},
+		       relativistic=true,
+		       magnetized=true,
+		       geometry='spherical'}
+   local m2 = m2app.m2Application(build_args)
+   local function wind_inner_boundary_flux(V0)
+      local nhat = m2lib.dvec4(0,1,0,0)
+      local t = 0.5 * (V0.x0[2] + V0.x1[2])
+      if V0.global_index[1] == -1 then
+	 V0.prim.v1 = 0.5
+	 V0.prim.v2 = 0.0
+	 V0.prim.v3 = 0.0
+	 V0.prim.B1 = 0.0
+	 V0.prim.B2 = 0.0
+	 V0.prim.B3 = 1.0 * math.sin(t)
+	 V0.prim.p = 0.1
+	 V0.prim.d = 1.0
+	 V0:from_primitive()
+	 V0.flux1 = V0.aux:fluxes(nhat)
+      else
+	 V0.flux1 = V0.aux:fluxes(nhat)
+      end
+   end
+   m2:set_cadence_checkpoint_hdf5(1.0)
+   m2:set_cadence_checkpoint_tpl(0.0)
+   m2:set_gamma_law_index(4./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(0.4)
+   m2:set_plm_parameter(1.5)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
+   m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
+   m2:set_problem(self)
+   return m2
+end
+
+
+
+return {RyuJones     = RyuJones,
+	BrioWu       = BrioWu,
+	ContactWave  = ContactWave,
+	BlastMHD     = BlastMHD,
+	Jet          = Jet,
+	MagnetarWind = MagnetarWind}

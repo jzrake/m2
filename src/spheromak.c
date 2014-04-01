@@ -35,76 +35,76 @@ static void initial_data(m2vol *V)
   V->Bflux3A = Bfield(R0, T0, F1, 3) * V->area3;
 }
 
-static void boundary_conditions(m2sim *m2)
-{
-  int *L = m2->local_grid_size;
-  int *G = m2->domain_resolution;
-  int *I;
-  int i, j, k;
-  m2vol *V0, *V1;
-#ifdef _OPENMP
-#pragma omp parallel for private(V0,V1,j,k) default(shared)
-#endif
-  for (i=0; i<L[1]; ++i) {
-    for (j=0; j<L[2]; ++j) {
-      for (k=0; k<L[3]; ++k) {
-	V0 = M2_VOL(i+0, j, k);
-	I = V0->global_index;
-	if (I[1] == 0) {
-	  V1 = M2_VOL(i+1, j, k);
-	  initial_data(V0);
-	  V0->prim.d = V1->prim.d;
-	  V0->prim.p = V1->prim.p;
-	  V0->prim.v1 *= -1.0;
-	  V0->prim.v2 = 0.0;
-	  m2sim_from_primitive(m2,
-			       &V0->prim, NULL, NULL,
-			       V0 ->volume,
-			       V0 ->consA,
-			       &V0->aux);
-	}
-	else if (I[1] == G[1] - 1) {
-	  V1 = M2_VOL(i-1, j, k);
-	  initial_data(V0);
-	  V0->prim.d = V1->prim.d;
-	  V0->prim.p = V1->prim.p;
-	  V0->prim.v1 = V1->prim.v1;
-	  V0->prim.v2 = 0.0;
-	  m2sim_from_primitive(m2,
-			       &V0->prim, NULL, NULL,
-			       V0 ->volume,
-			       V0 ->consA,
-			       &V0->aux);
-	}
-      }
-    }
-  }
-}
+/* static void boundary_conditions(m2sim *m2) */
+/* { */
+/*   int *L = m2->local_grid_size; */
+/*   int *G = m2->domain_resolution; */
+/*   int *I; */
+/*   int i, j, k; */
+/*   m2vol *V0, *V1; */
+/* #ifdef _OPENMP */
+/* #pragma omp parallel for private(V0,V1,j,k) default(shared) */
+/* #endif */
+/*   for (i=0; i<L[1]; ++i) { */
+/*     for (j=0; j<L[2]; ++j) { */
+/*       for (k=0; k<L[3]; ++k) { */
+/* 	V0 = M2_VOL(i+0, j, k); */
+/* 	I = V0->global_index; */
+/* 	if (I[1] == 0) { */
+/* 	  V1 = M2_VOL(i+1, j, k); */
+/* 	  initial_data(V0); */
+/* 	  V0->prim.d = V1->prim.d; */
+/* 	  V0->prim.p = V1->prim.p; */
+/* 	  V0->prim.v1 *= -1.0; */
+/* 	  V0->prim.v2 = 0.0; */
+/* 	  m2sim_from_primitive(m2, */
+/* 			       &V0->prim, NULL, NULL, */
+/* 			       V0 ->volume, */
+/* 			       V0 ->consA, */
+/* 			       &V0->aux); */
+/* 	} */
+/* 	else if (I[1] == G[1] - 1) { */
+/* 	  V1 = M2_VOL(i-1, j, k); */
+/* 	  initial_data(V0); */
+/* 	  V0->prim.d = V1->prim.d; */
+/* 	  V0->prim.p = V1->prim.p; */
+/* 	  V0->prim.v1 = V1->prim.v1; */
+/* 	  V0->prim.v2 = 0.0; */
+/* 	  m2sim_from_primitive(m2, */
+/* 			       &V0->prim, NULL, NULL, */
+/* 			       V0 ->volume, */
+/* 			       V0 ->consA, */
+/* 			       &V0->aux); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+/* } */
 
-static void boundary_conditions_emf1(m2vol *V)
-{
-  V->emf1 = 0.0;
-}
-static void boundary_conditions_emf2(m2vol *V)
-{
-  V->emf2 = 0.0;
-}
-static void boundary_conditions_emf3(m2vol *V)
-{
-  V->emf3 = 0.0;
-}
-static void boundary_conditions_flux1(m2vol *V)
-{
-  double n[4] = {0.0, 1.0, 0.0, 0.0};
-  m2vol *V1 = V->global_index[1] == -1 ? m2vol_neighbor(V, 1, 1) : V;
-  m2aux_fluxes(&V1->aux, n, V->flux1);
-}
-static void boundary_conditions_flux2(m2vol *V)
-{
-  double n[4] = {0.0, 0.0, 1.0, 0.0};
-  m2vol *V1 = V->global_index[2] == -1 ? m2vol_neighbor(V, 2, 1) : V;
-  m2aux_fluxes(&V1->aux, n, V->flux2);
-}
+/* static void boundary_conditions_emf1(m2vol *V) */
+/* { */
+/*   V->emf1 = 0.0; */
+/* } */
+/* static void boundary_conditions_emf2(m2vol *V) */
+/* { */
+/*   V->emf2 = 0.0; */
+/* } */
+/* static void boundary_conditions_emf3(m2vol *V) */
+/* { */
+/*   V->emf3 = 0.0; */
+/* } */
+/* static void boundary_conditions_flux1(m2vol *V) */
+/* { */
+/*   double n[4] = {0.0, 1.0, 0.0, 0.0}; */
+/*   m2vol *V1 = V->global_index[1] == -1 ? m2vol_neighbor(V, 1, 1) : V; */
+/*   m2aux_fluxes(&V1->aux, n, V->flux1); */
+/* } */
+/* static void boundary_conditions_flux2(m2vol *V) */
+/* { */
+/*   double n[4] = {0.0, 0.0, 1.0, 0.0}; */
+/*   m2vol *V1 = V->global_index[2] == -1 ? m2vol_neighbor(V, 2, 1) : V; */
+/*   m2aux_fluxes(&V1->aux, n, V->flux2); */
+/* } */
 
 
 void initialize_problem_spheromak(m2sim *m2)
