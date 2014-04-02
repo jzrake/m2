@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
@@ -795,6 +796,9 @@ int luaopen_m2lib(lua_State *L)
 
   lua_pushlightuserdata(L, jet_boundary_conditions_cell);
   lua_setfield(L, -2, "jet_boundary_conditions_cell");
+
+  lua_pushnumber(L, M2_PI);
+  lua_setfield(L, -2, "M2_PI");
 
 #define CONSTANT(m) lua_pushnumber(L, m); lua_setfield(L, -2, #m)
   CONSTANT(M2_CARTESIAN);

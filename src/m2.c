@@ -336,6 +336,9 @@ double m2vol_minimum_dimension(m2vol *V)
   double l1 = V->m2->domain_resolution[1] > 1 ? V->line1 : DBL_MAX;
   double l2 = V->m2->domain_resolution[2] > 1 ? V->line2 : DBL_MAX;
   double l3 = V->m2->domain_resolution[3] > 1 ? V->line3 : DBL_MAX;
+  if (l1 < 1e-12) l1 = DBL_MAX; /* don't worry about exactly zero cell size */
+  if (l2 < 1e-12) l2 = DBL_MAX;
+  if (l3 < 1e-12) l3 = DBL_MAX;
   return M2_MIN3(l1, l2, l3);
 }
 double m2vol_coordinate_centroid(m2vol *V, int axis)

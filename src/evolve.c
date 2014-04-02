@@ -470,13 +470,9 @@ static void _exchange_flux1(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   m2vol *V0, *V1;
 
-  for (i=0; i<L[1]; ++i) {
+  for (i=1; i<L[1]; ++i) {
     V0 = M2_VOL(i,   0, 0);
     V1 = M2_VOL(i-1, 0, 0);
-
-    if (V1 == NULL) {
-      continue;
-    }
 
     for (q=0; q<5; ++q) {
       V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
