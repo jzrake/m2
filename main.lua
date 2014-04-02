@@ -1,9 +1,24 @@
 local argparse = require 'argparse'
 local problems = require 'problems'
 local m2app    = require 'm2app'
+local logger   = require 'logger'
 
 
 local function main()
+   -----------------------------------------------------------------------------
+   -- Load system options from .m2rc file
+   -----------------------------------------------------------------------------
+   local err, m2rc = pcall(function() return loadfile '.m2rc' end)
+   print(err, m2rc)
+   if m2rc then
+      local rc = { }
+      rc.CommandLineLogger = logger.CommandLineLogger._rc
+      m2rc(rc)
+   end
+
+   -----------------------------------------------------------------------------
+   -- Configure command line parser
+   -----------------------------------------------------------------------------
    local parser = argparse()
    :name 'm2'
    :description 'astrophysical MHD code'
@@ -14,8 +29,6 @@ local function main()
 	 os.exit()
       end)
    parser:flag '--vis'
-
-   parser:argument 'ProblemClass' :convert(problems)
    parser:flag '-e' '--explain'
    parser:option '--tmax' :convert(tonumber)
    parser:option '--output-path' :default '.'
@@ -33,6 +46,7 @@ local function main()
 		parser:flag '--newtonian')
    parser:mutex(parser:flag '--magnetized',
 		parser:flag '--unmagnetized')
+   parser:argument 'ProblemClass' :convert(problems)
 
    local args = parser:parse()
    local problem = args.ProblemClass()
