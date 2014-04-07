@@ -356,6 +356,10 @@ MagnetarWind.explanation = [[
 -- 
 --------------------------------------------------------------------------------]]
 function MagnetarWind:__init__()
+   self.model_parameters = {
+      three_d={false, 'run in three dimensions'},
+      r_outer={100, 'outer radius (inner is always 1)'}
+   }
    self.initial_data_cell = function(x)
       local d0 = 1.0
       if x[1] < 5.0 then
@@ -370,13 +374,23 @@ function MagnetarWind:set_runtime_defaults(runtime_cfg)
    runtime_cfg.tmax = 2.0
 end
 function MagnetarWind:build_m2(runtime_cfg)
-   local build_args = {lower={ 1.0, 0.0, 0.0},
-		       upper={30.0, math.pi, 2*math.pi},
+   local build_args = {lower={  1.0, 0.0, 0.0},
+		       upper={100.0, math.pi, 2*math.pi},
 		       resolution={128,64,1},
 		       scaling={'logarithmic', 'linear', 'linear'},
 		       relativistic=true,
 		       magnetized=true,
 		       geometry='spherical'}
+   local N = runtime_cfg.resolution or 64
+   local r0 = 1.0
+   local r1 = self.model_parameters.r_outer[1]
+   build_args.upper[1] = r1
+   build_args.resolution[1] = N * math.floor(math.log10(r1/r0))
+   build_args.resolution[2] = N
+   build_args.resolution[3] = N * 2
+   if not self.model_parameters.three_d[1] then
+      build_args.resolution[3] = 1
+   end
    local m2 = m2app.m2Application(build_args)
    local function wind_inner_boundary_flux(V0)
       local nhat = m2lib.dvec4(0,1,0,0)
