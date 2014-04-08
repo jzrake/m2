@@ -173,6 +173,9 @@ struct m2sim
   double plm_parameter;
   double cfl_parameter;
   double gamma_law_index;
+  double cadence_checkpoint_hdf5;
+  double cadence_checkpoint_tpl;
+  double cadence_analysis;
   m2sim_status status;
   m2sim_operator analysis;
   m2sim_operator boundary_conditions_gradient;
@@ -190,11 +193,8 @@ struct m2sim
   m2vol_operator add_physical_source_terms;
   m2vol *volumes;
   void *user_struct;
-  double cadence_checkpoint_hdf5;
-  double cadence_checkpoint_tpl;
-  double cadence_analysis;
 } ;
-#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiifff$(ffii))",	\
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
 			      m2,4,4,4,4,4,4)
 
 

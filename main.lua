@@ -9,7 +9,6 @@ local function main()
    -- Load system options from .m2rc file
    -----------------------------------------------------------------------------
    local err, m2rc = pcall(function() return loadfile '.m2rc' end)
-   print(err, m2rc)
    if m2rc then
       local rc = { }
       rc.CommandLineLogger = logger.CommandLineLogger._rc

@@ -396,12 +396,12 @@ function MagnetarWind:build_m2(runtime_cfg)
       local nhat = m2lib.dvec4(0,1,0,0)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       if V0.global_index[1] == -1 then
-	 V0.prim.v1 = 0.9
+	 V0.prim.v1 = 0.95
 	 V0.prim.v2 = 0.0
 	 V0.prim.v3 = 0.0
 	 V0.prim.B1 = 0.0
 	 V0.prim.B2 = 0.0
-	 V0.prim.B3 = 0.3 * math.sin(t)
+	 V0.prim.B3 = 4.0 * math.sin(t)
 	 V0.prim.p = 0.01
 	 V0.prim.d = 1.00
 	 V0:from_primitive()
@@ -410,8 +410,8 @@ function MagnetarWind:build_m2(runtime_cfg)
 	 V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
-   m2:set_cadence_checkpoint_hdf5(0.25)
-   m2:set_cadence_checkpoint_tpl(0.0)
+   m2:set_cadence_checkpoint_hdf5(5.0)
+   m2:set_cadence_checkpoint_tpl(2.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(0.4)
