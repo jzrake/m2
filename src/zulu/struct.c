@@ -6,6 +6,7 @@
 #include "struct.h"
 #include "zulu.h"
 
+static int _struct_api_items(lua_State *L);
 static int _struct_api_members(lua_State *L);
 static int _struct_api_methods(lua_State *L);
 static int _struct_api_type(lua_State *L);
@@ -16,6 +17,7 @@ int luaopen_struct(lua_State *L)
 {
   lua_newtable(L);
   luaL_Reg struct_module_funcs[] = {
+    {"items", _struct_api_items},
     {"members", _struct_api_members},
     {"methods", _struct_api_methods},
     {"type", _struct_api_type},
@@ -27,6 +29,24 @@ int luaopen_struct(lua_State *L)
 }
 
 
+
+int _struct_api_items(lua_State *L)
+{
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "__members__");
+  lua_remove(L, -2);
+  lua_newtable(L);
+  lua_pushnil(L);
+  while (lua_next(L, -3) != 0) {
+    lua_pushvalue(L, -2);
+    lua_pushvalue(L, -3);
+    lua_gettable(L, 1);
+    lua_rawset(L, -5);
+    lua_pop(L, 1);
+  }
+  lua_remove(L, 2);
+  return 1;
+}
 
 int _struct_api_members(lua_State *L)
 {
@@ -133,6 +153,7 @@ static int _struct_constructor(lua_State *L);
 static int _struct_mt_index(lua_State *L);
 static int _struct_mt_newindex(lua_State *L);
 static int _struct_mt_tostring(lua_State *L);
+static int _struct_mt_pairs(lua_State *L);
 static int _struct_mt_gc(lua_State *L);
 
 lua_struct_t lua_struct_newtype(lua_State *L)
@@ -284,8 +305,9 @@ int lua_struct_register(lua_State *L, lua_struct_t type)
   luaL_Reg struct_mt[] = {
     {"__index", _struct_mt_index},
     {"__newindex", _struct_mt_newindex},
-    {"__gc", _struct_mt_gc},
     {"__tostring", _struct_mt_tostring},
+    {"__pairs", _struct_mt_pairs},
+    {"__gc", _struct_mt_gc},
     {NULL, NULL}
   };
 
@@ -468,6 +490,16 @@ int _struct_mt_tostring(lua_State *L)
     lua_pushfstring(L, "<struct %s instance at %p>", T->type_name, *obj);
     return 1;
   }
+}
+
+
+int _struct_mt_pairs(lua_State *L)
+{
+  _struct_api_items(L);
+  lua_pushnil(L);
+  lua_getglobal(L, "next");
+  lua_insert(L, -3);
+  return 3;
 }
 
 
