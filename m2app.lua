@@ -101,21 +101,13 @@ end
 
 function m2Application:print_config()
    print()
-   local items = { }
-   for i,member in ipairs(struct.members(self._m2)) do
-      items[member] = self._m2[member]
-   end
-   self:_log(serpent.block(items, {nocode=true}), 1)
+   self:_log(serpent.block(struct.items(self._m2), {nocode=true}), 1)
    print()
 end
 
 function m2Application:print_status()
    print()
-   local items = { }
-   for i,member in ipairs(struct.members(self._m2.status)) do
-      items[member] = self._m2.status[member]
-   end
-   self:_log(serpent.block(items, {nocode=true}), 1)
+   self:_log(serpent.block(struct.items(self._m2.status), {nocode=true}), 1)
    print()
 end
 
@@ -137,7 +129,7 @@ function m2Application:write_checkpoint_hdf5(fname)
    end
 
    if fast_method then
-      for i,field in ipairs(struct.members('m2prim')) do
+      for _,field in ipairs(struct.members('m2prim')) do
 	 self:_log('writing '..fname..'/prim/'..field, 1)
 	 local h5d = hdf5.DataSet(h5prim, field, 'w', {shape=global_shape})
 	 local data = array.view(self:get_volume_data(field), 'double',

@@ -47,10 +47,18 @@ local function test4()
    end
 end
 
+local function test5()
+   local m2sim = m2lib.m2sim()
+   for k,v in pairs(m2sim) do
+      print(k, v)
+   end
+end
+
 test1()
 test2()
 test3()
 test4()
+test5()
 
-m2lib.self_test()
+--m2lib.self_test()
 

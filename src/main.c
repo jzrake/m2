@@ -271,8 +271,8 @@ static int L_m2vol_next(lua_State *L)
 static int L_m2vol_neighbor(lua_State *L)
 {
   m2vol *V = (m2vol *) lua_struct_checkstruct(L, 1, "m2vol");
-  int axis = luaL_checknumber(L, 2);
-  int dist = luaL_checknumber(L, 3);
+  int axis = luaL_checkinteger(L, 2);
+  int dist = luaL_checkinteger(L, 3);
   m2vol *V1 = m2vol_neighbor(V, axis, dist);
   if (V1) {
     lua_struct_pushparent(L, 1);
@@ -560,6 +560,7 @@ static int _drive_or_visualize(lua_State *L, char mode)
   m2vol_operator tbc_emf2 = m2->boundary_conditions_emf2;
   m2vol_operator tbc_emf3 = m2->boundary_conditions_emf3;
   m2sim_operator tbc_cell = m2->boundary_conditions_cell;
+  m2vol_operator tsrctrms = m2->add_physical_source_terms;
 
   struct user_call *u = (struct user_call*) malloc(sizeof(struct user_call));
   u->bc_flux1 = -1;
@@ -569,6 +570,7 @@ static int _drive_or_visualize(lua_State *L, char mode)
   u->bc_emf2 = -1;
   u->bc_emf3 = -1;
   u->bc_cell = -1;
+  u->srcterm = -1;
   u->L = L;
   m2->user_struct = u;
 
@@ -602,6 +604,22 @@ static int _drive_or_visualize(lua_State *L, char mode)
   CHECKF(cell);
 #undef CHECKF
 
+  lua_struct_pushmember(L, 1, "add_physical_source_terms");
+  if (lua_isnil(L, -1)) { }
+  else if (lua_type(L, -1) == LUA_TFUNCTION) {
+    u->srcterm = lua_gettop(L);
+    m2->add_physical_source_terms = cb_srcterm;
+  }
+  else if (lua_type(L, -1) == LUA_TLIGHTUSERDATA) {
+    u->srcterm = -1;
+    m2->add_physical_source_terms = lua_touserdata(L, -1);
+  }
+  else {
+    luaL_error(L,
+	       "callback add_physical_source_terms not set "
+	       "to a function value");
+  }
+
   if (mode == 'd') {
     m2sim_drive(m2);
   }
@@ -618,6 +636,7 @@ static int _drive_or_visualize(lua_State *L, char mode)
   m2->boundary_conditions_emf2 = tbc_emf2;
   m2->boundary_conditions_emf3 = tbc_emf3;
   m2->boundary_conditions_cell = tbc_cell;
+  m2->add_physical_source_terms = tsrctrms;
   return 0;
 }
 
@@ -723,6 +742,7 @@ int register_m2sim(lua_State *L)
     MO(boundary_conditions_emf1),
     MO(boundary_conditions_emf2),
     MO(boundary_conditions_emf3),
+    MO(add_physical_source_terms),
     {NULL, 0, 0},
   };
 #undef MD
@@ -776,7 +796,9 @@ static int L_m2_self_test(lua_State *L)
   return 0;
 }
 
+/* problem-specific C-level callbacks */
 void jet_boundary_conditions_cell(m2sim *m2);
+void jet_add_physical_source_terms(m2vol *V);
 
 int luaopen_m2lib(lua_State *L)
 {
@@ -796,6 +818,8 @@ int luaopen_m2lib(lua_State *L)
 
   lua_pushlightuserdata(L, jet_boundary_conditions_cell);
   lua_setfield(L, -2, "jet_boundary_conditions_cell");
+  lua_pushlightuserdata(L, jet_add_physical_source_terms);
+  lua_setfield(L, -2, "jet_add_physical_source_terms");
 
   lua_pushnumber(L, M2_PI);
   lua_setfield(L, -2, "M2_PI");

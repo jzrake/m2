@@ -307,14 +307,14 @@ Jet.explanation = [[
 --------------------------------------------------------------------------------]]
 function Jet:__init__()
    self.initial_data_cell = function(x)
-      return {0.01, 0.0001, 0.0, 0.0, 0.0}
+      return {0.01, 0.01, 0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
       local nu = 0.75 -- nu parameter
       local r = x[1]
       local t = x[2]
       local R = r * math.sin(t)
-      local P = 0.01 * r^nu * (1.0 - math.abs(math.cos(t)))
+      local P = 8.0 * r^nu * (1.0 - math.abs(math.cos(t)))
       local Af = P / (R + 0.01) -- A_phi
       return {-Af * n[3]}
    end
@@ -323,9 +323,9 @@ function Jet:set_runtime_defaults(runtime_cfg)
    runtime_cfg.tmax = 2.0
 end
 function Jet:build_m2(runtime_cfg)
-   local build_args = {lower={ 1.0, 0.0, 0.0},
-		       upper={10.0, math.pi/2, 2*math.pi},
-		       resolution={64,64,1},
+   local build_args = {lower={  1.0, 0.0, 0.0},
+		       upper={100.0, math.pi/2, 2*math.pi},
+		       resolution={128,64,1},
 		       scaling={'logarithmic', 'linear', 'linear'},
 		       relativistic=false,
 		       magnetized=true,
@@ -336,11 +336,11 @@ function Jet:build_m2(runtime_cfg)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(0.4)
-   m2:set_plm_parameter(1.5)
+   m2:set_plm_parameter(1.8)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
+   --m2:set_add_physical_source_terms(m2lib.jet_add_physical_source_terms)
    m2:set_boundary_conditions_cell(m2lib.jet_boundary_conditions_cell)
-   m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
    m2:set_problem(self)
    return m2
 end
