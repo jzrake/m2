@@ -442,9 +442,58 @@ static int L_m2sim_get_volume_data(lua_State *L)
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   int offset = luaL_checkoption(L, 2, NULL, lst);
   int n, N = m2->local_grid_size[0];
-  double *D = (double*) buf_new_buffer(L, NULL, N * sizeof(double));
+  double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
   for (n=0; n<N; ++n) {
-    D[n] = *((double*) &m2->volumes[n].prim + offset);
+    D[n] = *((double *) &m2->volumes[n].prim + offset);
+  }
+  return 1;
+}
+static int L_m2sim_set_volume_data(lua_State *L)
+{
+  const char *const lst[] = {"v1", "v2", "v3",
+			     "B1", "B2", "B3", "p", "d", NULL};
+  m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
+  int offset = luaL_checkoption(L, 2, NULL, lst);
+  int n, N = m2->local_grid_size[0];
+  double *D = (double *) buf_check_buffer(L, 3, N * sizeof(double));
+  for (n=0; n<N; ++n) {
+    *((double*) &m2->volumes[n].prim + offset) = D[n];
+  }
+  return 0;
+}
+static int L_m2sim_get_face_data(lua_State *L)
+{
+  m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
+  int axis = luaL_checkunsigned(L, 2);
+  int n, N = m2->local_grid_size[0];
+  double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
+  ptrdiff_t offs;
+  switch (axis) {
+  case 1: offs = offsetof(m2vol, Bflux1A); break;
+  case 2: offs = offsetof(m2vol, Bflux2A); break;
+  case 3: offs = offsetof(m2vol, Bflux3A); break;
+  default: luaL_error(L, "argument 2 must be 1, 2, or 3"); offs = 0; break;
+  }
+  for (n=0; n<N; ++n) {
+    D[n] = *((double *)((void *) &m2->volumes[n] + offs));
+  }
+  return 1;
+}
+static int L_m2sim_set_face_data(lua_State *L)
+{
+  m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
+  int axis = luaL_checkunsigned(L, 2);
+  int n, N = m2->local_grid_size[0];
+  double *D = (double *) buf_check_buffer(L, 3, N * sizeof(double));
+  ptrdiff_t offs;
+  switch (axis) {
+  case 1: offs = offsetof(m2vol, Bflux1A); break;
+  case 2: offs = offsetof(m2vol, Bflux2A); break;
+  case 3: offs = offsetof(m2vol, Bflux3A); break;
+  default: luaL_error(L, "argument 2 must be 1, 2, or 3"); offs = 0; break;
+  }
+  for (n=0; n<N; ++n) {
+    *((double *)((void *) &m2->volumes[n] + offs)) = D[n];
   }
   return 1;
 }
@@ -460,6 +509,7 @@ struct user_call
   int bc_emf2;
   int bc_emf3;
   int bc_cell;
+  int srcterm;
   lua_State *L;
 } ;
 #define ID_CALLBACK(index,Nq)						\
@@ -499,7 +549,6 @@ struct user_call
     }									\
   }									\
 
-
 static void bc_cell(m2sim *m2)
 {
   struct user_call *u = (struct user_call*) m2->user_struct;
@@ -507,6 +556,17 @@ static void bc_cell(m2sim *m2)
   if (u->bc_cell != -1) {
     lua_pushvalue(L, u->bc_cell);
     lua_pushvalue(L, 1); /* m2sim on the stack */
+    lua_call(L, 1, 0);
+  }
+}
+
+static void cb_srcterm(m2vol *V)
+{
+  struct user_call *u = (struct user_call*) V->m2->user_struct;
+  lua_State *L = u->L;
+  if (u->srcterm != -1) {
+    lua_pushvalue(L, u->srcterm);
+    lua_struct_newref(L, "m2vol", V, 1);
     lua_call(L, 1, 0);
   }
 }
@@ -751,9 +811,12 @@ int register_m2sim(lua_State *L)
 
 #define METHOD(m) {#m, L_m2sim_##m}
   lua_struct_method_t methods[] = {
-    METHOD(get_volume),
     METHOD(volumes),
+    METHOD(get_volume),
     METHOD(get_volume_data),
+    METHOD(set_volume_data),
+    METHOD(get_face_data),
+    METHOD(set_face_data),
     METHOD(initialize),
     METHOD(calculate_gradient),
     METHOD(calculate_flux),
