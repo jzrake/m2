@@ -12,5 +12,6 @@ enum {
 } ;
 
 void *buf_new_buffer(lua_State *L, const void *p, size_t size);
+void *buf_check_buffer(lua_State *L, int index, size_t size);
 
 #endif /* LUA_BUFFER_H */
