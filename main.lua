@@ -2,6 +2,7 @@ local argparse = require 'argparse'
 local problems = require 'problems'
 local m2app    = require 'm2app'
 local logger   = require 'logger'
+local hdf5     = require 'hdf5'
 
 
 local function main()
@@ -20,7 +21,6 @@ local function main()
    -----------------------------------------------------------------------------
    local parser = argparse()
    :name 'm2'
-   :description 'astrophysical MHD code'
    parser:flag '-v' '--version'
    :action(
       function()
@@ -41,27 +41,42 @@ local function main()
       function(rs)
 	 return m2app.to_enum('riemann_'..rs)
       end)
+   parser:option '--restart'
    parser:mutex(parser:flag '--relativistic',
 		parser:flag '--newtonian')
    parser:mutex(parser:flag '--magnetized',
 		parser:flag '--unmagnetized')
-   parser:argument 'ProblemClass' :convert(problems)
+   parser:argument 'ProblemClass' :convert(problems) :args '?'
 
    local args = parser:parse()
+
+   if args.restart then
+      local h5f = hdf5.File(args.restart, 'r')
+      args.ProblemClass = problems[h5f['problem_name']:value()]
+      h5f:close()
+   end
+
+   if not args.ProblemClass then
+      local choices = { }
+      for k,v in pairs(problems) do table.insert(choices, k) end
+      print(parser:get_usage())
+      print("\navailable problems:\n\t"..table.concat(choices, '\n\t'))
+      return
+   end
+
    local problem = args.ProblemClass()
 
    local function user_config_callback(runtime_cfg)
       for k,v in pairs(args) do
 	 runtime_cfg[k:gsub('-','_')] = v
       end
-      return args
    end
 
    if args.explain then
       problem:describe()
    else
       problem:update_model_parameters(args['model-parameters'])
-      problem:run(user_config_callback)
+      problem:run(user_config_callback, args['restart'])
    end
 end
 

@@ -372,6 +372,7 @@ int register_m2status(lua_State *L)
     MD(time_last_analysis),
     MI(checkpoint_number_hdf5),
     MI(checkpoint_number_tpl),
+    {"message", offsetof(m2sim_status, message), LSTRUCT_STRING, NULL, 1024},
     {NULL, 0, 0},
   };
   lua_struct_method_t methods[] = {

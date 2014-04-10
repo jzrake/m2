@@ -50,8 +50,14 @@ end
 local function test5()
    local m2sim = m2lib.m2sim()
    for k,v in pairs(m2sim) do
-      print(k, v)
+      assert(type(k) == 'string')
    end
+end
+
+local function test6()
+   local m2sim = m2lib.m2sim()
+   m2sim.status.message = "the message"
+   assert(m2sim.status.message == "the message")
 end
 
 test1()
@@ -59,6 +65,7 @@ test2()
 test3()
 test4()
 test5()
+test6()
 
 --m2lib.self_test()
 

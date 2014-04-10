@@ -111,7 +111,7 @@ function m2Application:print_status()
    print()
 end
 
-function m2Application:write_checkpoint_hdf5(fname)
+function m2Application:write_checkpoint_hdf5(fname, extras)
    print()
    local fast_method = true
    local global_shape = self:global_shape()
@@ -162,9 +162,55 @@ function m2Application:write_checkpoint_hdf5(fname)
    if self._problem then
       self._problem:write_hdf5_problem_data(h5file)
    end
+   for k,v in pairs(extras or { }) do
+      h5file[k] = serpent.block(v)
+   end
    h5file['version'] = 'm2: '..m2lib.M2_GIT_SHA
    h5file['build_date'] = m2lib.M2_BUILD_DATE
    h5file['time_stamp'] = os.date("%c")
+   h5file:close()
+   print()
+end
+
+function m2Application:read_checkpoint_hdf5(fname)
+   print()
+   local fast_method = true
+   local global_shape = self:global_shape()
+   local h5file   = hdf5.File(fname, 'r')
+   local h5prim   = hdf5.Group(h5file, 'prim', 'r')
+   local h5status = hdf5.Group(h5file, 'status', 'r')
+   local h5config = hdf5.Group(h5file, 'config', 'r')
+   local wguard = { }
+   local start = { }
+   for i=1,#global_shape do
+      start[i] = self._m2.number_guard_zones0[i]
+      wguard[i] = global_shape[i] +
+	 self._m2.number_guard_zones0[i] +
+	 self._m2.number_guard_zones1[i]
+   end
+
+   for _,field in ipairs(struct.members('m2prim')) do
+      self:_log('loading '..fname..'/prim/'..field, 1)
+      local data = array.array(wguard)
+      local h5d = h5prim[field]
+      local slice = { }
+      for n=1,#global_shape do
+	 slice[n] = { }
+	 slice[n][1] = start[n]
+	 slice[n][2] = global_shape[n] + start[n]
+      end
+      data[slice] = h5d:value()
+      self:set_volume_data(field, data:buffer())
+      h5d:close()
+   end
+
+   for i,member in ipairs(struct.members(self.status)) do
+      self.status[member] = h5status[member]:value()
+   end
+   if self._problem then
+      self._problem:read_hdf5_problem_data(h5file)
+   end
+
    h5file:close()
    print()
 end

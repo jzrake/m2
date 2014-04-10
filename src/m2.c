@@ -516,9 +516,9 @@ void m2sim_run_initial_data(m2sim *m2)
       V->Bflux3A = Bfield * V->area3;
     }
     else {
-      V->Bflux1A = 0.0;
-      V->Bflux2A = 0.0;
-      V->Bflux3A = 0.0;
+      /* V->Bflux1A = 0.0; */
+      /* V->Bflux2A = 0.0; */
+      /* V->Bflux3A = 0.0; */
     }
     if (m2->initial_data_edge) {
       N[1] = 1.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
@@ -540,22 +540,10 @@ void m2sim_run_initial_data(m2sim *m2)
       V->emf3 = Efield * V->line3;
     }
     else {
-      V->emf1 = 0.0;
-      V->emf2 = 0.0;
-      V->emf3 = 0.0;
+      /* V->emf1 = 0.0; */
+      /* V->emf2 = 0.0; */
+      /* V->emf3 = 0.0; */
     }
-  }
-
-  /******************************/
-  /* initial_data is deprecated */
-  /******************************/
-  if (m2->initial_data) {
-    for (n=0; n<L[0]; ++n) {
-      m2->initial_data(m2->volumes + n);
-    }
-  }
-  else {
-    //MSG(FATAL, "no initial data function supplied");
   }
 
 

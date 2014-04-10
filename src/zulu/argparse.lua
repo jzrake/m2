@@ -641,7 +641,7 @@ function Parser:_parse(args, errhandler)
          else
             ok, err = element._convert[data]
 	    local choices = { }
-	    for k,v in pairs(element._convert) do choices[#choices+1] = k end
+	    for k,v in pairs(element._convert) do table.insert(choices, k) end
 	    assert_(ok ~= nil, "%s", err or "'"..element._name.."'"..
 		    ' must be one of:\n\t' .. table.concat(choices, '\n\t'))
          end

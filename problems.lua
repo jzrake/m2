@@ -3,23 +3,7 @@ local class   = require 'class'
 local logger  = require 'logger'
 local m2lib   = require 'm2lib'
 local m2app   = require 'm2app'
-
-
-
-local function outflow_bc_flux(axis)
-   local flux = 'flux'..axis
-   local nhat = m2lib.dvec4()
-   nhat[axis] = 1.0
-   local function bc(V0)
-      if V0.global_index[axis] == -1 then
-	 local V1 = V0:neighbor(axis, 1)
-	 V0[flux] = V1.aux:fluxes(nhat)
-      else
-	 V0[flux] = V0.aux:fluxes(nhat)
-      end
-   end
-   return bc
-end
+local hdf5    = require 'hdf5'
 
 
 
@@ -29,6 +13,16 @@ end
 local TestProblem = class.class 'TestProblem'
 function TestProblem:write_hdf5_problem_data(h5file)
    h5file['problem_name'] = class.classname(self)
+   local h5mp = hdf5.Group(h5file, 'model_parameters', 'w')
+   for k,v in pairs(self.model_parameters or { }) do
+      h5mp[k] = tostring(v[1])
+   end
+end
+function TestProblem:read_hdf5_problem_data(h5file)
+   local h5mp = hdf5.Group(h5file, 'model_parameters', 'r+')
+   for k,v in pairs(self.model_parameters or { }) do
+      v[1] = h5mp[k]:value()
+   end
 end
 function TestProblem:set_runtime_defaults(cfg) end
 function TestProblem:update_model_parameters(user_mp)
@@ -56,45 +50,77 @@ function TestProblem:describe()
 	 n = n + 1
       end
    end
+   print()
 end
-function TestProblem:run(user_config_callback)
-   local log = logger.CommandLineLogger(class.classname(self))
+function TestProblem:run(user_config_callback, restart_file)
+
+
+   -----------------------------------------------------------------------------
+   -- Build runtime_cfg table from with precedence given first to the
+   -- user_config_callback (probably feeding in command line arguments), then
+   -- the restart file if it exists, and finally the problem's
+   -- set_runtime_defaults method.
+   -----------------------------------------------------------------------------
    local runtime_cfg = {
       tmax = 0.4,
       output_path = 'data',
       message_cadence = 1
    }
    self:set_runtime_defaults(runtime_cfg)
+   if restart_file then
+      local h5f = hdf5.File(restart_file, 'r')
+      local err, restored_runtime_cfg = serpent.load(h5f['runtime_cfg']:value())
+      for k,v in pairs(restored_runtime_cfg) do
+	 runtime_cfg[k] = v
+      end
+      h5f:close()
+   end
    if user_config_callback then
       user_config_callback(runtime_cfg)
    end
+
+   local log = logger.CommandLineLogger(class.classname(self))
    local m2 = self:build_m2(runtime_cfg)
    m2:print_splash()
    m2:print_config()
    log:log_message('run', serpent.block(runtime_cfg), 1)
-   self:describe()
-   m2:run_initial_data(self.initial_data_cell,
-		       self.initial_data_face,
-		       self.initial_data_edge)
 
-   m2.status.checkpoint_number_hdf5 = 1
+
+   if restart_file then
+      m2:read_checkpoint_hdf5(restart_file)
+      m2:run_initial_data()
+   else
+      m2:run_initial_data(self.initial_data_cell,
+			  self.initial_data_face,
+			  self.initial_data_edge)
+   end
+   self:describe()
+
 
    if runtime_cfg.vis then
       m2:visualize()
    end
+
 
    while m2.status.time_simulation < runtime_cfg.tmax do
       local cad = m2:get_cadence_checkpoint_hdf5()
       local now = m2.status.time_simulation
       local las = m2.status.time_last_checkpoint_hdf5
       local num = m2.status.checkpoint_number_hdf5
+
       if cad > 0.0 and now - las > cad then
+	 -- Print and then update the status
 	 m2:print_status()
-	 m2:write_checkpoint_hdf5(
-	    ('%s/chkpt.%04d.h5'):format(runtime_cfg.output_path, num))
 	 m2.status.checkpoint_number_hdf5 = num + 1
 	 m2.status.time_last_checkpoint_hdf5 = las + cad
+
+	 -- Write data, config, status, problem data, and serialized runtime_cfg
+	 -- into the checkpoint file
+	 m2:write_checkpoint_hdf5(
+	    ('%s/chkpt.%04d.h5'):format(runtime_cfg.output_path, num),
+	    {runtime_cfg=runtime_cfg})
       end
+
       if m2.status.iteration_number > 0 and
 	 m2.status.iteration_number % runtime_cfg.message_cadence == 0 then
 	 log:log_message('run', m2.status:get_message(), 0)
@@ -103,7 +129,25 @@ function TestProblem:run(user_config_callback)
    end
 
    m2:write_checkpoint_hdf5(
-      ('%s/chkpt.final.h5'):format(runtime_cfg.output_path))
+      ('%s/chkpt.final.h5'):format(runtime_cfg.output_path),
+      {runtime_cfg=runtime_cfg})
+end
+
+
+
+local function outflow_bc_flux(axis)
+   local flux = 'flux'..axis
+   local nhat = m2lib.dvec4()
+   nhat[axis] = 1.0
+   local function bc(V0)
+      if V0.global_index[axis] == -1 then
+	 local V1 = V0:neighbor(axis, 1)
+	 V0[flux] = V1.aux:fluxes(nhat)
+      else
+	 V0[flux] = V0.aux:fluxes(nhat)
+      end
+   end
+   return bc
 end
 
 
