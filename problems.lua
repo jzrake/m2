@@ -52,7 +52,7 @@ function TestProblem:describe()
       for k,v in pairs(self.model_parameters) do
 	 print(n..'. '..k)
 	 print('\t  description: '..tostring(v[2]))
-	 print('\t  default:     '..tostring(v[1]))
+	 print('\t  value:       '..tostring(v[1]))
 	 n = n + 1
       end
    end
@@ -72,6 +72,7 @@ function TestProblem:run(user_config_callback)
    m2:print_splash()
    m2:print_config()
    log:log_message('run', serpent.block(runtime_cfg), 1)
+   self:describe()
    m2:run_initial_data(self.initial_data_cell,
 		       self.initial_data_face,
 		       self.initial_data_edge)
@@ -358,14 +359,18 @@ MagnetarWind.explanation = [[
 function MagnetarWind:__init__()
    self.model_parameters = {
       three_d={false, 'run in three dimensions'},
-      r_outer={100, 'outer radius (inner is always 1)'}
+      r_outer={100, 'outer radius (inner is 1.0)'},
+      r_cavity={10, 'cavity radius'},
+      d_star={100, 'star density (wind density is 1.0)'},
+      B_wind={8.00, 'wind toroidal field value'},
+      g_wind={8.00, 'wind Lorentz factor'},
    }
    self.initial_data_cell = function(x)
-      local d0 = 1.0
-      if x[1] < 5.0 then
+      local d0
+      if x[1] < self.model_parameters.r_cavity[1]  then
       	 d0 = 0.1
       else
-      	 d0 = 10.0
+      	 d0 = self.model_parameters.d_star[1]
       end
       return {d0, 0.01, 0.0, 0.0, 0.0}
    end
@@ -396,14 +401,17 @@ function MagnetarWind:build_m2(runtime_cfg)
       local nhat = m2lib.dvec4(0,1,0,0)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       if V0.global_index[1] == -1 then
-	 V0.prim.v1 = 0.95
+	 local d = 1.0
+	 local B = self.model_parameters.B_wind[1]
+	 local g = self.model_parameters.g_wind[1]
+	 V0.prim.v1 =(1.0 - g^-2)^0.5
 	 V0.prim.v2 = 0.0
 	 V0.prim.v3 = 0.0
 	 V0.prim.B1 = 0.0
 	 V0.prim.B2 = 0.0
-	 V0.prim.B3 = 4.0 * math.sin(t)
-	 V0.prim.p = 0.01
-	 V0.prim.d = 1.00
+	 V0.prim.B3 = B * math.sin(t)
+	 V0.prim.d = d
+	 V0.prim.p = 0.01 * d
 	 V0:from_primitive()
 	 V0.flux1 = V0.aux:fluxes(nhat)
       else
