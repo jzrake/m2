@@ -24,6 +24,7 @@ typedef struct {
   ptrdiff_t offset;
   int data_type;
   const char *type_name; /* if type is LSTRUCT_STRUCT */
+  unsigned string_len; /* if type is LSTRUCT_STRING */
 } lua_struct_member_t;
 
 

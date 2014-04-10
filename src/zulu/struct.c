@@ -387,7 +387,7 @@ int _struct_mt_index(lua_State *L)
       lua_pushnumber(L, *((double *)(*obj + memb->offset)));
       break;
     case LSTRUCT_STRING:
-      lua_pushstring(L, *((const char **)(*obj + memb->offset)));
+      lua_pushstring(L, (const char *)(*obj + memb->offset));
       break;
     case LSTRUCT_OBJECT:
       lua_rawgetp(L, iinstt, obj);
@@ -447,7 +447,7 @@ int _struct_mt_newindex(lua_State *L)
       *((double *)(*obj + memb->offset)) = luaL_checknumber(L, 3);
       break;
     case LSTRUCT_STRING:
-      *((const char **)(*obj + memb->offset)) = luaL_checkstring(L, 3);
+      strncpy((char *)(*obj + memb->offset), luaL_checkstring(L, 3), memb->string_len);
       break;
     case LSTRUCT_OBJECT:
       lua_rawgetp(L, iinstt, obj);
