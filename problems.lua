@@ -110,8 +110,9 @@ function TestProblem:run(user_config_callback, restart_file)
 
       if cad > 0.0 and now - las > cad then
 	 -- Print and then update the status
+	 num = num + 1
 	 m2:print_status()
-	 m2.status.checkpoint_number_hdf5 = num + 1
+	 m2.status.checkpoint_number_hdf5 = num
 	 m2.status.time_last_checkpoint_hdf5 = las + cad
 
 	 -- Write data, config, status, problem data, and serialized runtime_cfg
@@ -170,8 +171,8 @@ function Shocktube:build_m2(runtime_cfg)
       build_args.resolution[1] = runtime_cfg.resolution
    end
    local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(0.0)
-   m2:set_cadence_checkpoint_tpl(0.0)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(self.gamma_law_index or 5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(0.8)

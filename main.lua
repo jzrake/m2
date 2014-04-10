@@ -21,18 +21,23 @@ local function main()
    -----------------------------------------------------------------------------
    local parser = argparse()
    :name 'm2'
-   parser:flag '-v' '--version'
+   parser:flag '--version'
    :action(
       function()
 	 m2app.print_splash()
 	 os.exit()
       end)
+   parser:flag '--explain'
+   :description 'Print a description of the problem and exit.'
    parser:flag '--vis'
-   parser:flag '-e' '--explain'
+   :description 'Use builtin realime visualization (incomplete)'
    parser:option '--tmax' :convert(tonumber)
    parser:option '--output-path' :default '.'
-   parser:option '-N' '--resolution' :convert(tonumber)
+   parser:option '--hdf5-cadence' :convert(tonumber)
+   parser:option '--tpl-cadence' :convert(tonumber)
+   parser:option '--msg-cadence' :convert(tonumber)
    parser:option '--rkorder' :convert(tonumber)
+   parser:option '-N' '--resolution' :convert(tonumber)
    parser:option '-m' '--model-parameters' :convert(
       function(mp)
 	 return load('return {'..mp..'}')()
