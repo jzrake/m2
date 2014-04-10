@@ -175,6 +175,7 @@ function Indexable:__newindex__(key, value)
       error("Indexable:cannot assign to closed object")
    end
    if type(value) == 'string' then
+      if value == '' then value = ' ' end -- work-around in case of empty string
       clobber_if_H5Lexists(self._hid, key)
       local targ = self._hid
       local data = buffer.new_buffer(value)
