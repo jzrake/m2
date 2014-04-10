@@ -32,7 +32,7 @@ void jet_boundary_conditions_cell(m2sim *m2)
           double rdisk = r * pow(1.0 - cost, 1.0/n);
           double omega = rdisk < rinner ? 0.25 : 0.25 * pow(rdisk/rinner, -1.5);
           double vkepl = omega * rdisk;
-          double vz = 0.001 * vkepl;
+          double vz = 0.5 * vkepl;
 	  double zh_r =  cos(t);
 	  double zh_t = -sin(t);
 	  double d = 1.0;
@@ -63,7 +63,7 @@ void jet_boundary_conditions_cell(m2sim *m2)
           double rdisk = r * pow(1.0 - cost, 1.0/n);
           double omega = rdisk < rinner ? 0.25 : 0.25 * pow(rdisk/rinner, -1.5);
           double vkepl = omega * rdisk;
-          double vz = 0.001 * vkepl;
+          double vz = 0.5 * vkepl;
 	  double zh_r =  cos(t);
 	  double zh_t = -sin(t);
 	  double d = 1.0;
@@ -82,7 +82,7 @@ void jet_boundary_conditions_cell(m2sim *m2)
 	}
 	else if (I[1] == G[1] - 1) {
 	  V0->prim.p = 0.01;
-	  V0->prim.d = 0.01;
+	  V0->prim.d = 1.00;
 	  V0->prim.v1 = 0.0;
 	  V0->prim.v2 = 0.0;
 	  V0->prim.v3 = 0.0;

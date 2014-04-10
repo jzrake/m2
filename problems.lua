@@ -40,21 +40,17 @@ function TestProblem:describe()
    if self.explanation then
       print('\n'..self.explanation..'\n')
    end
-   if self.model_parameters then
-      print(("model parameters for problem '%s'"):format(class.classname(self)))
-      local n = 1
-      for k,v in pairs(self.model_parameters) do
-	 print(n..'. '..k)
-	 print('\t  description: '..tostring(v[2]))
-	 print('\t  value:       '..tostring(v[1]))
-	 n = n + 1
-      end
+   local mp = { }
+   for n in pairs(self.model_parameters or { }) do table.insert(mp, n) end
+   table.sort(mp)
+   print("model parameters for problem '"..class.classname(self).."':\n")
+   for _,k in ipairs(mp) do
+      local v = self.model_parameters[k]
+      print(("%-40s %s"):format(("%12s .......... %s"):format(k, v[1]), v[2]))
    end
    print()
 end
 function TestProblem:run(user_config_callback, restart_file)
-
-
    -----------------------------------------------------------------------------
    -- Build runtime_cfg table from with precedence given first to the
    -- user_config_callback (probably feeding in command line arguments), then
@@ -348,37 +344,41 @@ local Jet = class.class('Jet', TestProblem)
 Jet.explanation = [[
 --------------------------------------------------------------------------------
 -- Stability of relativistic magnetized jets
---
--- 
 --------------------------------------------------------------------------------]]
 function Jet:__init__()
    self.initial_data_cell = function(x)
-      return {0.01, 0.01, 0.0, 0.0, 0.0}
+      return {1.0, 0.01, 0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
       local nu = 0.75 -- nu parameter
       local r = x[1]
       local t = x[2]
       local R = r * math.sin(t)
-      local P = 8.0 * r^nu * (1.0 - math.abs(math.cos(t)))
+      local P = 0.25 * r^nu * (1.0 - math.abs(math.cos(t)))
       local Af = P / (R + 0.01) -- A_phi
       return {-Af * n[3]}
    end
 end
 function Jet:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 2.0
+   runtime_cfg.tmax = 128.0
 end
 function Jet:build_m2(runtime_cfg)
-   local build_args = {lower={  1.0, 0.0, 0.0},
-		       upper={100.0, math.pi/2, 2*math.pi},
-		       resolution={128,64,1},
+   local r0 = 1.0
+   local r1 = 100.0
+   local N = runtime_cfg.resolution or 64
+   local build_args = {lower={r0, 0.0, 0.0},
+		       upper={r1, math.pi/2, 2*math.pi},
+		       resolution={ },
 		       scaling={'logarithmic', 'linear', 'linear'},
 		       relativistic=false,
 		       magnetized=true,
 		       geometry='spherical'}
+   build_args.resolution[1] = N / 2 * math.floor(math.log10(r1/r0))
+   build_args.resolution[2] = N / 2
+   build_args.resolution[3] = 1
    local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(1.0)
-   m2:set_cadence_checkpoint_tpl(0.0)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(0.4)
@@ -398,8 +398,6 @@ MagnetarWind.explanation = [[
 --------------------------------------------------------------------------------
 -- Relativistic toroidally magnetized wind injected through a spherical inner
 -- boundary
---
--- 
 --------------------------------------------------------------------------------]]
 function MagnetarWind:__init__()
    self.model_parameters = {
