@@ -254,7 +254,7 @@ function m2Application:read_checkpoint_hdf5(fname)
    end
 
    h5file:close()
-   print()
+   self:print_status()
 end
 
 function m2Application:global_shape()

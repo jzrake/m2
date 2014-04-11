@@ -454,15 +454,15 @@ function MagnetarWind:build_m2(runtime_cfg)
 	 V0.prim.B2 = 0.0
 	 V0.prim.B3 = B * math.sin(t)
 	 V0.prim.d = d
-	 V0.prim.p = 0.01 * d
+	 V0.prim.p = d * 0.01
 	 V0:from_primitive()
 	 V0.flux1 = V0.aux:fluxes(nhat)
       else
 	 V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
-   m2:set_cadence_checkpoint_hdf5(5.0)
-   m2:set_cadence_checkpoint_tpl(2.0)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(0.4)
