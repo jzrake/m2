@@ -377,7 +377,7 @@ function Jet:build_m2(runtime_cfg)
    build_args.resolution[2] = N / 2
    build_args.resolution[3] = 1
    local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)

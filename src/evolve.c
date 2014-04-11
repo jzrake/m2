@@ -470,9 +470,11 @@ static void _exchange_flux1(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   m2vol *V0, *V1;
 
-  for (i=1; i<L[1]; ++i) {
+  for (i=0; i<L[1]; ++i) {
     V0 = M2_VOL(i,   0, 0);
     V1 = M2_VOL(i-1, 0, 0);
+
+    V1 = V1 ? V1 : V0;
 
     for (q=0; q<5; ++q) {
       V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
@@ -494,11 +496,14 @@ static void _exchange_flux2(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2;
 
-  for (i=1; i<L[1]; ++i) {
-    for (j=1; j<L[2]; ++j) {
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
       V0 = M2_VOL(i,   j, 0);
       V1 = M2_VOL(i-1, j, 0);
       V2 = M2_VOL(i, j-1, 0);
+
+      V1 = V1 ? V1 : V0;
+      V2 = V2 ? V2 : V0;
 
       for (q=0; q<5; ++q) {
 	V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
@@ -528,14 +533,18 @@ static void _exchange_flux3(m2sim *m2, double dt)
   int *L = m2->local_grid_size;
   m2vol *V0, *V1, *V2, *V3;
 
-  for (i=1; i<L[1]; ++i) {
-    for (j=1; j<L[2]; ++j) {
-      for (k=1; k<L[3]; ++k) {
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
 
 	V0 = M2_VOL(i,   j, k  );
 	V1 = M2_VOL(i-1, j, k  );
 	V2 = M2_VOL(i, j-1, k  );
 	V3 = M2_VOL(i, j,   k-1);
+
+	V1 = V1 ? V1 : V0;
+	V2 = V2 ? V2 : V0;
+	V3 = V3 ? V3 : V0;
 
 	for (q=0; q<5; ++q) {
 	  V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
