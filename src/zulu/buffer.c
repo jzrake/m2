@@ -26,7 +26,7 @@ void *buf_new_buffer(lua_State *L, const void *p, size_t size)
 void *buf_check_buffer(lua_State *L, int index, size_t size)
 {
   void *buf = luaL_checkudata(L, index, "buffer");
-  if (size >= 0) {
+  if (size > 0) {
     if (lua_rawlen(L, index) != size) {
       luaL_error(L, "buffer of size %d where %d was expected",
 		 lua_rawlen(L, index), size);

@@ -31,6 +31,7 @@ ZULU_OBJ = \
 	struct.o \
 	H5.o \
 	hdf5.o \
+	mpi.o \
 	json.o \
 	lfs.o \
 	zulu.o
