@@ -12,9 +12,9 @@ int luaopen_class(lua_State *L);
 int luaopen_json(lua_State *L);
 int luaopen_H5(lua_State *L);
 int luaopen_hdf5(lua_State *L);
-int luaopen_legend(lua_State *L);
+int luaopen_mpi(lua_State *L);
 int luaopen_serpent(lua_State *L);
-int luaopen_lfs (lua_State *L);
+int luaopen_lfs(lua_State *L);
 int luaopen_struct(lua_State *L);
 
 int zulu_create_argtable(lua_State *L, int argc, char **argv);
