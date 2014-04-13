@@ -22,6 +22,10 @@ void m2sim_new(m2sim *m2)
   m2->local_grid_size[1] = 0;
   m2->local_grid_size[2] = 0;
   m2->local_grid_size[3] = 0;
+  m2->local_grid_start[0] = 0;
+  m2->local_grid_start[1] = 0;
+  m2->local_grid_start[2] = 0;
+  m2->local_grid_start[3] = 0;
   m2->number_guard_zones0[0] = 0;
   m2->number_guard_zones0[1] = 0;
   m2->number_guard_zones0[2] = 0;

@@ -956,6 +956,7 @@ int main(int argc, char **argv)
   luaL_requiref(L, "array", luaopen_array, 0); lua_pop(L, 1);
   luaL_requiref(L, "class", luaopen_class, 0); lua_pop(L, 1);
   luaL_requiref(L, "hdf5", luaopen_hdf5, 0); lua_pop(L, 1);
+  luaL_requiref(L, "MPI", luaopen_mpi, 0); lua_pop(L, 1);
   luaL_requiref(L, "json", luaopen_json, 0); lua_pop(L, 1);
   luaL_requiref(L, "serpent", luaopen_serpent, 0); lua_pop(L, 1);
   luaL_requiref(L, "lfs", luaopen_lfs, 0); lua_pop(L, 1);

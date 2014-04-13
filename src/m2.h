@@ -158,6 +158,7 @@ struct m2sim
   double domain_extent_upper[4];
   int domain_resolution[4];
   int local_grid_size[4];
+  int local_grid_start[4];
   int number_guard_zones0[4];
   int number_guard_zones1[4];
   int coordinate_scaling1; /* logarithmic, linear, etc */
