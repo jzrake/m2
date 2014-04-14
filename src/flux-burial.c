@@ -2,6 +2,8 @@
 #include <string.h>
 #include "m2.h"
 
+#ifdef DEPRECATED
+
 static double Bfield(double r, double t, double f, int a)
 {
   double m = 0.1;
@@ -95,13 +97,13 @@ static void add_physical_source_terms(m2vol *V)
 
 void initialize_problem_flux_burial(m2sim *m2)
 {
-  m2sim_set_resolution(m2, 64*2, 128*2, 1);
-  m2sim_set_extent0(m2, 1.0, 0.0, 0.0);
-  m2sim_set_extent1(m2, 4.0, M2_PI, 2*M2_PI);
-  m2sim_set_geometry(m2, M2_SPHERICAL);
-  m2sim_set_rk_order(m2, 2);
-  m2sim_set_boundary_conditions(m2, boundary_conditions);
-  m2sim_set_initial_data(m2, initial_data);
+  /* m2sim_set_resolution(m2, 64*2, 128*2, 1); */
+  /* m2sim_set_extent0(m2, 1.0, 0.0, 0.0); */
+  /* m2sim_set_extent1(m2, 4.0, M2_PI, 2*M2_PI); */
+  /* m2sim_set_geometry(m2, M2_SPHERICAL); */
+  /* m2sim_set_rk_order(m2, 2); */
+  /* m2sim_set_boundary_conditions(m2, boundary_conditions); */
+  /* m2sim_set_initial_data(m2, initial_data); */
 
   m2->relativistic = 0;
   m2->magnetized = 1;
@@ -114,3 +116,5 @@ void initialize_problem_flux_burial(m2sim *m2)
   m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
   m2->coordinate_scaling1 = M2_LOGARITHMIC;
 }
+
+#endif
