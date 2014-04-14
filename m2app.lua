@@ -4,17 +4,17 @@
 --
 --------------------------------------------------------------------------------
 
-local colors  = require 'ansicolors'
-local serpent = require 'serpent'
-local lfs     = require 'lfs'
-local struct  = require 'struct'
-local class   = require 'class'
-local m2lib   = require 'm2lib'
-local hdf5    = require 'hdf5'
-local buffer  = require 'buffer'
-local array   = require 'array'
-local logger  = require 'logger'
-
+local colors   = require 'ansicolors'
+local serpent  = require 'serpent'
+local lfs      = require 'lfs'
+local struct   = require 'struct'
+local class    = require 'class'
+local m2lib    = require 'm2lib'
+local hdf5     = require 'hdf5'
+local buffer   = require 'buffer'
+local array    = require 'array'
+local logger   = require 'logger'
+local parallel = require 'parallel'
 
 local function print_splash()
    print(([[
@@ -68,23 +68,44 @@ for _, member in pairs(struct.members 'm2sim') do
 end
 
 function m2Application:__init__(args)
-   self._logger = logger.CommandLineLogger(class.classname(self))
    args = args or { }
+
+   self._cart_comm = parallel.MPI_CartesianCommunicator(3)
+   self._logger = logger.CommandLineLogger(class.classname(self))
+   self._m2 = m2lib.m2sim()
+
    local resolution = args.resolution or {128,1,1}
    local lower = args.lower or {0,0,0}
    local upper = args.upper or {1,1,1}
    local scaling = {to_enum'linear', to_enum'linear', to_enum'linear'}
    local geometry = to_enum(args.geometry or 'cartesian')
+   local Ng0 = m2lib.ivec4()
+   local Ng1 = m2lib.ivec4()
+
+   local start, size = self._cart_comm:partition(resolution)
+
    for i,v in ipairs(args['scaling'] or { }) do scaling[i] = to_enum(v) end
-   self._m2 = m2lib.m2sim()
+
+   -- ensure zero guard zones along single-cell axis
+   for n=1,3 do
+      if resolution[n] > 1 then Ng0[n] = (args.guard0 or {1, 1, 1})[n] end
+      if resolution[n] > 1 then Ng1[n] = (args.guard1 or {0, 0, 0})[n] end
+   end
+
+   for n=1,3 do
+      self._m2.local_grid_size [n] = size [n] + Ng0[n] + Ng1[n]
+      self._m2.local_grid_start[n] = start[n] - Ng0[n]
+   end
+
+   self._m2.cart_comm = self._cart_comm._comm
    self._m2.domain_resolution = m2lib.ivec4(0, unpack(resolution))
    self._m2.domain_extent_lower = m2lib.dvec4(0, unpack(lower))
    self._m2.domain_extent_upper = m2lib.dvec4(0, unpack(upper))
    self._m2.coordinate_scaling1 = scaling[1]
    self._m2.coordinate_scaling2 = scaling[2]
    self._m2.coordinate_scaling3 = scaling[3]
-   self._m2.number_guard_zones0 = m2lib.ivec4(0,unpack(args.guard0 or {1,1,1}))
-   self._m2.number_guard_zones1 = m2lib.ivec4(0,unpack(args.guard1 or {0,0,0}))
+   self._m2.number_guard_zones0 = Ng0
+   self._m2.number_guard_zones1 = Ng1
    self._m2.geometry = geometry
    self._m2.relativistic = args.relativistic and 1 or 0
    self._m2.magnetized = args.magnetized and 1 or 0
@@ -117,6 +138,8 @@ function m2Application:memory_selections()
    -- Build descriptions of file and memory space selections
    -----------------------------------------------------------------------------
    local global_shape = self:global_shape()
+   local coords = self._cart_comm:get 'coords'
+   local period = self._cart_comm:get 'periods'
    local Ng0 = self._m2.number_guard_zones0
    local Ng1 = self._m2.number_guard_zones1
    local file_prim = { exten={}, start={}, strid={}, count={}, block={} }
@@ -125,27 +148,34 @@ function m2Application:memory_selections()
    local mems_face = { exten={}, start={}, strid={}, count={}, block={} }
 
    for n=1,#global_shape do
-      file_prim.exten[n] = global_shape[n]
-      file_face.exten[n] = global_shape[n] + 1
-      file_prim.start[n] = 0
-      file_face.start[n] = 0
+      file_prim.exten[n] = self._m2.domain_resolution[n]
+      file_face.exten[n] = self._m2.domain_resolution[n] + 1
+      file_prim.start[n] = self._m2.local_grid_start[n] + Ng0[n]
+      file_face.start[n] = self._m2.local_grid_start[n] + Ng0[n] + 1
       file_prim.strid[n] = 1
       file_face.strid[n] = 1
-      file_prim.count[n] = global_shape[n]
-      file_face.count[n] = global_shape[n] + 1
+      file_prim.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
+      file_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
       file_prim.block[n] = 1
       file_face.block[n] = 1
 
-      mems_prim.exten[n] = global_shape[n] + Ng0[n] + Ng1[n]
-      mems_face.exten[n] = global_shape[n] + Ng0[n] + Ng1[n]
+      mems_prim.exten[n] = self._m2.local_grid_size[n]
+      mems_face.exten[n] = self._m2.local_grid_size[n]
       mems_prim.start[n] = Ng0[n]
-      mems_face.start[n] = Ng0[n] - 1
+      mems_face.start[n] = Ng0[n]
       mems_prim.strid[n] = 1
       mems_face.strid[n] = 1
-      mems_prim.count[n] = global_shape[n]
-      mems_face.count[n] = global_shape[n] + 1
+      mems_prim.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
+      mems_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
       mems_prim.block[n] = 1
       mems_face.block[n] = 1
+
+      if coords[n] == 0 and period[n] == 0 then
+	 file_face.start[n] = 0
+	 mems_face.start[n] = Ng0[n] - 1
+	 file_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n] + 1
+	 mems_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n] + 1
+      end
    end
 
    for _,s in pairs {file_prim, file_face, mems_prim, mems_face} do
@@ -159,70 +189,95 @@ end
 
 function m2Application:write_checkpoint_hdf5(fname, extras)
    print()
-   local h5file   = hdf5.File(fname, 'w')
-   local h5prim   = hdf5.Group(h5file, 'prim')
-   local h5face   = hdf5.Group(h5file, 'face_magnetic_flux')
-   local h5status = hdf5.Group(h5file, 'status')
-   local h5config = hdf5.Group(h5file, 'config')
-
    local file_prim, file_face, mems_prim, mems_face = self:memory_selections()
+
+   if self._cart_comm:rank() == 0 then
+      local h5file = hdf5.File(fname, 'w')
+      local h5prim = hdf5.Group(h5file, 'prim')
+      local h5face = hdf5.Group(h5file, 'face_magnetic_flux')
+      for _,field in ipairs(struct.members('m2prim')) do
+	 local h5d = hdf5.DataSet(h5prim, field, 'w', {shape=file_prim.exten})
+	 h5d:close()
+      end
+      for field=1,3 do
+	 local h5d = hdf5.DataSet(h5face, field, 'w', {shape=file_face.exten})
+	 h5d:close()
+      end
+      h5file:close()
+   end
 
 
    -----------------------------------------------------------------------------
    -- Write cell-centered primitive and face-centered magnetic flux to HDF5
    -----------------------------------------------------------------------------
-   for _,field in ipairs(struct.members('m2prim')) do
-      self:_log('writing '..h5prim:path()..'/'..field, 1)
-      local h5d = hdf5.DataSet(h5prim, field, 'w', {shape=file_prim.exten})
-      h5d:write(self:get_volume_data(field), mems_prim.space, file_prim.space)
-      h5d:close()
+   local function write()
+      local h5file = hdf5.File(fname, 'r+')
+      local h5prim = hdf5.Group(h5file, 'prim')
+      local h5face = hdf5.Group(h5file, 'face_magnetic_flux')
+
+      for _,field in ipairs(struct.members('m2prim')) do
+	 self:_log('writing '..h5prim:path()..'/'..field, 1)
+	 local h5d = hdf5.DataSet(h5prim, field, 'r+', {shape=file_prim.exten})
+	 local data = self:get_volume_data(field)
+	 h5d:write(data, mems_prim.space, file_prim.space)
+	 h5d:close()
+      end
+      for field=1,3 do
+	 self:_log('writing '..h5face:path()..'/'..field, 1)
+	 local h5d = hdf5.DataSet(h5face, field, 'r+', {shape=file_face.exten})
+	 local data = self:get_face_data(field)
+	 h5d:write(data, mems_face.space, file_face.space)
+	 h5d:close()
+      end
+
+      h5file:close()
    end
-   for field=1,3 do
-      self:_log('writing '..h5face:path()..'/'..field, 1)
-      local h5d = hdf5.DataSet(h5face, field, 'w', {shape=file_face.exten})
-      h5d:write(self:get_face_data(field), mems_face.space, file_face.space)
-      h5d:close()
-   end
+   self._cart_comm:call_in_serial(write)
 
 
    -----------------------------------------------------------------------------
    -- Write m2 configuration, status, problem, and build meta-data to HDF5
    -----------------------------------------------------------------------------
-   for i,member in ipairs(struct.members(self._m2)) do
-      h5config[member] = tostring(self._m2[member])
-   end
-   for i,member in ipairs(struct.members(self.status)) do
-      h5status[member] = self.status[member]
-   end
-   if self._problem then
-      self._problem:write_hdf5_problem_data(h5file)
-   end
-   for k,v in pairs(extras or { }) do
-      h5file[k] = serpent.block(v)
-   end
-   h5file['version'] = 'm2: '..m2lib.M2_GIT_SHA
-   h5file['build_date'] = m2lib.M2_BUILD_DATE
-   h5file['time_stamp'] = os.date("%c")
+   if self._cart_comm:rank() == 0 then
+      local h5file = hdf5.File(fname, 'r+')
+      local h5status = hdf5.Group(h5file, 'status')
+      local h5config = hdf5.Group(h5file, 'config')
 
-
-   h5file:close()
+      for i,member in ipairs(struct.members(self._m2)) do
+	 h5config[member] = tostring(self._m2[member])
+      end
+      for i,member in ipairs(struct.members(self.status)) do
+	 h5status[member] = self.status[member]
+      end
+      if self._problem then
+	 self._problem:write_hdf5_problem_data(h5file)
+      end
+      for k,v in pairs(extras or { }) do
+	 h5file[k] = serpent.block(v)
+      end
+      h5file['version'] = 'm2: '..m2lib.M2_GIT_SHA
+      h5file['build_date'] = m2lib.M2_BUILD_DATE
+      h5file['time_stamp'] = os.date("%c")
+      h5file:close()
+   end
    print()
 end
 
 function m2Application:read_checkpoint_hdf5(fname)
    print()
+   local file_prim, file_face, mems_prim, mems_face = self:memory_selections()
+
    local h5file   = hdf5.File(fname, 'r')
    local h5prim   = hdf5.Group(h5file, 'prim')
    local h5face   = hdf5.Group(h5file, 'face_magnetic_flux')
    local h5status = hdf5.Group(h5file, 'status')
-
-   local file_prim, file_face, mems_prim, mems_face = self:memory_selections()
 
    local function prod(A)
       local p = 1
       for _,a in ipairs(A) do p = p * a end
       return p
    end
+
 
    -----------------------------------------------------------------------------
    -- Read cell-centered primitive and face-centered magnetic flux from HDF5

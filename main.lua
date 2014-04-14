@@ -3,7 +3,8 @@ local problems = require 'problems'
 local m2app    = require 'm2app'
 local logger   = require 'logger'
 local hdf5     = require 'hdf5'
-
+local MPI      = require 'MPI'
+local parallel = require 'parallel'
 
 local function main()
    -----------------------------------------------------------------------------
@@ -85,4 +86,17 @@ local function main()
    end
 end
 
+
+MPI.Init()
+
+local comm_world = parallel.MPI_Communicator()
+print = function(...)
+   if comm_world:rank() == 0 then
+      io.write(...)
+      io.write('\n')
+   end
+end
 main()
+
+collectgarbage()
+MPI.Finalize()

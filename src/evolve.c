@@ -844,6 +844,7 @@ void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
   m2sim_exchange_flux(m2, dt);
   m2sim_add_source_terms(m2, dt);
   m2sim_average_runge_kutta(m2, rkparam);
+  m2sim_synchronize_guard(m2);
   m2sim_enforce_boundary_condition(m2);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_conserved_all(m2);

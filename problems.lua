@@ -123,6 +123,7 @@ function TestProblem:run(user_config_callback, restart_file)
 	 log:log_message('run', m2.status:get_message(), 0)
       end
       m2:drive()
+      collectgarbage()
    end
 
    m2:write_checkpoint_hdf5(

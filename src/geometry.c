@@ -214,7 +214,7 @@ void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4])
   int *N = m2->domain_resolution;
   int *L = m2->local_grid_size;
   int d;
-  double index[4] = { 0, 0, 0 };
+  double index[4] = { 0, 0, 0, 0 };
   int scale[4] = { 0,
 		   m2->coordinate_scaling1,
 		   m2->coordinate_scaling2,

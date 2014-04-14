@@ -772,11 +772,13 @@ int register_m2sim(lua_State *L)
 #define MI(m)   {#m, offsetof(m2sim, m), LSTRUCT_INT}
 #define MS(m,n) {#m, offsetof(m2sim, m), LSTRUCT_STRUCT, n}
 #define MO(m)   {#m, offsetof(m2sim, m), LSTRUCT_OBJECT}
+#define MP(m)   {#m, offsetof(m2sim, m), LSTRUCT_POINTER}
   lua_struct_member_t members[] = {
     MS(domain_extent_lower, "dvec4"),
     MS(domain_extent_upper, "dvec4"),
     MS(domain_resolution, "ivec4"),
     MS(local_grid_size, "ivec4"),
+    MS(local_grid_start, "ivec4"),
     MS(number_guard_zones0, "ivec4"),
     MS(number_guard_zones1, "ivec4"),
     MS(status, "m2sim_status"),
@@ -804,6 +806,7 @@ int register_m2sim(lua_State *L)
     MO(boundary_conditions_emf2),
     MO(boundary_conditions_emf3),
     MO(add_physical_source_terms),
+    MP(cart_comm),
     {NULL, 0, 0},
   };
 #undef MD
