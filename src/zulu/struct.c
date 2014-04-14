@@ -397,6 +397,9 @@ int _struct_mt_index(lua_State *L)
     case LSTRUCT_STRUCT:
       lua_struct_newref(L, memb->type_name, *obj + memb->offset, 1);
       break;
+    case LSTRUCT_POINTER:
+      lua_pushlightuserdata(L, *obj + memb->offset);
+      break;
     }
   }
   else if (meth) {
@@ -462,6 +465,9 @@ int _struct_mt_newindex(lua_State *L)
       lua_pop(L, 2);
       val = lua_struct_checkstruct(L, 3, memb->type_name);
       memcpy(*obj + memb->offset, val, member_type->alloc_size);
+      break;
+    case LSTRUCT_POINTER:
+      *((void **)(*obj + memb->offset)) = lua_touserdata(L, 3);
       break;
     }
   }
