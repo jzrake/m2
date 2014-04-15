@@ -82,8 +82,8 @@ function m2Application:__init__(args)
 
    -- ensure zero guard zones along single-cell axis
    for n=1,3 do
-      if resolution[n] >  1 then Ng0[n] = (args.guard0 or {2, 2, 2})[n] end
-      if resolution[n] >  1 then Ng1[n] = (args.guard1 or {2, 2, 2})[n] end
+      if resolution[n] >  1 then Ng0[n] = (args.guard0 or {1, 1, 1})[n] end
+      if resolution[n] >  1 then Ng1[n] = (args.guard1 or {0, 0, 0})[n] end
       if resolution[n] == 1 then proc_sizes[n] = 1 end
    end
 

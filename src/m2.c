@@ -125,7 +125,8 @@ void m2sim_initialize(m2sim *m2)
 	if ((G[1] > 1 && i == 0) ||
 	    (G[2] > 1 && j == 0) ||
 	    (G[3] > 1 && k == 0)) {
-	  V->zone_type = M2_ZONE_TYPE_SHELL;
+	  V->zone_type = M2_ZONE_TYPE_GUARD;
+	  //V->zone_type = M2_ZONE_TYPE_SHELL;
 	}
 	else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) || 
 		 (G[2] > 1 && (j < ng0[2] || j >= L[2] - ng1[2])) || 
@@ -515,7 +516,7 @@ void m2sim_run_initial_data(m2sim *m2)
   m2sim_exchange_flux(m2, 1.0);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_primitive_all(m2);
-  m2sim_synchronize_guard(m2);
+  //m2sim_synchronize_guard(m2);
 }
 
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)

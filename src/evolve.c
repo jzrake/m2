@@ -9,7 +9,7 @@
 #endif
 #include "riemann.h"
 
-#define ENABLE_PLM 1
+#define ENABLE_PLM 0
 
 
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
@@ -37,8 +37,8 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
   n[2] = 0.0;
   n[3] = 0.0;
 
-  if (VL->zone_type != M2_ZONE_TYPE_FULL ||
-      VR->zone_type != M2_ZONE_TYPE_FULL) {
+  if (VL->zone_type == M2_ZONE_TYPE_SHELL ||
+      VR->zone_type == M2_ZONE_TYPE_SHELL) {
     return;
   }
 
@@ -856,10 +856,10 @@ void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
   m2sim_exchange_flux(m2, dt);
   m2sim_add_source_terms(m2, dt);
   m2sim_average_runge_kutta(m2, rkparam);
-  m2sim_synchronize_guard(m2);
   m2sim_enforce_boundary_condition(m2);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_conserved_all(m2);
+  m2sim_synchronize_guard(m2);
 }
 
 

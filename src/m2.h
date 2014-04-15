@@ -134,8 +134,8 @@ struct m2vol
   double emf2;
   double emf3;
   char zone_type;
-  m2aux aux;
   m2sim *m2;
+  m2aux aux;
 } ;
 #define M2_VOL_SERIALIZE(b) ("A(S(i#$(ffffffff)fff))",b,4)
 

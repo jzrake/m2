@@ -167,6 +167,8 @@ function Soundwave:build_m2(runtime_cfg)
    local build_args = {lower={0.0, 0.0, 0.0},
 		       upper={1.0, 1.0, 1.0},
 		       resolution={512,1,1},
+		       guard0={2, 2, 2},
+		       guard1={2, 2, 2},
 		       scaling={'linear'},
 		       relativistic=false,
 		       magnetized=false,
