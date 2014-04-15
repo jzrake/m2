@@ -150,6 +150,47 @@ end
 
 
 
+local Soundwave = class.class('Soundwave', TestProblem)
+Soundwave.explanation = [[
+--------------------------------------------------------------------------------
+-- Smooth sinusoidal density and/or pressure fluctuation
+--
+--------------------------------------------------------------------------------]]
+function Soundwave:__init__()
+   local pi = math.pi
+   local L = 1
+   self.initial_data_cell = function(x)
+      return { 1.0 + 0.5 * math.sin(4*pi*x[1]/L), 1.0, 1.0, 0.0, 0.0}
+   end
+end
+function Soundwave:build_m2(runtime_cfg)
+   local build_args = {lower={0.0, 0.0, 0.0},
+		       upper={1.0, 1.0, 1.0},
+		       resolution={512,1,1},
+		       scaling={'linear'},
+		       relativistic=false,
+		       magnetized=false,
+		       geometry='cartesian'}
+   if runtime_cfg.relativistic then build_args.relativistic = true end
+   if runtime_cfg.unmagnetized then build_args.magnetized = false end
+   if runtime_cfg.resolution then
+      build_args.resolution[1] = runtime_cfg.resolution
+   end
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(0.8)
+   m2:set_plm_parameter(2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   return m2
+end
+
+
+
 --------------------------------------------------------------------------------
 -- base class for shocktube probems
 --------------------------------------------------------------------------------
@@ -478,7 +519,8 @@ end
 
 
 
-return {RyuJones     = RyuJones,
+return {Soundwave    = Soundwave,
+	RyuJones     = RyuJones,
 	BrioWu       = BrioWu,
 	ContactWave  = ContactWave,
 	BlastMHD     = BlastMHD,

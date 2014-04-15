@@ -1,9 +1,12 @@
+#include "m2.h"
 #include <string.h>
 #include <math.h>
 #if _OPENMP
 #include <omp.h>
 #endif
-#include "m2.h"
+#if M2_HAVE_MPI
+#include <mpi.h>
+#endif
 #include "riemann.h"
 
 #define ENABLE_PLM 1
@@ -821,6 +824,15 @@ double m2sim_minimum_courant_time(m2sim *m2)
       }
     }
   }
+
+#if M2_HAVE_MPI
+  if (m2->cart_comm) {
+    MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
+    MPI_Allreduce(MPI_IN_PLACE, &globalmindt, 1, MPI_DOUBLE, MPI_MIN,
+		  cart_comm);
+  }
+#endif
+
   return globalmindt;
 }
 

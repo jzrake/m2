@@ -80,20 +80,17 @@ function m2Application:__init__(args)
    local proc_sizes = {0, 0, 0}
    for i,v in ipairs(args['scaling'] or { }) do scaling[i] = to_enum(v) end
 
-   if resolution[1] == 1 then proc_sizes[1] = 1 end
-   if resolution[2] == 1 then proc_sizes[2] = 1 end
-   if resolution[3] == 1 then proc_sizes[3] = 1 end
+   -- ensure zero guard zones along single-cell axis
+   for n=1,3 do
+      if resolution[n] >  1 then Ng0[n] = (args.guard0 or {2, 2, 2})[n] end
+      if resolution[n] >  1 then Ng1[n] = (args.guard1 or {2, 2, 2})[n] end
+      if resolution[n] == 1 then proc_sizes[n] = 1 end
+   end
 
    self._cart_comm = parallel.MPI_CartesianCommunicator(3, proc_sizes)
    self._logger = logger.CommandLineLogger(class.classname(self))
    self._m2 = m2lib.m2sim()
    local start, size = self._cart_comm:partition(resolution)
-
-   -- ensure zero guard zones along single-cell axis
-   for n=1,3 do
-      if resolution[n] > 1 then Ng0[n] = (args.guard0 or {1, 1, 1})[n] end
-      if resolution[n] > 1 then Ng1[n] = (args.guard1 or {0, 0, 0})[n] end
-   end
 
    for n=1,3 do
       self._m2.local_grid_size [n] = size [n] + Ng0[n] + Ng1[n]
