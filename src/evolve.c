@@ -9,7 +9,7 @@
 #endif
 #include "riemann.h"
 
-#define ENABLE_PLM 0
+#define ENABLE_PLM 1
 
 
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)

@@ -13,9 +13,17 @@ void m2sim_synchronize_guard(m2sim *m2)
   MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
   MPI_Status status;
   MPI_Datatype vol;
-  MPI_Datatype sp, rp;
-  MPI_Datatype sm, rm;
-
+  MPI_Datatype sp[3], rp[3];
+  MPI_Datatype sm[3], rm[3];
+  int order = MPI_ORDER_C;
+  int rankS;
+  int rankD;
+  int tagS = 0;
+  int tagD = 0;
+  int *Ng0 = m2->number_guard_zones0;
+  int *Ng1 = m2->number_guard_zones1;
+  int *G = m2->domain_resolution;
+  int *L = m2->local_grid_size;
   int n;
   int blocklengths[20];
   MPI_Aint displacements[20];
@@ -48,57 +56,67 @@ void m2sim_synchronize_guard(m2sim *m2)
     types[n] = vol_members[n].type;
   }
 
-  int order = MPI_ORDER_C;
-  int rankS;
-  int rankD;
-  int tagS = 0;
-  int tagD = 0;
-
-  int *Ng0 = m2->number_guard_zones0;
-  int *Ng1 = m2->number_guard_zones1;
-  int *L = m2->local_grid_size;
-
-  int count_sp[1] = { L[1] };
-  int count_rp[1] = { L[1] };
-  int count_sm[1] = { L[1] };
-  int count_rm[1] = { L[1] };
-  int sizes_sp[1] = { Ng1[1] };
-  int sizes_rp[1] = { Ng1[1] };
-  int sizes_sm[1] = { Ng0[1] };
-  int sizes_rm[1] = { Ng0[1] };
-  int start_sp[1] = { L[1] - 2*Ng1[1] };
-  int start_rp[1] = { L[1] - 1*Ng1[1] };
-  int start_sm[1] = { Ng0[1] };
-  int start_rm[1] = { 0 };
-
   MPI_Type_create_struct(20, blocklengths, displacements, types, &vol);
   MPI_Type_commit(&vol);
-  MPI_Type_create_subarray(1, count_sp, sizes_sp, start_sp, order, vol, &sp);
-  MPI_Type_create_subarray(1, count_sm, sizes_sm, start_sm, order, vol, &sm);
-  MPI_Type_create_subarray(1, count_rp, sizes_rp, start_rp, order, vol, &rp);
-  MPI_Type_create_subarray(1, count_rm, sizes_rm, start_rm, order, vol, &rm);
-  MPI_Type_commit(&sp);
-  MPI_Type_commit(&sm);
-  MPI_Type_commit(&rp);
-  MPI_Type_commit(&rm);
 
-  /* send to right, receive from left */
-  MPI_Cart_shift(cart_comm, 0, +1, &rankS, &rankD);
-  MPI_Sendrecv(m2->volumes, 1, sp, rankD, tagD,
-  	       m2->volumes, 1, rm, rankS, tagS,
-  	       cart_comm, &status);
+  for (n=0; n<3; ++n) {
+    int count_sp[3] = { L[1], L[2], L[3] };
+    int count_rp[3] = { L[1], L[2], L[3] };
+    int count_sm[3] = { L[1], L[2], L[3] };
+    int count_rm[3] = { L[1], L[2], L[3] };
+    int sizes_sp[3] = { L[1], L[2], L[3] };
+    int sizes_rp[3] = { L[1], L[2], L[3] };
+    int sizes_sm[3] = { L[1], L[2], L[3] };
+    int sizes_rm[3] = { L[1], L[2], L[3] };
+    int start_sp[3] = { 0, 0, 0 };
+    int start_rp[3] = { 0, 0, 0 };
+    int start_sm[3] = { 0, 0, 0 };
+    int start_rm[3] = { 0, 0, 0 };
 
-  /* send to left, receive from right */
-  MPI_Cart_shift(cart_comm, 0, -1, &rankS, &rankD);
-  MPI_Sendrecv(m2->volumes, 1, sm, rankD, tagD,
-  	       m2->volumes, 1, rp, rankS, tagS,
-  	       cart_comm, &status);
+    sizes_sp[n] = G[n+1] > 1 ? Ng1[n+1] : 1;
+    sizes_rp[n] = G[n+1] > 1 ? Ng1[n+1] : 1;
+    sizes_sm[n] = G[n+1] > 1 ? Ng0[n+1] : 1;
+    sizes_rm[n] = G[n+1] > 1 ? Ng0[n+1] : 1;
+
+    start_sp[n] = G[n+1] > 1 ? L[n+1] - 2*Ng1[n+1] : 0;
+    start_rp[n] = G[n+1] > 1 ? L[n+1] - 1*Ng1[n+1] : 0;
+    start_sm[n] = G[n+1] > 1 ? Ng0[n+1] : 0;
+    start_rm[n] = G[n+1] > 1 ? 0 : 0;
+
+    MPI_Type_create_subarray(3, count_sp, sizes_sp, start_sp, order, vol, &sp[n]);
+    MPI_Type_create_subarray(3, count_sm, sizes_sm, start_sm, order, vol, &sm[n]);
+    MPI_Type_create_subarray(3, count_rp, sizes_rp, start_rp, order, vol, &rp[n]);
+    MPI_Type_create_subarray(3, count_rm, sizes_rm, start_rm, order, vol, &rm[n]);
+    MPI_Type_commit(&sp[n]);
+    MPI_Type_commit(&sm[n]);
+    MPI_Type_commit(&rp[n]);
+    MPI_Type_commit(&rm[n]);
+  }
+
+  for (n=0; n<3; ++n) {
+    if (G[n+1] == 1) continue;
+
+    /* send to right, receive from left */
+    MPI_Cart_shift(cart_comm, n, +1, &rankS, &rankD);
+    MPI_Sendrecv(m2->volumes, 1, sp[n], rankD, tagD,
+		 m2->volumes, 1, rm[n], rankS, tagS,
+		 cart_comm, &status);
+
+    /* send to left, receive from right */
+    MPI_Cart_shift(cart_comm, n, -1, &rankS, &rankD);
+    MPI_Sendrecv(m2->volumes, 1, sm[n], rankD, tagD,
+		 m2->volumes, 1, rp[n], rankS, tagS,
+		 cart_comm, &status);
+  }
+
 
   MPI_Type_free(&vol);
-  MPI_Type_free(&sp);
-  MPI_Type_free(&sm);
-  MPI_Type_free(&rp);
-  MPI_Type_free(&rm);
+  for (n=0; n<3; ++n) {
+    MPI_Type_free(&sp[n]);
+    MPI_Type_free(&sm[n]);
+    MPI_Type_free(&rp[n]);
+    MPI_Type_free(&rm[n]);
+  }
 
   /* because MPI overwrites aux.m2 */
   for (n=0; n<L[0]; ++n) {

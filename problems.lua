@@ -160,13 +160,15 @@ function Soundwave:__init__()
    local pi = math.pi
    local L = 1
    self.initial_data_cell = function(x)
-      return { 1.0 + 0.5 * math.sin(4*pi*x[1]/L), 1.0, 1.0, 0.0, 0.0}
+      local r = x[1] + x[2]
+      return { 1.0 + 0.5 * math.sin(4*pi*r/L), 1.0, 1.0, 1.0, 0.0}
    end
 end
 function Soundwave:build_m2(runtime_cfg)
+   local N = runtime_cfg.resolution or 64
    local build_args = {lower={0.0, 0.0, 0.0},
 		       upper={1.0, 1.0, 1.0},
-		       resolution={512,1,1},
+		       resolution={N,N,1},
 		       guard0={2, 2, 2},
 		       guard1={2, 2, 2},
 		       scaling={'linear'},
@@ -175,9 +177,6 @@ function Soundwave:build_m2(runtime_cfg)
 		       geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
-   if runtime_cfg.resolution then
-      build_args.resolution[1] = runtime_cfg.resolution
-   end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
