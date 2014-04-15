@@ -70,10 +70,6 @@ end
 function m2Application:__init__(args)
    args = args or { }
 
-   self._cart_comm = parallel.MPI_CartesianCommunicator(3)
-   self._logger = logger.CommandLineLogger(class.classname(self))
-   self._m2 = m2lib.m2sim()
-
    local resolution = args.resolution or {128,1,1}
    local lower = args.lower or {0,0,0}
    local upper = args.upper or {1,1,1}
@@ -81,10 +77,17 @@ function m2Application:__init__(args)
    local geometry = to_enum(args.geometry or 'cartesian')
    local Ng0 = m2lib.ivec4()
    local Ng1 = m2lib.ivec4()
-
-   local start, size = self._cart_comm:partition(resolution)
-
+   local proc_sizes = {0, 0, 0}
    for i,v in ipairs(args['scaling'] or { }) do scaling[i] = to_enum(v) end
+
+   if resolution[1] == 1 then proc_sizes[1] = 1 end
+   if resolution[2] == 1 then proc_sizes[2] = 1 end
+   if resolution[3] == 1 then proc_sizes[3] = 1 end
+
+   self._cart_comm = parallel.MPI_CartesianCommunicator(3, proc_sizes)
+   self._logger = logger.CommandLineLogger(class.classname(self))
+   self._m2 = m2lib.m2sim()
+   local start, size = self._cart_comm:partition(resolution)
 
    -- ensure zero guard zones along single-cell axis
    for n=1,3 do

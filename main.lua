@@ -90,10 +90,10 @@ end
 MPI.Init()
 
 local comm_world = parallel.MPI_Communicator()
+local old_print = print
 print = function(...)
    if comm_world:rank() == 0 then
-      io.write(...)
-      io.write('\n')
+      old_print(...)
    end
 end
 main()
