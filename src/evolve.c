@@ -9,7 +9,7 @@
 #endif
 #include "riemann.h"
 
-#define ENABLE_PLM 1
+#define ENABLE_PLM 0
 
 
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
@@ -642,7 +642,7 @@ void m2sim_cache_conserved(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     memcpy(V->consB, V->consA, 5 * sizeof(double));
@@ -663,7 +663,7 @@ void m2sim_average_runge_kutta(m2sim *m2, double b)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     for (q=0; q<5; ++q) {
@@ -738,7 +738,7 @@ int m2sim_from_conserved_all(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     /* assume fields have been averaged from faces to center (prim) */
@@ -749,9 +749,6 @@ int m2sim_from_conserved_all(m2sim *m2)
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
 				 &V->aux, &V->prim);
     if (error) {
-      //m2->initial_data(V);
-      //m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-      //		   V->consA, &V->aux);
       m2_print_state(&V->prim, &V->aux, V->consA);
       MSGF(FATAL, "at global index [%d %d %d]",
     	   V->global_index[1],
@@ -773,7 +770,7 @@ int m2sim_from_primitive_all(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,

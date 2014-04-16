@@ -37,6 +37,7 @@ void m2sim_new(m2sim *m2)
   m2->volumes = NULL;
   m2->user_struct = NULL;
   m2->cart_comm = NULL;
+  m2->mpi_types = NULL;
 
   /* solver and physics configuration */
   m2->coordinate_scaling1 = M2_LINEAR;
@@ -85,6 +86,7 @@ void m2sim_new(m2sim *m2)
 }
 void m2sim_del(m2sim *m2)
 {
+  m2sim_delete_mpi_types(m2);
   free(m2->volumes);
   m2->volumes = NULL;
 }
@@ -100,6 +102,8 @@ void m2sim_initialize(m2sim *m2)
   m2vol *V;
 
   L[0] = L[1] * L[2] * L[3];
+
+  m2sim_create_mpi_types(m2);
 
   m2->volumes = (m2vol*) realloc(m2->volumes, L[0] * sizeof(m2vol));
   for (i=0; i<L[1]; ++i) {
@@ -516,7 +520,7 @@ void m2sim_run_initial_data(m2sim *m2)
   m2sim_exchange_flux(m2, 1.0);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_primitive_all(m2);
-  //m2sim_synchronize_guard(m2);
+  m2sim_synchronize_guard(m2);
 }
 
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)

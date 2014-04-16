@@ -195,6 +195,7 @@ struct m2sim
   m2vol *volumes;
   void *user_struct;
   void *cart_comm;
+  void *mpi_types;
 } ;
 #define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
 			      m2,4,4,4,4,4,4)
@@ -224,6 +225,8 @@ int m2vol_from_primitive(m2vol *V);
 void m2sim_new(m2sim *m2);
 void m2sim_del(m2sim *m2);
 void m2sim_initialize(m2sim *m2);
+void m2sim_create_mpi_types(m2sim *m2);
+void m2sim_delete_mpi_types(m2sim *m2);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
 void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4]);
 void m2sim_primitive_at_position(m2sim *m2, double x[4], m2prim *P);
