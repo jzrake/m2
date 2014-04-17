@@ -82,7 +82,7 @@ end
 local MPI_CartesianCommunicator = class.class('MPI_CartesianCommunicator',
 					      MPI_Communicator)
 
-function MPI_CartesianCommunicator:__init__(ndim, sizes)
+function MPI_CartesianCommunicator:__init__(ndim, sizes, periods)
    local reorder = 1
    local wrapped_ax = integer(ndim)
    local proc_sizes = integer(ndim)
@@ -91,7 +91,7 @@ function MPI_CartesianCommunicator:__init__(ndim, sizes)
 
    for n=0,ndim-1 do
       buffer.set_typed(proc_sizes, buffer.int, n, (sizes or {0,0,0})[n+1])
-      buffer.set_typed(wrapped_ax, buffer.int, n, 1)
+      buffer.set_typed(wrapped_ax, buffer.int, n, (periods or {1,1,1})[n+1])
    end
 
    self._ndim = ndim

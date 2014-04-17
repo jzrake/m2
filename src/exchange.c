@@ -15,11 +15,10 @@ void m2sim_create_mpi_types(m2sim *m2)
   int B[20];
   MPI_Aint D[20];
   MPI_Datatype T[20];
-  int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   int *Ng0 = m2->number_guard_zones0;
   int *Ng1 = m2->number_guard_zones1;
-  int order = MPI_ORDER_C;
+  int o = MPI_ORDER_C;
   int n;
 
   B[ 0] = 4;   D[ 0] = offsetof(m2vol, global_index); T[ 0] = MPI_INT;
@@ -66,24 +65,36 @@ void m2sim_create_mpi_types(m2sim *m2)
     int start_sm[3] = { 0, 0, 0 };
     int start_rm[3] = { 0, 0, 0 };
 
-    sizes_sp[n] = G[n+1] > 1 ? Ng1[n+1] : 1;
-    sizes_rp[n] = G[n+1] > 1 ? Ng1[n+1] : 1;
-    sizes_sm[n] = G[n+1] > 1 ? Ng0[n+1] : 1;
-    sizes_rm[n] = G[n+1] > 1 ? Ng0[n+1] : 1;
+    sizes_sp[n] = Ng1[n+1];
+    sizes_rp[n] = Ng1[n+1];
+    sizes_sm[n] = Ng0[n+1];
+    sizes_rm[n] = Ng0[n+1];
 
-    start_sp[n] = G[n+1] > 1 ? L[n+1] - 2*Ng1[n+1] : 0;
-    start_rp[n] = G[n+1] > 1 ? L[n+1] - 1*Ng1[n+1] : 0;
-    start_sm[n] = G[n+1] > 1 ? Ng0[n+1] : 0;
-    start_rm[n] = G[n+1] > 1 ? 0 : 0;
+    start_sp[n] = L[n+1] - 2*Ng1[n+1];
+    start_rp[n] = L[n+1] - 1*Ng1[n+1];
+    start_sm[n] = Ng0[n+1];
+    start_rm[n] = 0;
 
-    MPI_Type_create_subarray(3, count_sp, sizes_sp, start_sp, order, v, &sp[n]);
-    MPI_Type_create_subarray(3, count_sm, sizes_sm, start_sm, order, v, &sm[n]);
-    MPI_Type_create_subarray(3, count_rp, sizes_rp, start_rp, order, v, &rp[n]);
-    MPI_Type_create_subarray(3, count_rm, sizes_rm, start_rm, order, v, &rm[n]);
-    MPI_Type_commit(&sp[n]);
-    MPI_Type_commit(&sm[n]);
-    MPI_Type_commit(&rp[n]);
-    MPI_Type_commit(&rm[n]);
+    if (Ng1[n+1]) {
+      MPI_Type_create_subarray(3, count_sp, sizes_sp, start_sp, o, v, &sp[n]);
+      MPI_Type_create_subarray(3, count_rp, sizes_rp, start_rp, o, v, &rp[n]);
+      MPI_Type_commit(&sp[n]);
+      MPI_Type_commit(&rp[n]);
+    }
+    else {
+      sp[n] = MPI_BYTE; /* indicates empty; it's never used */
+      rp[n] = MPI_BYTE;
+    }
+    if (Ng0[n+1]) {
+      MPI_Type_create_subarray(3, count_sm, sizes_sm, start_sm, o, v, &sm[n]);
+      MPI_Type_create_subarray(3, count_rm, sizes_rm, start_rm, o, v, &rm[n]);
+      MPI_Type_commit(&sm[n]);
+      MPI_Type_commit(&rm[n]);
+    }
+    else {
+      sm[n] = MPI_BYTE;
+      rm[n] = MPI_BYTE;
+    }
   }
 }
 
@@ -99,10 +110,10 @@ void m2sim_delete_mpi_types(m2sim *m2)
   MPI_Type_free(&MT->vol);
 
   for (n=0; n<3; ++n) {
-    MPI_Type_free(&sp[n]);
-    MPI_Type_free(&sm[n]);
-    MPI_Type_free(&rp[n]);
-    MPI_Type_free(&rm[n]);
+    if (sp[n] != MPI_BYTE) MPI_Type_free(&sp[n]);
+    if (sm[n] != MPI_BYTE) MPI_Type_free(&sm[n]);
+    if (rp[n] != MPI_BYTE) MPI_Type_free(&rp[n]);
+    if (rm[n] != MPI_BYTE) MPI_Type_free(&rm[n]);
   }
 
   free(m2->mpi_types);

@@ -75,37 +75,49 @@ function m2Application:__init__(args)
    local upper = args.upper or {1,1,1}
    local scaling = {to_enum'linear', to_enum'linear', to_enum'linear'}
    local geometry = to_enum(args.geometry or 'cartesian')
+   local proc_sizes = {0, 0, 0}
+   local periods = {0, 0, 0}
    local Ng0 = m2lib.ivec4()
    local Ng1 = m2lib.ivec4()
-   local proc_sizes = {0, 0, 0}
    for i,v in ipairs(args['scaling'] or { }) do scaling[i] = to_enum(v) end
 
-   -- ensure zero guard zones along single-cell axis
    for n=1,3 do
-      if resolution[n] >  1 then Ng0[n] = (args.guard0 or {2, 2, 2})[n] end
-      if resolution[n] >  1 then Ng1[n] = (args.guard1 or {2, 2, 2})[n] end
+      if (args.periods or { })[n] then periods[n] = 1 end
       if resolution[n] == 1 then proc_sizes[n] = 1 end
    end
 
-   self._cart_comm = parallel.MPI_CartesianCommunicator(3, proc_sizes)
+   self._cart_comm = parallel.MPI_CartesianCommunicator(3, proc_sizes, periods)
    self._logger = logger.CommandLineLogger(class.classname(self))
    self._m2 = m2lib.m2sim()
    local start, size = self._cart_comm:partition(resolution)
 
    for n=1,3 do
+      if resolution[n] > 1 then
+	 Ng0[n] = 2
+	 Ng1[n] = 2
+	 if periods[n] == 0 then
+	    local coords = self._cart_comm:get 'coords'
+	    local dims = self._cart_comm:get 'dims'
+	    if coords[n] == 0 then
+	       Ng0[n] = 1 -- so that there's a layer of shells
+	    end
+	    if coords[n] == dims[n] - 1 then
+	       Ng1[n] = 0
+	    end
+	 end
+      end
       self._m2.local_grid_size [n] = size [n] + Ng0[n] + Ng1[n]
       self._m2.local_grid_start[n] = start[n] - Ng0[n]
    end
-
    self._m2.cart_comm = self._cart_comm._comm
    self._m2.domain_resolution = m2lib.ivec4(0, unpack(resolution))
    self._m2.domain_extent_lower = m2lib.dvec4(0, unpack(lower))
    self._m2.domain_extent_upper = m2lib.dvec4(0, unpack(upper))
+   self._m2.number_guard_zones0 = Ng0
+   self._m2.number_guard_zones1 = Ng1
    self._m2.coordinate_scaling1 = scaling[1]
    self._m2.coordinate_scaling2 = scaling[2]
    self._m2.coordinate_scaling3 = scaling[3]
-   self._m2.number_guard_zones0 = Ng0
-   self._m2.number_guard_zones1 = Ng1
    self._m2.geometry = geometry
    self._m2.relativistic = args.relativistic and 1 or 0
    self._m2.magnetized = args.magnetized and 1 or 0
@@ -143,48 +155,29 @@ function m2Application:memory_selections()
    local Ng0 = self._m2.number_guard_zones0
    local Ng1 = self._m2.number_guard_zones1
    local file_prim = { exten={}, start={}, strid={}, count={}, block={} }
-   local file_face = { exten={}, start={}, strid={}, count={}, block={} }
    local mems_prim = { exten={}, start={}, strid={}, count={}, block={} }
-   local mems_face = { exten={}, start={}, strid={}, count={}, block={} }
 
    for n=1,#global_shape do
       file_prim.exten[n] = self._m2.domain_resolution[n]
-      file_face.exten[n] = self._m2.domain_resolution[n] + 1
       file_prim.start[n] = self._m2.local_grid_start[n] + Ng0[n]
-      file_face.start[n] = self._m2.local_grid_start[n] + Ng0[n] + 1
       file_prim.strid[n] = 1
-      file_face.strid[n] = 1
       file_prim.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
-      file_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
       file_prim.block[n] = 1
-      file_face.block[n] = 1
 
       mems_prim.exten[n] = self._m2.local_grid_size[n]
-      mems_face.exten[n] = self._m2.local_grid_size[n]
       mems_prim.start[n] = Ng0[n]
-      mems_face.start[n] = Ng0[n]
       mems_prim.strid[n] = 1
-      mems_face.strid[n] = 1
       mems_prim.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
-      mems_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
       mems_prim.block[n] = 1
-      mems_face.block[n] = 1
-
-      if coords[n] == 0 and period[n] == 0 then
-	 file_face.start[n] = 0
-	 mems_face.start[n] = Ng0[n] - 1
-	 file_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n] + 1
-	 mems_face.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n] + 1
-      end
    end
 
-   for _,s in pairs {file_prim, file_face, mems_prim, mems_face} do
+   for _,s in pairs {file_prim, mems_prim} do
       s.space = hdf5.DataSpace()
       s.space:set_extent(s.exten)
       s.space:select_hyperslab(s.start, s.strid, s.count, s.block)
    end
 
-   return file_prim, file_face, mems_prim, mems_face
+   return file_prim, file_prim, mems_prim, mems_prim
 end
 
 function m2Application:write_checkpoint_hdf5(fname, extras)

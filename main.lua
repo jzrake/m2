@@ -99,4 +99,5 @@ end
 main()
 
 collectgarbage()
+collectgarbage()
 MPI.Finalize()

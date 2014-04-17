@@ -91,6 +91,11 @@ void m2sim_del(m2sim *m2)
   m2->volumes = NULL;
 }
 void m2sim_initialize(m2sim *m2)
+/*
+ * Each axes is either periodic or is bounded by hard walls at both sides. If it
+ * is periodic, then the number of guard zones in both directions
+ *
+ */
 {
   int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
@@ -124,13 +129,12 @@ void m2sim_initialize(m2sim *m2)
 	  V->global_index[2] = j + S[2];
 	  V->global_index[3] = k + S[3];
 	}
-	/* the left-most cell along each fleshed out axis is a shell (it has no
-	   volume data, only +1/2 face data) */
-	if ((G[1] > 1 && i == 0) ||
-	    (G[2] > 1 && j == 0) ||
-	    (G[3] > 1 && k == 0)) {
-	  V->zone_type = M2_ZONE_TYPE_GUARD;
-	  //V->zone_type = M2_ZONE_TYPE_SHELL;
+	/* the left-most cell along each fleshed out, non-periodic axis is a
+	   shell (it has no volume data, only +1/2 face data) */
+	if ((ng0[1] == 1 && V->global_index[1] == -1) ||
+	    (ng0[2] == 1 && V->global_index[2] == -1) ||
+	    (ng0[3] == 1 && V->global_index[3] == -1)) {
+	  V->zone_type = M2_ZONE_TYPE_SHELL;
 	}
 	else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) || 
 		 (G[2] > 1 && (j < ng0[2] || j >= L[2] - ng1[2])) || 
