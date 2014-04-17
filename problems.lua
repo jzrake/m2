@@ -139,11 +139,9 @@ local function outflow_bc_flux(axis)
    nhat[axis] = 1.0
    local function bc(V0)
       if V0.global_index[axis] == -1 then
-	 print '-1'
 	 local V1 = V0:neighbor(axis, 1)
 	 V0[flux] = V1.aux:fluxes(nhat)
       else
-	 print 'end'
 	 V0[flux] = V0.aux:fluxes(nhat)
       end
    end
