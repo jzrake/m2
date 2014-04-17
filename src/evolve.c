@@ -166,20 +166,26 @@ void m2sim_calculate_flux(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 	V0 = M2_VOL(i, j, k);
-	if ((V0->global_index[1] == -1 ||
-	     V0->global_index[1] == G[1] - 1) &&
-	    (m2->boundary_conditions_flux1)) {
-	  m2->boundary_conditions_flux1(V0);
+	if (m2->periodic_dimension[1] == 0 &&
+	    (V0->global_index[1] == -1 ||
+	     V0->global_index[1] == G[1] - 1)) {
+	  if (m2->boundary_conditions_flux1) {
+	    m2->boundary_conditions_flux1(V0);
+	  }
 	}
-	if ((V0->global_index[2] == -1 ||
-	     V0->global_index[2] == G[2] - 1) &&
-	    (m2->boundary_conditions_flux2)) {
-	  m2->boundary_conditions_flux2(V0);
+	if (m2->periodic_dimension[2] == 0 &&
+	    (V0->global_index[2] == -1 ||
+	     V0->global_index[2] == G[2] - 1)) {
+	  if (m2->boundary_conditions_flux2) {
+	    m2->boundary_conditions_flux2(V0);
+	  }
 	}
-	if ((V0->global_index[3] == -1 ||
-	     V0->global_index[3] == G[3] - 1) &&
-	    (m2->boundary_conditions_flux3)) {
-	  m2->boundary_conditions_flux3(V0);
+	if (m2->periodic_dimension[3] == 0 &&
+	    (V0->global_index[3] == -1 ||
+	     V0->global_index[3] == G[3] - 1)) {
+	  if (m2->boundary_conditions_flux3) {
+	    m2->boundary_conditions_flux3(V0);
+	  }
 	}
       }
     }

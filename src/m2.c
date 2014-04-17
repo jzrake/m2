@@ -34,6 +34,11 @@ void m2sim_new(m2sim *m2)
   m2->number_guard_zones1[1] = 0;
   m2->number_guard_zones1[2] = 0;
   m2->number_guard_zones1[3] = 0;
+  m2->periodic_dimension[0] = 0;
+  m2->periodic_dimension[1] = 0;
+  m2->periodic_dimension[2] = 0;
+  m2->periodic_dimension[3] = 0;
+
   m2->volumes = NULL;
   m2->user_struct = NULL;
   m2->cart_comm = NULL;
@@ -131,9 +136,9 @@ void m2sim_initialize(m2sim *m2)
 	}
 	/* the left-most cell along each fleshed out, non-periodic axis is a
 	   shell (it has no volume data, only +1/2 face data) */
-	if ((ng0[1] == 1 && V->global_index[1] == -1) ||
-	    (ng0[2] == 1 && V->global_index[2] == -1) ||
-	    (ng0[3] == 1 && V->global_index[3] == -1)) {
+	if ((m2->periodic_dimension[1] == 0 && V->global_index[1] == -1) ||
+	    (m2->periodic_dimension[2] == 0 && V->global_index[2] == -1) ||
+	    (m2->periodic_dimension[3] == 0 && V->global_index[3] == -1)) {
 	  V->zone_type = M2_ZONE_TYPE_SHELL;
 	}
 	else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) || 

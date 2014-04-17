@@ -276,7 +276,7 @@ end
 local RyuJones = class.class('RyuJones', Shocktube)
 RyuJones.explanation = [[
 --------------------------------------------------------------------------------
--- Ryu and Jones Test 2A
+-- Ryu and Jones Test 2A (Newtonian only)
 --
 -- http://www.astro.princeton.edu/~jstone/Athena/tests/rj2a/RJ2a.html
 --

@@ -161,6 +161,7 @@ struct m2sim
   int local_grid_start[4];
   int number_guard_zones0[4];
   int number_guard_zones1[4];
+  int periodic_dimension[4];
   int coordinate_scaling1; /* logarithmic, linear, etc */
   int coordinate_scaling2;
   int coordinate_scaling3;
@@ -197,8 +198,8 @@ struct m2sim
   void *cart_comm;
   void *mpi_types;
 } ;
-#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
-			      m2,4,4,4,4,4,4)
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
+			      m2,4,4,4,4,4,4,4)
 
 
 void m2_self_test();

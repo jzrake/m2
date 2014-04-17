@@ -781,6 +781,7 @@ int register_m2sim(lua_State *L)
     MS(local_grid_start, "ivec4"),
     MS(number_guard_zones0, "ivec4"),
     MS(number_guard_zones1, "ivec4"),
+    MS(periodic_dimension, "ivec4"),
     MS(status, "m2sim_status"),
     MI(coordinate_scaling1),
     MI(coordinate_scaling2),

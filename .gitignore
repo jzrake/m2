@@ -13,3 +13,5 @@
 *.h5
 /src/lua/lua
 /src/lua/luac
+
+/m2tools/*.pyc

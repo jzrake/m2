@@ -108,6 +108,7 @@ function m2Application:__init__(args)
       end
       self._m2.local_grid_size [n] = size [n] + Ng0[n] + Ng1[n]
       self._m2.local_grid_start[n] = start[n] - Ng0[n]
+      self._m2.periodic_dimension[n] = periods[n]
    end
    self._m2.cart_comm = self._cart_comm._comm
    self._m2.domain_resolution = m2lib.ivec4(0, unpack(resolution))
