@@ -944,11 +944,34 @@ int luaopen_m2lib(lua_State *L)
 }
 
 
+#if M2_HAVE_MPI
+#include <mpi.h>
+#endif
 
 int main(int argc, char **argv)
 {
+#if M2_HAVE_MPI
+  char *DISABLE_MPI = getenv("M2_DISABLE_MPI");
+  if (DISABLE_MPI == NULL) {
+    MPI_Init(&argc, &argv);
+  }
+  else if (strcmp(DISABLE_MPI, "1") != 0) {
+    MPI_Init(&argc, &argv);
+  }
+#endif
+
   lua_State *L = luaL_newstate();
-  zulu_create_argtable(L, argc, argv);
+  char *script;
+
+  if (argc > 1 &&
+      strcmp(argv[1] + strlen(argv[1]) - 4, ".lua") == 0) {
+    zulu_create_argtable(L, argc-1, argv+1);
+    script = argv[1];
+  }
+  else {
+    zulu_create_argtable(L, argc, argv);
+    script = M2_INSTALL_PATH"/lib/main.lua";
+  }
 
   luaL_openlibs(L);
   luaL_requiref(L, "buffer", luaopen_buffer, 0); lua_pop(L, 1);
@@ -967,14 +990,23 @@ int main(int argc, char **argv)
   luaL_requiref(L, "struct", luaopen_struct, 0); lua_pop(L, 1);
   luaL_requiref(L, "m2lib", luaopen_m2lib, 0); lua_pop(L, 1);
 
-  if (argc == 1) {
-    printf("usage: main script.lua [arg1=val1 arg2=val2]\n");
-  }
-  else {
-    zulu_runscript(L, argv[1]);
-  }
+  // Set the Lua path
+  // ---------------------------------------------------------------------------
+  lua_getglobal(L, "package");
+  lua_pushstring(L, M2_INSTALL_PATH"/lib/?.lua;");
+  lua_setfield(L, -2, "path");
+  lua_pop(L, 1);
 
+  zulu_runscript(L, script);
   lua_close(L);
+
+#if M2_HAVE_MPI
+  int mpi_started;
+  MPI_Initialized(&mpi_started);
+  if (mpi_started) {
+    MPI_Finalize();
+  }
+#endif
 
   return 0;
 }

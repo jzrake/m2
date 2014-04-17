@@ -91,7 +91,9 @@ void m2sim_new(m2sim *m2)
 }
 void m2sim_del(m2sim *m2)
 {
-  m2sim_delete_mpi_types(m2);
+  if (m2->cart_comm) {
+    m2sim_delete_mpi_types(m2);
+  }
   free(m2->volumes);
   m2->volumes = NULL;
 }
@@ -113,7 +115,9 @@ void m2sim_initialize(m2sim *m2)
 
   L[0] = L[1] * L[2] * L[3];
 
-  m2sim_create_mpi_types(m2);
+  if (m2->cart_comm) {
+    m2sim_create_mpi_types(m2);
+  }
 
   m2->volumes = (m2vol*) realloc(m2->volumes, L[0] * sizeof(m2vol));
   for (i=0; i<L[1]; ++i) {

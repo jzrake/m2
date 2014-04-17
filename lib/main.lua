@@ -87,8 +87,6 @@ local function main()
 end
 
 
-MPI.Init()
-
 local comm_world = parallel.MPI_Communicator()
 local old_print = print
 print = function(...)
@@ -97,7 +95,3 @@ print = function(...)
    end
 end
 main()
-
-collectgarbage()
-collectgarbage()
-MPI.Finalize()

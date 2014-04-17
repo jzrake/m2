@@ -69,6 +69,7 @@ m2-cfg.h : .FORCE
 	@echo "#define M2_HAVE_GLUT $(HAVE_GLUT)" >> $(TMP_H)
 	@echo "#define M2_GIT_SHA \"$(GIT_SHA)\"" >> $(TMP_H)
 	@echo "#define M2_DEBUG_FILE $(DEBUG_FILE)" >> $(TMP_H)
+	@echo "#define M2_INSTALL_PATH \"$(PWD)\"" >> $(TMP_H)
 	@cmp -s $(TMP_H) $@ || (echo "[m2-cfg.h updated]"; cat $(TMP_H)>$@)
 	@$(RM) $(TMP_H)
 
@@ -84,6 +85,7 @@ show :
 	@echo "#define M2_HAVE_GLUT $(HAVE_GLUT)"
 	@echo "#define M2_GIT_SHA \"$(GIT_SHA)\""
 	@echo "#define M2_DEBUG_FILE $(DEBUG_FILE)"
+	@echo "#define M2_INSTALL_PATH \"$(PWD)\""
 
 clean :
 	$(MAKE) -C lua clean

@@ -28,7 +28,7 @@ class SimulationRunner(object):
             mpi_cmd = "mpiexec -np {0} ".format(self._np)
         else:
             mpi_cmd = ""
-        argstr = "{0}{1} main.lua {2}".format(mpi_cmd, self._m2exe, self._problem)
+        argstr = "{0}{1} {2}".format(mpi_cmd, self._m2exe, self._problem)
         for k,v in self._m2args.iteritems():
             if k == 'magnetized':
                 argstr += ' --magnetized' if v else ' --unmagnetized'

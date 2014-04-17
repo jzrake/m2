@@ -10,9 +10,9 @@ int zulu_create_argtable(lua_State *L, int argc, char **argv)
 {
   int n;
   lua_newtable(L);
-  for (n=1; n<argc; ++n) {
+  for (n=0; n<argc; ++n) {
     lua_pushstring(L, argv[n]);
-    lua_rawseti(L, -2, n-1);
+    lua_rawseti(L, -2, n);
   }
   lua_setglobal(L, "arg");
   return 0;
