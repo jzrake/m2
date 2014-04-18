@@ -531,7 +531,7 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   m2:set_simple_eigenvalues(1)
+   m2:set_simple_eigenvalues(0) -- set to 1 to pass top-down test (quartic bug)
    m2:set_problem(self)
    return m2
 end

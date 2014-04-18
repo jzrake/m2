@@ -300,7 +300,7 @@ function m2Application:read_checkpoint_hdf5(fname)
    end
    for field=1,3 do
       self:_log('reading '..h5face:path()..'/'..field, 1)
-      local N = prod(mems_face.space:get_extent())
+      local N = prod(mems.space:get_extent())
       local buf = buffer.new_buffer(N * buffer.sizeof(buffer.double))
       h5face[field]:read(buf, mems.space, file.space)
       self:set_face_data(field, buf)
