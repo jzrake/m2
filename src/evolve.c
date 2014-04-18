@@ -12,6 +12,12 @@
 #define ENABLE_PLM 1
 
 
+/* ===================================================== */
+#define DEBUG_SYMMETRY 0
+static void check_symmetry(m2sim *m2, char *msg);
+/* ===================================================== */
+
+
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
 {
   int q;
@@ -401,7 +407,6 @@ static void _calculate_emf2(m2sim *m2)
 	}
 	bnd = 0;
       }
-
       vols[0]->emf1 = -vols[0]->flux2[B33] * vols[0]->line1;
       vols[0]->emf2 = +vols[0]->flux1[B33] * vols[0]->line2;
       vols[0]->emf3 = bnd?0.0:_calculate_emf_single(emfs, 3) * vols[0]->line3;
@@ -625,7 +630,7 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     V->x0[0] = 0.0;
@@ -777,7 +782,7 @@ int m2sim_from_primitive_all(m2sim *m2)
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
     if (V->zone_type == M2_ZONE_TYPE_SHELL) {
-      continue;
+      /* continue; */
     }
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
 			 V->consA, &V->aux);
@@ -854,15 +859,15 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
 void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   m2sim_calculate_gradient(m2);
-  m2sim_calculate_flux(m2);
-  m2sim_calculate_emf(m2);
-  m2sim_exchange_flux(m2, dt);
-  m2sim_add_source_terms(m2, dt);
-  m2sim_average_runge_kutta(m2, rkparam);
-  m2sim_enforce_boundary_condition(m2);
-  m2sim_magnetic_flux_to_cell_center(m2);
-  m2sim_from_conserved_all(m2);
-  m2sim_synchronize_guard(m2);
+  m2sim_calculate_flux(m2); check_symmetry(m2, "A");
+  m2sim_calculate_emf(m2); check_symmetry(m2, "B");
+  m2sim_exchange_flux(m2, dt); check_symmetry(m2, "C");
+  m2sim_add_source_terms(m2, dt); check_symmetry(m2, "D");
+  m2sim_average_runge_kutta(m2, rkparam); check_symmetry(m2, "E");
+  m2sim_enforce_boundary_condition(m2); check_symmetry(m2, "F");
+  m2sim_magnetic_flux_to_cell_center(m2); check_symmetry(m2, "G");
+  m2sim_from_conserved_all(m2); check_symmetry(m2, "H");
+  m2sim_synchronize_guard(m2); check_symmetry(m2, "I");
 }
 
 
@@ -936,4 +941,51 @@ void m2sim_drive(m2sim *m2)
 	   m2->status.time_simulation,
 	   dt,
 	   kzps);
+}
+
+
+
+
+void check_symmetry(m2sim *m2, char *msg)
+{
+#if DEBUG_SYMMETRY
+#define NOTZERO(a) (fabs(a)>1e-12)
+  int *L = m2->local_grid_size;
+  int i,j;
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=1; j<L[2]-1; ++j) {
+
+      m2vol *V0 = M2_VOL(i,        j, 0);
+      m2vol *V1 = M2_VOL(i, L[2] - j, 0);
+
+      if (NOTZERO(V0->emf2 - V1->emf2) ||
+	  NOTZERO(V0->prim.d - V1->prim.d) ||
+	  NOTZERO(V0->prim.p - V1->prim.p) ||
+	  NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
+	  NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
+	printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) flux1[B3] = (%+14.12e %+14.12e) "
+	       "B3 = (%+14.12e %+14.12e)\n",
+	       msg, V0->global_index[1], V0->global_index[2],
+	       V0->emf2, V1->emf2, V0->flux1[B33], V1->flux1[B33],
+	       V0->Bflux1A, V1->Bflux1A);
+      }
+    }
+  }
+
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+
+      m2vol *V0 = M2_VOL(i,        j  , 0);
+      m2vol *V1 = M2_VOL(i, L[2] - j-1, 0);
+
+      if (NOTZERO(V0->emf1 + V1->emf1)) {
+	printf("%s [%d %d]: emf1 = (%+14.12e %+14.12e)\n",
+	       msg, i, j, V0->emf1, V1->emf1);
+      }
+    }
+  }
+#undef NOTZERO
+#endif
 }

@@ -173,18 +173,18 @@ function m2Application:memory_selections()
 
       -- If there is no periodicity along this axis then add another layer of
       -- data at the left boundary for face-centered data
-      if period[n] == 0 then
-	 if coords[n] == 0 then
-	    file.exten[n] = file.exten[n] + 1
-	    file.count[n] = file.count[n] + 1
-	    mems.exten[n] = mems.exten[n] + 1
-	    mems.start[n] = mems.start[n] - 1
-	    mems.count[n] = mems.count[n] + 1
-	 else
-	    file.exten[n] = file.exten[n] + 1
-	    file.start[n] = file.start[n] + 1
-	 end
-      end
+      -- if period[n] == 0 then
+      -- 	 if coords[n] == 0 then
+      -- 	    file.exten[n] = file.exten[n] + 1
+      -- 	    file.count[n] = file.count[n] + 1
+      -- 	    mems.exten[n] = mems.exten[n] + 1
+      -- 	    mems.start[n] = mems.start[n] - 1
+      -- 	    mems.count[n] = mems.count[n] + 1
+      -- 	 else
+      -- 	    file.exten[n] = file.exten[n] + 1
+      -- 	    file.start[n] = file.start[n] + 1
+      -- 	 end
+      -- end
    end
 
    for _,s in pairs {file, mems} do

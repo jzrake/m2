@@ -140,7 +140,11 @@ local function outflow_bc_flux(axis)
    local function bc(V0)
       if V0.global_index[axis] == -1 then
 	 local V1 = V0:neighbor(axis, 1)
-	 V0[flux] = V1.aux:fluxes(nhat)
+	 if V1.zone_type == m2lib.M2_ZONE_TYPE_SHELL then
+	    V0[flux] = m2lib.dvec8()
+	 else
+	    V0[flux] = V1.aux:fluxes(nhat)
+	 end
       else
 	 V0[flux] = V0.aux:fluxes(nhat)
       end
@@ -527,6 +531,7 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
+   m2:set_simple_eigenvalues(1)
    m2:set_problem(self)
    return m2
 end
