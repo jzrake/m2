@@ -167,7 +167,7 @@ void m2sim_initialize(m2sim *m2)
 	I1[3] = V->global_index[3] + 0.5;
 	m2sim_index_to_position(m2, I0, x0);
 	m2sim_index_to_position(m2, I1, x1);
-	if (V->zone_type == M2_ZONE_TYPE_FULL) {
+	if (V->zone_type != M2_ZONE_TYPE_SHELL) {
 	  V->volume = m2_volume_measure(x0, x1, m2->geometry);
 	}
 	else {

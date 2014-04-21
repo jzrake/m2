@@ -66,7 +66,9 @@ function MPI_Communicator:print(rank, ...)
       for n=0, self:size()-1 do
 	 if n == self:rank() then
 	    io.write(('[rank %d] '):format(n))
-	    io.write(...)
+	    for _,s in ipairs {...} do
+	       io.write(tostring(s)..'  ')
+	    end
 	    io.write('\n')
 	 end
 	 self:barrier()
