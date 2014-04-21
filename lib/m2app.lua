@@ -173,18 +173,17 @@ function m2Application:memory_selections()
 
       -- If there is no periodicity along this axis then add another layer of
       -- data at the left boundary for face-centered data
-      -- if period[n] == 0 then
-      -- 	 if coords[n] == 0 then
-      -- 	    file.exten[n] = file.exten[n] + 1
-      -- 	    file.count[n] = file.count[n] + 1
-      -- 	    mems.exten[n] = mems.exten[n] + 1
-      -- 	    mems.start[n] = mems.start[n] - 1
-      -- 	    mems.count[n] = mems.count[n] + 1
-      -- 	 else
-      -- 	    file.exten[n] = file.exten[n] + 1
-      -- 	    file.start[n] = file.start[n] + 1
-      -- 	 end
-      -- end
+      if period[n] == 0 then
+      	 if coords[n] == 0 then
+      	    file.exten[n] = file.exten[n] + 1
+      	    file.count[n] = file.count[n] + 1
+      	    mems.start[n] = mems.start[n] - 1
+      	    mems.count[n] = mems.count[n] + 1
+      	 else
+      	    file.exten[n] = file.exten[n] + 1
+      	    file.start[n] = file.start[n] + 1
+      	 end
+      end
    end
 
    for _,s in pairs {file, mems} do
@@ -202,7 +201,7 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
 
    if self._cart_comm:rank() == 0 then
       local h5file = hdf5.File(fname, 'w')
-      local h5prim = hdf5.Group(h5file, 'prim')
+      local h5prim = hdf5.Group(h5file, 'cell_primitive')
       local h5face = hdf5.Group(h5file, 'face_magnetic_flux')
       for _,field in ipairs(struct.members('m2prim')) do
 	 local h5d = hdf5.DataSet(h5prim, field, 'w', {shape=file.exten})
@@ -221,7 +220,7 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
    -----------------------------------------------------------------------------
    local function write()
       local h5file = hdf5.File(fname, 'r+')
-      local h5prim = hdf5.Group(h5file, 'prim')
+      local h5prim = hdf5.Group(h5file, 'cell_primitive')
       local h5face = hdf5.Group(h5file, 'face_magnetic_flux')
 
       for _,field in ipairs(struct.members('m2prim')) do
@@ -277,7 +276,7 @@ function m2Application:read_checkpoint_hdf5(fname)
    local file, mems = self:memory_selections()
 
    local h5file   = hdf5.File(fname, 'r')
-   local h5prim   = hdf5.Group(h5file, 'prim')
+   local h5prim   = hdf5.Group(h5file, 'cell_primitive')
    local h5face   = hdf5.Group(h5file, 'face_magnetic_flux')
    local h5status = hdf5.Group(h5file, 'status')
 

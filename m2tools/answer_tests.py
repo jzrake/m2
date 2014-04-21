@@ -108,5 +108,9 @@ class MagnetarWindTopDownSymmetry(unittest.TestCase, TestTopDownSymmetry2D):
         self.set_up('MagnetarWind', usempi=False,
                     np=1, resolution=32, rkorder=1, tmax=0.5)
 
+class MagnetarWindSerialToParallel(unittest.TestCase, SerialToParallel):
+    def setUp(self):
+        self.set_up('MagnetarWind', resolution=32, tmax=0.5)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
