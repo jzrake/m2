@@ -1,7 +1,6 @@
 import subprocess
 import shlex
 import os
-import h5py
 
 
 class SimulationRunner(object):
@@ -45,13 +44,14 @@ class SimulationRunner(object):
         p.communicate()
 
         try:
+            import h5py
             h5f = h5py.File('chkpt.final.h5', 'r')
         except IOError:
             return None
 
         fields = { }
-        for f in h5f['prim']:
-            fields[f] = h5f['prim'][f][...]
+        for f in h5f['cell_primitive']:
+            fields[f] = h5f['cell_primitive'][f][...]
         h5f.close()
         os.remove('chkpt.final.h5')
 

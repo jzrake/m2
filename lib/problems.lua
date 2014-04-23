@@ -274,6 +274,9 @@ function BrioWu:__init__()
       end
    end
 end
+function BrioWu:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 0.15
+end
 
 
 

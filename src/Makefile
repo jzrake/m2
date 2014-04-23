@@ -32,13 +32,18 @@ DEP = $(SRC1:.c=.dep) $(SRC2:.cpp=.dep)
 LUA_L  = $(LUA_LIB)
 ZULU_L = zulu/libzulu.a
 GLUI_L = glui/libglui.a
-INC = -Izulu -Ilua -Iglui
+INC = -Izulu -Ilua
 
 LIB += $(LUA_L)
 LIB += $(ZULU_L)
 
+LIB_STATIC += $(LUA_L)
+LIB_STATIC += $(ZULU_L)
+
 ifeq ($(HAVE_GLUT), 1)
 LIB += $(GLUT_L) $(GLUI_L)
+INC += -Iglui
+LIB_STATIC += $(GLUI_L)
 endif
 
 ifeq ($(HAVE_HDF5), 1)
@@ -59,7 +64,7 @@ vis.o : vis.cpp m2-cfg.h $(MAKEFILE_IN)
 	@$(CC) -MM $< $(INC) > $(<:.c=.dep)
 	$(CC) $(CFLAGS) $(INC) $< -c
 
-$(EXE) : $(OBJ) $(GLUI_L) $(LUA_L) $(ZULU_L)
+$(EXE) : $(OBJ) $(LIB_STATIC)
 	$(CXX) $(CFLAGS) $(OBJ) $(LIB) -o $@
 
 m2-cfg.h : .FORCE

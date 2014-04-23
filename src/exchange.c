@@ -122,6 +122,9 @@ void m2sim_delete_mpi_types(m2sim *m2)
 
 void m2sim_synchronize_guard(m2sim *m2)
 {
+  if (m2->cart_comm == NULL) {
+    MSG(FATAL, "guard zone synch without MPI is not yet implemented [TODO]");
+  }
   struct mpi_types *MT = (struct mpi_types *) m2->mpi_types;
   MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
   MPI_Status status;
