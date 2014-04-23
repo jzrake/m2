@@ -64,6 +64,11 @@ enum m2flag {
   M2_RIEMANN_HLLE,
   M2_RIEMANN_HLLC,
 
+  /* Quartic polynomial solvers */
+  M2_QUARTIC_NONE,
+  M2_QUARTIC_FULL_COMPLEX,
+  M2_QUARTIC_ALGORITHMIC,
+
   /* Zone types */
   M2_ZONE_TYPE_FULL,
   M2_ZONE_TYPE_GUARD,
@@ -169,9 +174,9 @@ struct m2sim
   int relativistic;
   int magnetized;
   int rk_order;
-  int simple_eigenvalues; /* fix outer characteristics to plus/minus c */
   int interpolation_fields;
   int riemann_solver;
+  int quartic_solver;
   double plm_parameter;
   double cfl_parameter;
   double gamma_law_index;
@@ -208,9 +213,12 @@ double m2_volume_measure(double x0[4], double x1[4], int geometry);
 double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
 void m2_to_cartesian(double x[4], double xcart[4], int geometry);
-int m2_solve_quartic_equation(double d4, double d3,
-			      double d2, double d1, double d0,
-			      double roots[4]);
+int m2_solve_quartic_equation1(double d4, double d3,
+			       double d2, double d1, double d0,
+			       double roots[4]);
+int m2_solve_quartic_equation2(double d4, double d3,
+			       double d2, double d1, double d0,
+			       double roots[4]);
 
 
 /* vol */

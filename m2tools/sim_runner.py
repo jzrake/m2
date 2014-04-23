@@ -1,11 +1,14 @@
 import subprocess
 import shlex
 import os
+import command
+import checkpoint
+
 
 
 class SimulationRunner(object):
 
-    def __init__(self, problem, usempi=False, np=1):
+    def __init__(self, problem, usempi=False, np=1, suppress_output=True):
         self._m2exe = 'src/m2'
         self._np = np
         self._usempi = usempi
@@ -18,6 +21,7 @@ class SimulationRunner(object):
                             hdf5_cadence=0.0,
                             tpl_cadence=0.0,
                             model_parameters="")
+        self._suppress_output = suppress_output
 
     def update_args(self, **kwargs):
         self._m2args.update(kwargs)
@@ -40,19 +44,19 @@ class SimulationRunner(object):
     def run(self):
         cmd = self.get_command()        
         arg = shlex.split(cmd)
-        p = subprocess.Popen(arg, stdout=subprocess.PIPE)
+        stdout = subprocess.PIPE if self._suppress_output else None
+        p = subprocess.Popen(arg, stdout=stdout)
         p.communicate()
 
         try:
-            import h5py
-            h5f = h5py.File('chkpt.final.h5', 'r')
+            chkpt = checkpoint.Checkpoint('chkpt.final.h5')
         except IOError:
             return None
 
         fields = { }
-        for f in h5f['cell_primitive']:
-            fields[f] = h5f['cell_primitive'][f][...]
-        h5f.close()
+        for f in chkpt.cell_primitive:
+            fields[f] = chkpt.cell_primitive[f][...]
+        chkpt.close()
         os.remove('chkpt.final.h5')
 
         return fields

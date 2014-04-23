@@ -3,7 +3,33 @@ import checkpoint
 
 
 
-class ShocktubePlot1d(object):
+class PlotDriver(object):
+
+    _hardcopy = None
+    _plot_axes = None
+
+    def show(self):
+        import matplotlib.pyplot as plt
+        if self._hardcopy:
+            plt.savefig(self._hardcopy)
+            plt.clf()
+        else:
+            plt.show()
+
+    def set_hardcopy(self, hardcopy):
+        self._hardcopy = hardcopy
+
+    def get_plot_axes(self, **fig_kwds):
+        import matplotlib.pyplot as plt
+        ax0 = self._plot_axes
+        if ax0 is None:
+            fig = plt.figure(**fig_kwds)
+            ax0 = fig.add_subplot(111)
+        return ax0
+
+
+
+class ShocktubePlot1d(PlotDriver):
 
     def __init__(self, chkpt, args):
         self._chkpt = chkpt
@@ -47,11 +73,11 @@ class ShocktubePlot1d(object):
             grid[i].set_xlim(0.0, spread)
 
         trim_axis(grid[0])
-        plt.show()
+        self.show()
 
 
 
-class RectangularPlot2d(object):
+class RectangularPlot2d(PlotDriver):
     
     def __init__(self, chkpt, args):
         self._chkpt = chkpt
@@ -64,11 +90,11 @@ class RectangularPlot2d(object):
         plt.imshow(data)
         plt.colorbar()
         plt.axis('equal')
-        plt.show()
+        self.show()
 
 
 
-class PolarPlot2d(object):
+class PolarPlot2d(PlotDriver):
 
     def __init__(self, chkpt, args):
         self._chkpt = chkpt
@@ -77,14 +103,18 @@ class PolarPlot2d(object):
     def plot(self):
         import matplotlib.pyplot as plt
         import numpy as np
-        R, T = self._chkpt.cell_edge_meshgrid
-        X = R * np.sin(T)
-        Z = R * np.cos(T)
+        args = self._args
         data = self._chkpt.cell_primitive[self._args.field][1:,1:].T
-        plt.pcolormesh(X, Z, data)
+        R, T = self._chkpt.cell_edge_meshgrid
+        X = +R * np.sin(T)
+        Z = +R * np.cos(T)
+        plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+        X = -R * np.sin(T)
+        Z = +R * np.cos(T)
+        plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
         plt.colorbar()
         plt.axis('equal')
-        plt.show()
+        self.show()
 
 
 
@@ -94,10 +124,12 @@ class PlotCommand(command.Command):
     def configure_parser(self, parser):
         parser.add_argument('filename')
         parser.add_argument('--field', default='d')
+        parser.add_argument('--vmin', type=float, default=None)
+        parser.add_argument('--vmax', type=float, default=None)
+        parser.add_argument('-o', '--output')
 
     def run(self, args):
         chkpt = checkpoint.Checkpoint(args.filename)
-
         if chkpt.geometry == 'cartesian':
             if (chkpt.domain_resolution == 1).sum() == 2:
                 plotter = ShocktubePlot1d(chkpt, args)
@@ -108,4 +140,5 @@ class PlotCommand(command.Command):
             if (chkpt.domain_resolution == 1).sum() == 1:
                 plotter = PolarPlot2d(chkpt, args)
 
+        plotter.set_hardcopy(args.output)
         plotter.plot()

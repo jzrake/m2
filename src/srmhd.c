@@ -163,7 +163,8 @@ int srmhd_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
 {
   m2sim *m2 = aux->m2;
-  if (m2 && m2->simple_eigenvalues) {
+  int quartic_solver = m2 ? m2->quartic_solver : M2_QUARTIC_FULL_COMPLEX;
+  if (quartic_solver == M2_QUARTIC_NONE) {
     evals[0] = -1.0;
     evals[1] =  0.0;
     evals[2] =  0.0;
@@ -211,7 +212,14 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   double roots[4];
   int nr;
 
-  nr = m2_solve_quartic_equation(A4, A3, A2, A1, A0, roots);
+  switch (quartic_solver) {
+  case M2_QUARTIC_ALGORITHMIC:
+    nr = m2_solve_quartic_equation1(A4, A3, A2, A1, A0, roots);
+    break;
+  case M2_QUARTIC_FULL_COMPLEX:
+    nr = m2_solve_quartic_equation2(A4, A3, A2, A1, A0, roots);
+    break;
+  }
 
   if (nr == 2 || nr == 4) {
     /* if nr=2, the slow wave has same speed as the entropy wave */

@@ -790,9 +790,9 @@ int register_m2sim(lua_State *L)
     MI(relativistic),
     MI(magnetized),
     MI(rk_order),
-    MI(simple_eigenvalues),
     MI(interpolation_fields),
     MI(riemann_solver),
+    MI(quartic_solver),
     MD(plm_parameter),
     MD(cfl_parameter),
     MD(gamma_law_index),
@@ -935,6 +935,9 @@ int luaopen_m2lib(lua_State *L)
   CONSTANT(M2_CT_FULL3D);
   CONSTANT(M2_RIEMANN_HLLE);
   CONSTANT(M2_RIEMANN_HLLC);
+  CONSTANT(M2_QUARTIC_NONE);
+  CONSTANT(M2_QUARTIC_FULL_COMPLEX);
+  CONSTANT(M2_QUARTIC_ALGORITHMIC);
   CONSTANT(M2_ZONE_TYPE_FULL);
   CONSTANT(M2_ZONE_TYPE_GUARD);
   CONSTANT(M2_ZONE_TYPE_SHELL);

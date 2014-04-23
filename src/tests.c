@@ -199,7 +199,7 @@ void test_srmhd_waves()
 void test_quartic()
 {
   printf("\n\n********* %s *********\n", __FUNCTION__);
-  double roots[4];
+  double roots1[4], roots2[4];
   double A1[5] = {+1, -1, +1, -2, +1};
   double A2[5] = {+11166.1589491647,
 		  -49480.3771267108,
@@ -221,20 +221,31 @@ void test_quartic()
 		  +5989.3459074759,
 		  -4599.4258609677,
 		  +1324.2662465491};
-  int i, n, nr;
-  double y, *A, *As[5] = {A1, A2, A3, A4, A5};
+  int i, n, nr1, nr2;
+  double y1, y2, *A, *As[5] = {A1, A2, A3, A4, A5};
 
   for (i=0; i<5; ++i) {
     A = As[i];
-    nr = m2_solve_quartic_equation(A[4], A[3], A[2], A[1], A[0], roots);
-    printf("\nthere are %d roots:\n", nr);
+    nr1 = m2_solve_quartic_equation1(A[4], A[3], A[2], A[1], A[0], roots1);
+    nr2 = m2_solve_quartic_equation2(A[4], A[3], A[2], A[1], A[0], roots2);
+
+    printf("\n\n***** quartic solve number %d ****\n\n", i);
+    printf("\nthere are %d(%d) roots:\n", nr1, nr2);
+
     for (n=0; n<4; ++n) {
-      y = (A[4]*pow(roots[n], 4) +
-	   A[3]*pow(roots[n], 3) +
-	   A[2]*pow(roots[n], 2) +
-	   A[1]*pow(roots[n], 1) +
-	   A[0]*pow(roots[n], 0));
-      printf("r%d = %f, y(r%d) = %8.6e\n", n, roots[n], n, y);
+      y1 = (A[4]*pow(roots1[n], 4) +
+	    A[3]*pow(roots1[n], 3) +
+	    A[2]*pow(roots1[n], 2) +
+	    A[1]*pow(roots1[n], 1) +
+	    A[0]*pow(roots1[n], 0));
+      y2 = (A[4]*pow(roots2[n], 4) +
+	    A[3]*pow(roots2[n], 3) +
+	    A[2]*pow(roots2[n], 2) +
+	    A[1]*pow(roots2[n], 1) +
+	    A[0]*pow(roots2[n], 0));
+      printf("1: r%d = %+12.10e, y(r%d) = %+12.10e\n", n, roots1[n], n, y1);
+      printf("2: r%d = %+12.10e, y(r%d) = %+12.10e\n", n, roots2[n], n, y2);
+      printf("\n");
     }
   }
 }

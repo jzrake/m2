@@ -1,13 +1,13 @@
 import unittest
-import simrunner
+import sim_runner
 
 TOL = 1e-13
 
 class SerialToParallel(object):
 
     def set_up(self, problem, **kwargs):
-        runner_s = simrunner.SimulationRunner(problem, usempi=True, np=1)
-        runner_p = simrunner.SimulationRunner(problem, usempi=True, np=4)
+        runner_s = sim_runner.SimulationRunner(problem, usempi=True, np=1)
+        runner_p = sim_runner.SimulationRunner(problem, usempi=True, np=4)
         runner_s.update_args(**kwargs)
         runner_p.update_args(**kwargs)
         self.answer_s = runner_s.run()
@@ -21,10 +21,11 @@ class SerialToParallel(object):
             self.assertAlmostEqual(abs(diff).max(), 0.0, delta=TOL)
 
 
+
 class TestSymmetry2D(object):
 
     def set_up(self, problem, usempi=True, np=1, **kwargs):
-        runner = simrunner.SimulationRunner(problem, usempi=True, np=np)
+        runner = sim_runner.SimulationRunner(problem, usempi=True, np=np)
         runner.update_args(**kwargs)
         self.answer = runner.run()
 
@@ -42,7 +43,7 @@ class TestSymmetry2D(object):
 class TestAntisymmetry2D(object):
 
     def set_up(self, problem, usempi=False, np=1, **kwargs):
-        runner = simrunner.SimulationRunner(problem, usempi=usempi, np=np)
+        runner = sim_runner.SimulationRunner(problem, usempi=usempi, np=np)
         runner.update_args(**kwargs)
         self.answer = runner.run()
 
@@ -58,14 +59,14 @@ class TestAntisymmetry2D(object):
 class TestTopDownSymmetry2D(object):
 
     def set_up(self, problem, usempi=True, np=1, **kwargs):
-        runner = simrunner.SimulationRunner(problem, usempi=True, np=np)
+        runner = sim_runner.SimulationRunner(problem, usempi=True, np=np)
         runner.update_args(**kwargs)
         self.answer = runner.run()
 
     def test_symmetry(self):
         self.assertIsNotNone(self.answer, 'm2 run did not complete')
         for f in 'dp':
-            sx = self.answer[f][...]
+            sx = self.answer[f][1:,1:] # assumes non-periodic domain
             diff = sx - sx[:,::-1]
             self.assertAlmostEqual(diff.max(), 0.0, delta=TOL)
 

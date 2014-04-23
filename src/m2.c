@@ -52,9 +52,9 @@ void m2sim_new(m2sim *m2)
   m2->relativistic = 0;
   m2->magnetized = 0;
   m2->rk_order = 2;
-  m2->simple_eigenvalues = 0;
   m2->interpolation_fields = M2_PRIMITIVE;
   m2->riemann_solver = M2_RIEMANN_HLLE;
+  m2->quartic_solver = M2_QUARTIC_FULL_COMPLEX;
   m2->plm_parameter = 1.5;
   m2->cfl_parameter = 0.4;
   m2->gamma_law_index = 4./3;
