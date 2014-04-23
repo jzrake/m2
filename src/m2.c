@@ -22,6 +22,10 @@ void m2sim_new(m2sim *m2)
   m2->local_grid_size[1] = 0;
   m2->local_grid_size[2] = 0;
   m2->local_grid_size[3] = 0;
+  m2->local_grid_start[0] = 0;
+  m2->local_grid_start[1] = 0;
+  m2->local_grid_start[2] = 0;
+  m2->local_grid_start[3] = 0;
   m2->number_guard_zones0[0] = 0;
   m2->number_guard_zones0[1] = 0;
   m2->number_guard_zones0[2] = 0;
@@ -30,7 +34,15 @@ void m2sim_new(m2sim *m2)
   m2->number_guard_zones1[1] = 0;
   m2->number_guard_zones1[2] = 0;
   m2->number_guard_zones1[3] = 0;
+  m2->periodic_dimension[0] = 0;
+  m2->periodic_dimension[1] = 0;
+  m2->periodic_dimension[2] = 0;
+  m2->periodic_dimension[3] = 0;
+
   m2->volumes = NULL;
+  m2->user_struct = NULL;
+  m2->cart_comm = NULL;
+  m2->mpi_types = NULL;
 
   /* solver and physics configuration */
   m2->coordinate_scaling1 = M2_LINEAR;
@@ -79,72 +91,42 @@ void m2sim_new(m2sim *m2)
 }
 void m2sim_del(m2sim *m2)
 {
+  if (m2->cart_comm) {
+    m2sim_delete_mpi_types(m2);
+  }
   free(m2->volumes);
   m2->volumes = NULL;
 }
-void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3)
-{
-  m2->domain_resolution[1] = n1;
-  m2->domain_resolution[2] = n2;
-  m2->domain_resolution[3] = n3;
-}
-void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3)
-{
-  m2->domain_extent_lower[1] = x1;
-  m2->domain_extent_lower[2] = x2;
-  m2->domain_extent_lower[3] = x3;
-}
-void m2sim_set_extent1(m2sim *m2, double x1, double x2, double x3)
-{
-  m2->domain_extent_upper[1] = x1;
-  m2->domain_extent_upper[2] = x2;
-  m2->domain_extent_upper[3] = x3;
-}
-void m2sim_set_geometry(m2sim *m2, int geometry)
-{
-  m2->geometry = geometry;
-}
-void m2sim_set_rk_order(m2sim *m2, int order)
-{
-  m2->rk_order = order;
-}
-void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis)
-{
-  m2->analysis = analysis;
-}
-void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc)
-{
-  m2->boundary_conditions_cell = bc;
-}
-void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg)
-{
-  m2->boundary_conditions_gradient = bcg;
-}
-void m2sim_set_initial_data(m2sim *m2, m2vol_operator id)
-{
-  m2->initial_data = id;
-}
 void m2sim_initialize(m2sim *m2)
+/*
+ * Each axes is either periodic or is bounded by hard walls at both sides. If it
+ * is periodic, then the number of guard zones in both directions
+ *
+ */
 {
-  int *N = m2->domain_resolution;
+  int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
+  int *S = m2->local_grid_start;
   int *ng0 = m2->number_guard_zones0;
   int *ng1 = m2->number_guard_zones1;
   int i, j, k, d;
   double I0[4], I1[4], x0[4], x1[4];
   m2vol *V;
-  if (N[1] == 1) ng0[1] = ng1[1] = 0; /* don't allow guard zones if symmetric */
-  if (N[2] == 1) ng0[2] = ng1[2] = 0;
-  if (N[3] == 1) ng0[3] = ng1[3] = 0;
-  L[1] = N[1] + ng0[1] + ng1[1];
-  L[2] = N[2] + ng0[2] + ng1[2];
-  L[3] = N[3] + ng0[3] + ng1[3];
+
   L[0] = L[1] * L[2] * L[3];
+
+  if (m2->cart_comm) {
+    m2sim_create_mpi_types(m2);
+  }
+
   m2->volumes = (m2vol*) realloc(m2->volumes, L[0] * sizeof(m2vol));
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
+
 	V = m2->volumes + M2_IND(i,j,k);
+	memset(V, 0, sizeof(m2vol));
+
 	V->m2 = m2;
 	V->aux.m2 = m2;
 	/* ----------------------- */
@@ -152,23 +134,26 @@ void m2sim_initialize(m2sim *m2)
 	/* ----------------------- */
 	for (d=1; d<=3; ++d) {
 	  V->global_index[0] = M2_IND(i,j,k);
-	  V->global_index[1] = i - ng0[1];
-	  V->global_index[2] = j - ng0[2];
-	  V->global_index[3] = k - ng0[3];
+	  V->global_index[1] = i + S[1];
+	  V->global_index[2] = j + S[2];
+	  V->global_index[3] = k + S[3];
 	}
-	if (V->global_index[1] == -1 ||
-	    V->global_index[2] == -1 ||
-	    V->global_index[3] == -1) {
+	/* the left-most cell along each fleshed out, non-periodic axis is a
+	   shell (it has no volume data, only +1/2 face data) */
+	if ((m2->periodic_dimension[1] == 0 && V->global_index[1] == -1) ||
+	    (m2->periodic_dimension[2] == 0 && V->global_index[2] == -1) ||
+	    (m2->periodic_dimension[3] == 0 && V->global_index[3] == -1)) {
 	  V->zone_type = M2_ZONE_TYPE_SHELL;
 	}
-	else if (V->global_index[1] >= 0 && V->global_index[1] < N[1] &&
-		 V->global_index[2] >= 0 && V->global_index[2] < N[2] &&
-		 V->global_index[3] >= 0 && V->global_index[3] < N[3]) {
-	  V->zone_type = M2_ZONE_TYPE_FULL;
-	}
-	else {
+	else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) || 
+		 (G[2] > 1 && (j < ng0[2] || j >= L[2] - ng1[2])) || 
+		 (G[3] > 1 && (k < ng0[3] || k >= L[3] - ng1[3]))) {
 	  V->zone_type = M2_ZONE_TYPE_GUARD;
 	}
+	else {
+	  V->zone_type = M2_ZONE_TYPE_FULL;
+	}
+
 	/* ----------------------- */
 	/* cache cell volumes      */
 	/* ----------------------- */
@@ -182,7 +167,7 @@ void m2sim_initialize(m2sim *m2)
 	I1[3] = V->global_index[3] + 0.5;
 	m2sim_index_to_position(m2, I0, x0);
 	m2sim_index_to_position(m2, I1, x1);
-	if (V->zone_type == M2_ZONE_TYPE_FULL) {
+	if (V->zone_type != M2_ZONE_TYPE_SHELL) {
 	  V->volume = m2_volume_measure(x0, x1, m2->geometry);
 	}
 	else {
@@ -447,14 +432,10 @@ double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
 }
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
 {
-  int i = global_index[1];
-  int j = global_index[2];
-  int k = global_index[3];
-  int *ng0 = m2->number_guard_zones0;
   I[0] = global_index[0];
-  I[1] = i + ng0[1];
-  I[2] = j + ng0[2];
-  I[3] = k + ng0[3];
+  I[1] = global_index[1] - m2->local_grid_start[1];
+  I[2] = global_index[2] - m2->local_grid_start[2];
+  I[3] = global_index[3] - m2->local_grid_start[3];
 }
 void m2sim_run_analysis(m2sim *m2)
 {
@@ -552,6 +533,7 @@ void m2sim_run_initial_data(m2sim *m2)
   m2sim_exchange_flux(m2, 1.0);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_primitive_all(m2);
+  m2sim_synchronize_guard(m2);
 }
 
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)

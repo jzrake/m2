@@ -134,8 +134,8 @@ struct m2vol
   double emf2;
   double emf3;
   char zone_type;
-  m2aux aux;
   m2sim *m2;
+  m2aux aux;
 } ;
 #define M2_VOL_SERIALIZE(b) ("A(S(i#$(ffffffff)fff))",b,4)
 
@@ -158,8 +158,10 @@ struct m2sim
   double domain_extent_upper[4];
   int domain_resolution[4];
   int local_grid_size[4];
+  int local_grid_start[4];
   int number_guard_zones0[4];
   int number_guard_zones1[4];
+  int periodic_dimension[4];
   int coordinate_scaling1; /* logarithmic, linear, etc */
   int coordinate_scaling2;
   int coordinate_scaling3;
@@ -193,9 +195,11 @@ struct m2sim
   m2vol_operator add_physical_source_terms;
   m2vol *volumes;
   void *user_struct;
+  void *cart_comm;
+  void *mpi_types;
 } ;
-#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
-			      m2,4,4,4,4,4,4)
+#define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
+			      m2,4,4,4,4,4,4,4)
 
 
 void m2_self_test();
@@ -221,16 +225,9 @@ int m2vol_from_primitive(m2vol *V);
 /* sim */
 void m2sim_new(m2sim *m2);
 void m2sim_del(m2sim *m2);
-void m2sim_set_resolution(m2sim *m2, int n1, int n2, int n3);
-void m2sim_set_extent0(m2sim *m2, double x1, double x2, double x3);
-void m2sim_set_extent1(m2sim *m2, double x1, double x2, double x3);
-void m2sim_set_geometry(m2sim *m2, int geometry);
-void m2sim_set_rk_order(m2sim *m2, int order);
-void m2sim_set_analysis(m2sim *m2, m2sim_operator analysis);
-void m2sim_set_boundary_conditions(m2sim *m2, m2sim_operator bc);
-void m2sim_set_boundary_conditions_gradient(m2sim *m2, m2sim_operator bcg);
-void m2sim_set_initial_data(m2sim *m2, m2vol_operator id);
 void m2sim_initialize(m2sim *m2);
+void m2sim_create_mpi_types(m2sim *m2);
+void m2sim_delete_mpi_types(m2sim *m2);
 void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
 void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4]);
 void m2sim_primitive_at_position(m2sim *m2, double x[4], m2prim *P);
@@ -244,6 +241,7 @@ void m2sim_cache_conserved(m2sim *m2);
 void m2sim_average_runge_kutta(m2sim *m2, double b);
 void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
 void m2sim_enforce_boundary_condition(m2sim *m2);
+void m2sim_synchronize_guard(m2sim *m2);
 void m2sim_print(m2sim *m2);
 int m2sim_save_checkpoint_tpl(m2sim *m2, const char *fname);
 int m2sim_load_checkpoint_tpl(m2sim *m2, const char *fname);

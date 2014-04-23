@@ -41,6 +41,7 @@ end
 local function test4()
    local m2sim = m2lib.m2sim()
    m2sim.domain_resolution = m2lib.ivec4(0, 16, 16, 16)
+   m2sim.local_grid_size = m2sim.domain_resolution
    m2sim:initialize()
    for i,v in m2sim:volumes() do
       assert(i == v.global_index[0])
@@ -67,5 +68,5 @@ test4()
 test5()
 test6()
 
---m2lib.self_test()
+m2lib.self_test()
 

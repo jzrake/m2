@@ -60,7 +60,7 @@ function TestProblem:run(user_config_callback, restart_file)
    local runtime_cfg = {
       tmax = 0.4,
       output_path = 'data',
-      message_cadence = 1
+      msg_cadence = 1
    }
    self:set_runtime_defaults(runtime_cfg)
    if restart_file then
@@ -119,10 +119,11 @@ function TestProblem:run(user_config_callback, restart_file)
       end
 
       if m2.status.iteration_number > 0 and
-	 m2.status.iteration_number % runtime_cfg.message_cadence == 0 then
+	 m2.status.iteration_number % runtime_cfg.msg_cadence == 0 then
 	 log:log_message('run', m2.status:get_message(), 0)
       end
       m2:drive()
+      collectgarbage()
    end
 
    m2:write_checkpoint_hdf5(
@@ -139,12 +140,74 @@ local function outflow_bc_flux(axis)
    local function bc(V0)
       if V0.global_index[axis] == -1 then
 	 local V1 = V0:neighbor(axis, 1)
-	 V0[flux] = V1.aux:fluxes(nhat)
+	 if V1.zone_type == m2lib.M2_ZONE_TYPE_SHELL then
+	    V0[flux] = m2lib.dvec8()
+	 else
+	    V0[flux] = V1.aux:fluxes(nhat)
+	 end
       else
 	 V0[flux] = V0.aux:fluxes(nhat)
       end
    end
    return bc
+end
+
+
+
+local DensityWave = class.class('DensityWave', TestProblem)
+DensityWave.explanation = [[
+--------------------------------------------------------------------------------
+-- Smooth sinusoidal density and/or pressure fluctuation
+--
+--------------------------------------------------------------------------------]]
+function DensityWave:__init__()
+   self.model_parameters = {
+      dims = {1, 'domain dimensionality'},
+      B0 = {0.0, 'magnetic field strength'},
+   }
+   local pi = math.pi
+   local L = 1
+   self.initial_data_cell = function(x)
+      local dims = self.model_parameters.dims[1]
+      local v1 = dims >= 1 and 1.0 or 0.0
+      local v2 = dims >= 2 and 1.0 or 0.0
+      local v3 = dims >= 3 and 1.0 or 0.0
+      local r1 = dims >= 1 and x[1] or 0.0
+      local r2 = dims >= 2 and x[2] or 0.0
+      local r3 = dims >= 3 and x[3] or 0.0
+      local r = r1 + r2 + r3
+      return { 1.0 + 0.5 * math.sin(4*pi*r/L), 1.0, v1, v2, v3}
+   end
+   self.initial_data_face = function(x, n)
+      return { self.model_parameters.B0[1] * (n[1] + n[2] + n[3]) }
+   end
+end
+function DensityWave:build_m2(runtime_cfg)
+   local dims = self.model_parameters.dims[1]
+   local N1 = dims >= 1 and (runtime_cfg.resolution or 64) or 1
+   local N2 = dims >= 2 and (runtime_cfg.resolution or 64) or 1
+   local N3 = dims >= 3 and (runtime_cfg.resolution or 64) or 1
+   local build_args = {lower={0.0, 0.0, 0.0},
+		       upper={1.0, 1.0, 1.0},
+		       resolution={N1,N2,N3},
+		       periods={true,true,true},
+		       scaling={'linear'},
+		       relativistic=false,
+		       magnetized=false,
+		       geometry='cartesian'}
+   if runtime_cfg.relativistic then build_args.relativistic = true end
+   if runtime_cfg.unmagnetized then build_args.magnetized = false end
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(0.3)
+   m2:set_plm_parameter(2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   return m2
 end
 
 
@@ -157,6 +220,7 @@ function Shocktube:build_m2(runtime_cfg)
    local build_args = {lower={0.0, 0.0, 0.0},
 		       upper={1.0, 1.0, 1.0},
 		       resolution={512,1,1},
+		       periods={false,false,false},
 		       scaling={'linear'},
 		       relativistic=false,
 		       magnetized=true,
@@ -210,13 +274,16 @@ function BrioWu:__init__()
       end
    end
 end
+function BrioWu:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 0.15
+end
 
 
 
 local RyuJones = class.class('RyuJones', Shocktube)
 RyuJones.explanation = [[
 --------------------------------------------------------------------------------
--- Ryu and Jones Test 2A
+-- Ryu and Jones Test 2A (Newtonian only)
 --
 -- http://www.astro.princeton.edu/~jstone/Athena/tests/rj2a/RJ2a.html
 --
@@ -301,12 +368,13 @@ function BlastMHD:__init__()
    end
 end
 function BlastMHD:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 2.0
+   runtime_cfg.tmax = 0.4
 end
 function BlastMHD:build_m2(runtime_cfg)
    local build_args = {lower={-0.5,-0.5,-0.5},
 		       upper={ 0.5, 0.5, 0.5},
 		       resolution={64,64,1},
+		       periods={true,true,true},
 		       scaling={'linear', 'linear', 'linear'},
 		       relativistic=false,
 		       magnetized=true,
@@ -321,19 +389,14 @@ function BlastMHD:build_m2(runtime_cfg)
       build_args.resolution[3] = runtime_cfg.resolution or 64
    end
    local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(0.05)
-   m2:set_cadence_checkpoint_tpl(0.0)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(0.4)
    m2:set_plm_parameter(2.0)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
-   m2:set_boundary_conditions_flux1(outflow_bc_flux(1))
-   m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   if self.model_parameters.three_d[1] then
-      m2:set_boundary_conditions_flux3(outflow_bc_flux(3))
-   end
    m2:set_problem(self)
    return m2
 end
@@ -471,13 +534,15 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
+   m2:set_simple_eigenvalues(0) -- set to 1 to pass top-down test (quartic bug)
    m2:set_problem(self)
    return m2
 end
 
 
 
-return {RyuJones     = RyuJones,
+return {DensityWave  = DensityWave,
+	RyuJones     = RyuJones,
 	BrioWu       = BrioWu,
 	ContactWave  = ContactWave,
 	BlastMHD     = BlastMHD,

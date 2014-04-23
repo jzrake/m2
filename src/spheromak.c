@@ -2,6 +2,7 @@
 #include <string.h>
 #include "m2.h"
 
+#ifdef DEPRECATED
 
 static double Bfield(double r, double t, double f, int a)
 {
@@ -126,3 +127,5 @@ void initialize_problem_spheromak(m2sim *m2)
   m2->interpolation_fields = M2_PRIMITIVE_AND_FOUR_VELOCITY;
   m2->coordinate_scaling1 = M2_LOGARITHMIC;
 }
+
+#endif

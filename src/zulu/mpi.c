@@ -1,3 +1,4 @@
+#if ZULU_HAVE_MPI
 #include <mpi.h>
 #include "lua.h"
 #include "lualib.h"
@@ -3009,3 +3010,12 @@ int luaopen_mpi(lua_State *L)
   register_constants(L);
   return 1;
 }
+#else
+#include <lua.h>
+int luaopen_mpi(lua_State *L)
+{
+  lua_newtable(L);
+  return 1;
+}
+#endif /* ZULU_HAVE_MPI */
+

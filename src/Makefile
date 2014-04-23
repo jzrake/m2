@@ -32,13 +32,18 @@ DEP = $(SRC1:.c=.dep) $(SRC2:.cpp=.dep)
 LUA_L  = $(LUA_LIB)
 ZULU_L = zulu/libzulu.a
 GLUI_L = glui/libglui.a
-INC = -Izulu -Ilua -Iglui
+INC = -Izulu -Ilua
 
 LIB += $(LUA_L)
 LIB += $(ZULU_L)
 
+LIB_STATIC += $(LUA_L)
+LIB_STATIC += $(ZULU_L)
+
 ifeq ($(HAVE_GLUT), 1)
 LIB += $(GLUT_L) $(GLUI_L)
+INC += -Iglui
+LIB_STATIC += $(GLUI_L)
 endif
 
 ifeq ($(HAVE_HDF5), 1)
@@ -59,7 +64,7 @@ vis.o : vis.cpp m2-cfg.h $(MAKEFILE_IN)
 	@$(CC) -MM $< $(INC) > $(<:.c=.dep)
 	$(CC) $(CFLAGS) $(INC) $< -c
 
-$(EXE) : $(OBJ) $(GLUI_L) $(LUA_L) $(ZULU_L)
+$(EXE) : $(OBJ) $(LIB_STATIC)
 	$(CXX) $(CFLAGS) $(OBJ) $(LIB) -o $@
 
 m2-cfg.h : .FORCE
@@ -69,6 +74,7 @@ m2-cfg.h : .FORCE
 	@echo "#define M2_HAVE_GLUT $(HAVE_GLUT)" >> $(TMP_H)
 	@echo "#define M2_GIT_SHA \"$(GIT_SHA)\"" >> $(TMP_H)
 	@echo "#define M2_DEBUG_FILE $(DEBUG_FILE)" >> $(TMP_H)
+	@echo "#define M2_INSTALL_PATH \"$(PWD)\"" >> $(TMP_H)
 	@cmp -s $(TMP_H) $@ || (echo "[m2-cfg.h updated]"; cat $(TMP_H)>$@)
 	@$(RM) $(TMP_H)
 
@@ -84,6 +90,7 @@ show :
 	@echo "#define M2_HAVE_GLUT $(HAVE_GLUT)"
 	@echo "#define M2_GIT_SHA \"$(GIT_SHA)\""
 	@echo "#define M2_DEBUG_FILE $(DEBUG_FILE)"
+	@echo "#define M2_INSTALL_PATH \"$(PWD)\""
 
 clean :
 	$(MAKE) -C lua clean

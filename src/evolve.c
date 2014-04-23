@@ -1,12 +1,21 @@
+#include "m2.h"
 #include <string.h>
 #include <math.h>
 #if _OPENMP
 #include <omp.h>
 #endif
-#include "m2.h"
+#if M2_HAVE_MPI
+#include <mpi.h>
+#endif
 #include "riemann.h"
 
 #define ENABLE_PLM 1
+
+
+/* ===================================================== */
+#define DEBUG_SYMMETRY 0
+static void check_symmetry(m2sim *m2, char *msg);
+/* ===================================================== */
 
 
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
@@ -34,8 +43,8 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
   n[2] = 0.0;
   n[3] = 0.0;
 
-  if (VL->zone_type != M2_ZONE_TYPE_FULL ||
-      VR->zone_type != M2_ZONE_TYPE_FULL) {
+  if (VL->zone_type == M2_ZONE_TYPE_SHELL ||
+      VR->zone_type == M2_ZONE_TYPE_SHELL) {
     return;
   }
 
@@ -163,20 +172,26 @@ void m2sim_calculate_flux(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 	V0 = M2_VOL(i, j, k);
-	if ((V0->global_index[1] == -1 ||
-	     V0->global_index[1] == G[1] - 1) &&
-	    (m2->boundary_conditions_flux1)) {
-	  m2->boundary_conditions_flux1(V0);
+	if (m2->periodic_dimension[1] == 0 &&
+	    (V0->global_index[1] == -1 ||
+	     V0->global_index[1] == G[1] - 1)) {
+	  if (m2->boundary_conditions_flux1) {
+	    m2->boundary_conditions_flux1(V0);
+	  }
 	}
-	if ((V0->global_index[2] == -1 ||
-	     V0->global_index[2] == G[2] - 1) &&
-	    (m2->boundary_conditions_flux2)) {
-	  m2->boundary_conditions_flux2(V0);
+	if (m2->periodic_dimension[2] == 0 &&
+	    (V0->global_index[2] == -1 ||
+	     V0->global_index[2] == G[2] - 1)) {
+	  if (m2->boundary_conditions_flux2) {
+	    m2->boundary_conditions_flux2(V0);
+	  }
 	}
-	if ((V0->global_index[3] == -1 ||
-	     V0->global_index[3] == G[3] - 1) &&
-	    (m2->boundary_conditions_flux3)) {
-	  m2->boundary_conditions_flux3(V0);
+	if (m2->periodic_dimension[3] == 0 &&
+	    (V0->global_index[3] == -1 ||
+	     V0->global_index[3] == G[3] - 1)) {
+	  if (m2->boundary_conditions_flux3) {
+	    m2->boundary_conditions_flux3(V0);
+	  }
 	}
       }
     }
@@ -392,7 +407,6 @@ static void _calculate_emf2(m2sim *m2)
 	}
 	bnd = 0;
       }
-
       vols[0]->emf1 = -vols[0]->flux2[B33] * vols[0]->line1;
       vols[0]->emf2 = +vols[0]->flux1[B33] * vols[0]->line2;
       vols[0]->emf3 = bnd?0.0:_calculate_emf_single(emfs, 3) * vols[0]->line3;
@@ -616,7 +630,7 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     V->x0[0] = 0.0;
@@ -639,7 +653,7 @@ void m2sim_cache_conserved(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     memcpy(V->consB, V->consA, 5 * sizeof(double));
@@ -660,7 +674,7 @@ void m2sim_average_runge_kutta(m2sim *m2, double b)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     for (q=0; q<5; ++q) {
@@ -735,7 +749,7 @@ int m2sim_from_conserved_all(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
     /* assume fields have been averaged from faces to center (prim) */
@@ -746,9 +760,6 @@ int m2sim_from_conserved_all(m2sim *m2)
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
 				 &V->aux, &V->prim);
     if (error) {
-      //m2->initial_data(V);
-      //m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-      //		   V->consA, &V->aux);
       m2_print_state(&V->prim, &V->aux, V->consA);
       MSGF(FATAL, "at global index [%d %d %d]",
     	   V->global_index[1],
@@ -770,8 +781,8 @@ int m2sim_from_primitive_all(m2sim *m2)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
-      continue;
+    if (V->zone_type == M2_ZONE_TYPE_SHELL) {
+      /* continue; */
     }
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
 			 V->consA, &V->aux);
@@ -821,6 +832,15 @@ double m2sim_minimum_courant_time(m2sim *m2)
       }
     }
   }
+
+#if M2_HAVE_MPI
+  if (m2->cart_comm) {
+    MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
+    MPI_Allreduce(MPI_IN_PLACE, &globalmindt, 1, MPI_DOUBLE, MPI_MIN,
+		  cart_comm);
+  }
+#endif
+
   return globalmindt;
 }
 
@@ -839,14 +859,15 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
 void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   m2sim_calculate_gradient(m2);
-  m2sim_calculate_flux(m2);
-  m2sim_calculate_emf(m2);
-  m2sim_exchange_flux(m2, dt);
-  m2sim_add_source_terms(m2, dt);
-  m2sim_average_runge_kutta(m2, rkparam);
-  m2sim_enforce_boundary_condition(m2);
-  m2sim_magnetic_flux_to_cell_center(m2);
-  m2sim_from_conserved_all(m2);
+  m2sim_calculate_flux(m2); check_symmetry(m2, "A");
+  m2sim_calculate_emf(m2); check_symmetry(m2, "B");
+  m2sim_exchange_flux(m2, dt); check_symmetry(m2, "C");
+  m2sim_add_source_terms(m2, dt); check_symmetry(m2, "D");
+  m2sim_average_runge_kutta(m2, rkparam); check_symmetry(m2, "E");
+  m2sim_enforce_boundary_condition(m2); check_symmetry(m2, "F");
+  m2sim_magnetic_flux_to_cell_center(m2); check_symmetry(m2, "G");
+  m2sim_from_conserved_all(m2); check_symmetry(m2, "H");
+  m2sim_synchronize_guard(m2); check_symmetry(m2, "I");
 }
 
 
@@ -920,4 +941,51 @@ void m2sim_drive(m2sim *m2)
 	   m2->status.time_simulation,
 	   dt,
 	   kzps);
+}
+
+
+
+
+void check_symmetry(m2sim *m2, char *msg)
+{
+#if DEBUG_SYMMETRY
+#define NOTZERO(a) (fabs(a)>1e-12)
+  int *L = m2->local_grid_size;
+  int i,j;
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=1; j<L[2]-1; ++j) {
+
+      m2vol *V0 = M2_VOL(i,        j, 0);
+      m2vol *V1 = M2_VOL(i, L[2] - j, 0);
+
+      if (NOTZERO(V0->emf2 - V1->emf2) ||
+	  NOTZERO(V0->prim.d - V1->prim.d) ||
+	  NOTZERO(V0->prim.p - V1->prim.p) ||
+	  NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
+	  NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
+	printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) flux1[B3] = (%+14.12e %+14.12e) "
+	       "B3 = (%+14.12e %+14.12e)\n",
+	       msg, V0->global_index[1], V0->global_index[2],
+	       V0->emf2, V1->emf2, V0->flux1[B33], V1->flux1[B33],
+	       V0->Bflux1A, V1->Bflux1A);
+      }
+    }
+  }
+
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+
+      m2vol *V0 = M2_VOL(i,        j  , 0);
+      m2vol *V1 = M2_VOL(i, L[2] - j-1, 0);
+
+      if (NOTZERO(V0->emf1 + V1->emf1)) {
+	printf("%s [%d %d]: emf1 = (%+14.12e %+14.12e)\n",
+	       msg, i, j, V0->emf1, V1->emf1);
+      }
+    }
+  }
+#undef NOTZERO
+#endif
 }

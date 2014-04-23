@@ -28,9 +28,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdarg.h>  /* va_list */
 
-#ifdef __INTEL_COMPILER
-#include <tbb/tbbmalloc_proxy.h>
-#endif /* Intel Compiler efficient memcpy etc */
+
+/* Intel Compiler efficient memcpy etc */
+/* #ifdef __INTEL_COMPILER */
+/* #include <tbb/tbbmalloc_proxy.h> */
+/* #endif */
+
 
 #ifdef _MSC_VER
 typedef unsigned int uint32_t;
