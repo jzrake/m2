@@ -36,6 +36,14 @@ ZULU_OBJ = \
 	lfs.o \
 	zulu.o
 
+ifeq ($(HAVE_MPI), 1)
+DEFINES += -DZULU_HAVE_MPI=1
+endif
+
+ifeq ($(HAVE_HDF5), 1)
+DEFINES += -DZULU_HAVE_HDF5=1
+endif
+
 default : $(ZULU_LIB)
 
 lib : $(ZULU_LIB)
@@ -57,7 +65,7 @@ $(ZULU_LIB) : $(ZULU_OBJ)
 
 %.o : %.c $(MAKEFILE_IN)
 	@$(CC) -MM $< $(INC) > $(<:.c=.dep)
-	$(CC) $(CFLAGS) -o $@ $< $(INC) -c
+	$(CC) $(CFLAGS) -o $@ $< $(INC) -c $(DEFINES)
 
 clean :
 	$(RM) $(ZULU_LIB) $(ZULU_OBJ) $(wildcard *.dep)

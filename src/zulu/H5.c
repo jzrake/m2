@@ -1,3 +1,4 @@
+#if ZULU_HAVE_HDF5
 #include <stdlib.h>
 #include <string.h>
 #include <hdf5.h>
@@ -2972,3 +2973,11 @@ int luaopen_H5(lua_State *L)
 
   return 1;
 }
+#else
+#include <lua.h>
+int luaopen_H5(lua_State *L)
+{
+  lua_newtable(L);
+  return 1;
+}
+#endif /* ZULU_HAVE_HDF5 */
