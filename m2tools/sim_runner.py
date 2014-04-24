@@ -42,7 +42,7 @@ class SimulationRunner(object):
         return argstr
 
     def run(self):
-        cmd = self.get_command()        
+        cmd = self.get_command()
         arg = shlex.split(cmd)
         stdout = subprocess.PIPE if self._suppress_output else None
         p = subprocess.Popen(arg, stdout=stdout)

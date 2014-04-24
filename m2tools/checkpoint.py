@@ -4,8 +4,11 @@ class Checkpoint(object):
         import h5py
         self._file = h5py.File(filename, 'r')
         self._config = { }
+        self._status = { }
         for k,v in self._file['config'].iteritems():
             self._config[k] = v.value
+        for k,v in self._file['status'].iteritems():
+            self._status[k] = v.value
 
     def __del__(self):
         if self._file:
@@ -18,6 +21,13 @@ class Checkpoint(object):
     def close(self):
         self._file.close()
         self._file = None
+
+    @property
+    def status(self):
+        status = { }
+        for k,v in self._status.iteritems():
+            status[k] = v
+        return status
 
     @property
     def periodic_dimension(self):
@@ -77,7 +87,7 @@ class Checkpoint(object):
         if len(x1) > 2: args.append(x1)
         if len(x2) > 2: args.append(x2)
         if len(x3) > 2: args.append(x3)
-        return np.meshgrid(*args)
+        return np.ix_(*args)
 
     @property
     def cell_primitive(self):

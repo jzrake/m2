@@ -101,17 +101,35 @@ class PolarPlot2d(PlotDriver):
         self._args = args
 
     def plot(self):
+        import pprint
         import matplotlib.pyplot as plt
         import numpy as np
-        args = self._args
-        data = self._chkpt.cell_primitive[self._args.field][1:,1:].T
-        R, T = self._chkpt.cell_edge_meshgrid
-        X = +R * np.sin(T)
-        Z = +R * np.cos(T)
-        plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
-        X = -R * np.sin(T)
-        Z = +R * np.cos(T)
-        plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+
+        pprint.pprint(self._chkpt.status)
+
+        if self._chkpt.domain_resolution[3] == 1: # axial symmetry
+            args = self._args
+            data = self._chkpt.cell_primitive[self._args.field][1:,1:]
+            R, T = self._chkpt.cell_edge_meshgrid
+            X = +R * np.sin(T)
+            Z = +R * np.cos(T)
+            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+            X = -R * np.sin(T)
+            Z = +R * np.cos(T)
+            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+        else:
+            args = self._args
+            data = self._chkpt.cell_primitive[self._args.field][1:,1:,0]
+            R, T, P = self._chkpt.cell_edge_meshgrid
+            R = R[...,0]
+            T = T[...,0]
+            X = +R * np.sin(T)
+            Z = +R * np.cos(T)
+            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+            X = -R * np.sin(T)
+            Z = +R * np.cos(T)
+            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+
         plt.colorbar()
         plt.axis('equal')
         self.show()
@@ -137,8 +155,8 @@ class PlotCommand(command.Command):
                 plotter = RectangularPlot2d(chkpt, args)
 
         elif chkpt.geometry == 'spherical':
-            if (chkpt.domain_resolution == 1).sum() == 1:
-                plotter = PolarPlot2d(chkpt, args)
+            #if (chkpt.domain_resolution == 1).sum() == 1:
+            plotter = PolarPlot2d(chkpt, args)
 
         plotter.set_hardcopy(args.output)
         plotter.plot()
