@@ -77,10 +77,13 @@ function TestProblem:run(user_config_callback, restart_file)
 
    local log = logger.CommandLineLogger(class.classname(self))
    local m2 = self:build_m2(runtime_cfg)
+   local dims = m2._cart_comm:get 'dims'
+
    m2:print_splash()
    m2:print_config()
    log:log_message('run', serpent.block(runtime_cfg), 1)
-
+   log:log_message('run', ("domain decomposition: [%d %d %d]")
+		   :format(dims[1], dims[2], dims[3]), 1)
 
    if restart_file then
       m2:read_checkpoint_hdf5(restart_file)
@@ -140,7 +143,9 @@ local function outflow_bc_flux(axis)
    local function bc(V0)
       if V0.global_index[axis] == -1 then
 	 local V1 = V0:neighbor(axis, 1)
-	 if V1.zone_type == m2lib.M2_ZONE_TYPE_SHELL then
+	 if V1 == nil then
+	    return
+	 elseif V1.zone_type == m2lib.M2_ZONE_TYPE_SHELL then
 	    V0[flux] = m2lib.dvec8()
 	 else
 	    V0[flux] = V1.aux:fluxes(nhat)
