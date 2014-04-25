@@ -23,6 +23,13 @@ class Checkpoint(object):
         self._file = None
 
     @property
+    def config(self):
+        config = { }
+        for k,v in self._config.iteritems():
+            config[k] = v
+        return config
+
+    @property
     def status(self):
         status = { }
         for k,v in self._status.iteritems():
@@ -104,4 +111,3 @@ if __name__ == "__main__":
     print chkpt.cell_edge_coordinates[:2]
     print chkpt.periodic_dimension
     print chkpt.geometry
-

@@ -94,7 +94,7 @@ class RectangularPlot2d(PlotDriver):
 
 
 
-class PolarPlot2d(PlotDriver):
+class PolarPlot(PlotDriver):
 
     def __init__(self, chkpt, args):
         self._chkpt = chkpt
@@ -106,9 +106,12 @@ class PolarPlot2d(PlotDriver):
         import numpy as np
 
         pprint.pprint(self._chkpt.status)
+        pprint.pprint(self._chkpt.config)
 
-        if self._chkpt.domain_resolution[3] == 1: # axial symmetry
-            args = self._args
+        args = self._args
+
+        if self._chkpt.domain_resolution[3] == 1:
+            print "r-theta in axial symmetry"
             data = self._chkpt.cell_primitive[self._args.field][1:,1:]
             R, T = self._chkpt.cell_edge_meshgrid
             X = +R * np.sin(T)
@@ -117,8 +120,8 @@ class PolarPlot2d(PlotDriver):
             X = -R * np.sin(T)
             Z = +R * np.cos(T)
             plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
-        else:
-            args = self._args
+        elif not args.equatorial:
+            print "r-theta slice"
             data = self._chkpt.cell_primitive[self._args.field][1:,1:,0]
             R, T, P = self._chkpt.cell_edge_meshgrid
             R = R[...,0]
@@ -129,6 +132,16 @@ class PolarPlot2d(PlotDriver):
             X = -R * np.sin(T)
             Z = +R * np.cos(T)
             plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+        else:
+            print "r-phi slice"
+            nt = self._chkpt.domain_resolution[2]
+            data = self._chkpt.cell_primitive[self._args.field][1:,nt/2,:]
+            R, T, P = self._chkpt.cell_edge_meshgrid
+            X = R * np.sin(T) * np.cos(P)
+            Y = R * np.sin(T) * np.sin(P)
+            X = X[:,nt/2,:]
+            Y = Y[:,nt/2,:]
+            plt.pcolormesh(X, Y, data, vmin=args.vmin, vmax=args.vmax)
 
         plt.colorbar()
         plt.axis('equal')
@@ -144,6 +157,7 @@ class PlotCommand(command.Command):
         parser.add_argument('--field', default='d')
         parser.add_argument('--vmin', type=float, default=None)
         parser.add_argument('--vmax', type=float, default=None)
+        parser.add_argument('--equatorial', action="store_true")
         parser.add_argument('-o', '--output')
 
     def run(self, args):
@@ -155,8 +169,7 @@ class PlotCommand(command.Command):
                 plotter = RectangularPlot2d(chkpt, args)
 
         elif chkpt.geometry == 'spherical':
-            #if (chkpt.domain_resolution == 1).sum() == 1:
-            plotter = PolarPlot2d(chkpt, args)
+            plotter = PolarPlot(chkpt, args)
 
         plotter.set_hardcopy(args.output)
         plotter.plot()
