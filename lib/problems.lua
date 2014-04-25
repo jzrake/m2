@@ -15,21 +15,21 @@ function TestProblem:write_hdf5_problem_data(h5file)
    h5file['problem_name'] = class.classname(self)
    local h5mp = hdf5.Group(h5file, 'model_parameters', 'w')
    for k,v in pairs(self.model_parameters or { }) do
-      h5mp[k] = tostring(v[1])
+      h5mp[k] = tostring(v)
    end
 end
 function TestProblem:read_hdf5_problem_data(h5file)
    local h5mp = hdf5.Group(h5file, 'model_parameters', 'r+')
    for k,v in pairs(self.model_parameters or { }) do
-      v[1] = h5mp[k]:value()
+      self.model_parameters[k] = h5mp[k]:value()
    end
 end
 function TestProblem:set_runtime_defaults(cfg) end
 function TestProblem:update_model_parameters(user_mp)
    local problem_mp = self.model_parameters or { }
    for k,v in pairs(user_mp or { }) do
-      if problem_mp[k] then 
-	 problem_mp[k][1] = v
+      if problem_mp[k] ~= nil then
+	 problem_mp[k] = v
       else
 	 error(("problem class '%s' does not accept model parameter '%s'")
 	       :format(class.classname(self), k))
@@ -46,7 +46,8 @@ function TestProblem:describe()
    print("model parameters for problem '"..class.classname(self).."':\n")
    for _,k in ipairs(mp) do
       local v = self.model_parameters[k]
-      print(("%-40s %s"):format(("%12s .......... %s"):format(k, v[1]), v[2]))
+      local d = self.model_parameters_doc[k]
+      print(("%-40s %s"):format(("%12s .......... %s"):format(k, v), d))
    end
    print()
 end
@@ -166,14 +167,16 @@ DensityWave.explanation = [[
 --
 --------------------------------------------------------------------------------]]
 function DensityWave:__init__()
-   self.model_parameters = {
-      dims = {1, 'domain dimensionality'},
-      B0 = {0.0, 'magnetic field strength'},
-   }
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+   mps.dims = 1; doc.dims = 'domain dimensionality'
+   mps.B0 = 0.0; doc.B0 = 'magnetic field strength'
    local pi = math.pi
    local L = 1
    self.initial_data_cell = function(x)
-      local dims = self.model_parameters.dims[1]
+      local dims = mps.dims
       local v1 = dims >= 1 and 1.0 or 0.0
       local v2 = dims >= 2 and 1.0 or 0.0
       local v3 = dims >= 3 and 1.0 or 0.0
@@ -184,11 +187,12 @@ function DensityWave:__init__()
       return { 1.0 + 0.5 * math.sin(4*pi*r/L), 1.0, v1, v2, v3}
    end
    self.initial_data_face = function(x, n)
-      return { self.model_parameters.B0[1] * (n[1] + n[2] + n[3]) }
+      return { mps.B0 * (n[1] + n[2] + n[3]) }
    end
 end
 function DensityWave:build_m2(runtime_cfg)
-   local dims = self.model_parameters.dims[1]
+   local mps = self.model_parameters
+   local dims = mps.dims
    local N1 = dims >= 1 and (runtime_cfg.resolution or 64) or 1
    local N2 = dims >= 2 and (runtime_cfg.resolution or 64) or 1
    local N3 = dims >= 3 and (runtime_cfg.resolution or 64) or 1
@@ -326,12 +330,14 @@ ContactWave.explanation = [[
 -- density and tangential velocity will be numerically time-independent.
 --------------------------------------------------------------------------------]]
 function ContactWave:__init__()
-   self.model_parameters = {
-      vt = {0.0, 'transverse velocity magnitude'},
-      Bt = {0.0, 'transverse magnetic field strength'},
-   }
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+   mps.vt = 0.0; doc.vt = 'transverse velocity magnitude'
+   mps.Bt = 0.0; doc.Bt = 'transverse magnetic field strength'
    self.initial_data_cell = function(x)
-      local vt = self.model_parameters.vt[1]
+      local vt = mps.vt
       if x[1] < 0.5 then
 	 return {1.00, 1.00, 0.0, vt, vt}
       else
@@ -339,7 +345,7 @@ function ContactWave:__init__()
       end
    end
    self.initial_data_face = function(x, n)
-      local Bt = self.model_parameters.Bt[1]
+      local Bt = mps.Bt
       if x[1] < 0.5 then
 	 return {1.0*n[1] + Bt*n[2] + Bt*n[3]}
       else
@@ -358,7 +364,11 @@ BlastMHD.explanation = [[
 -- http://www.astro.princeton.edu/~jstone/Athena/tests/blast/blast.html
 --------------------------------------------------------------------------------]]
 function BlastMHD:__init__()
-   self.model_parameters = { three_d={false, 'run in three dimensions'} }
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+   mps.three_d = false; doc.three_d = 'run in three dimensions'
    self.initial_data_cell = function(x)
       local r = (x[1]^2 + x[2]^2 + x[3]^2)^0.5
       if r < 0.1 then
@@ -390,7 +400,7 @@ function BlastMHD:build_m2(runtime_cfg)
       build_args.resolution[1] = runtime_cfg.resolution
       build_args.resolution[2] = runtime_cfg.resolution
    end
-   if self.model_parameters.three_d[1] then
+   if self.model_parameters.three_d then
       build_args.resolution[3] = runtime_cfg.resolution or 64
    end
    local m2 = m2app.m2Application(build_args)
@@ -469,21 +479,24 @@ MagnetarWind.explanation = [[
 -- boundary
 --------------------------------------------------------------------------------]]
 function MagnetarWind:__init__()
-   self.model_parameters = {
-      three_d={false, 'run in three dimensions'},
-      r_outer={100, 'outer radius (inner is 1.0)'},
-      r_cavity={10, 'cavity radius'},
-      d_star={100, 'star density (wind density is 1.0)'},
-      B_wind={8.00, 'wind toroidal field value'},
-      g_wind={8.00, 'wind Lorentz factor'},
-      g_pert={0.00, 'fractional azimuthal variation in wind Lorentz factor'},
-   }
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
+   mps.three_d = false; doc.three_d='run in three dimensions'
+   mps.r_outer=100; doc.r_outer='outer radius (inner is 1.0)'
+   mps.r_cavity=10; doc.r_cavity='cavity radius'
+   mps.d_star=100; doc.r_d_star='star density (wind density is 1.0)'
+   mps.B_wind=8.00; doc.B_wind='wind toroidal field value'
+   mps.g_wind=8.00; doc.g_wind='wind Lorentz factor'
+   mps.g_pert=0.00; doc.g_pert='fractional azimuthal variation in g_wind'
    self.initial_data_cell = function(x)
       local d0
-      if x[1] < self.model_parameters.r_cavity[1]  then
+      if x[1] < mps.r_cavity  then
       	 d0 = 0.1
       else
-      	 d0 = self.model_parameters.d_star[1]
+      	 d0 = mps.d_star
       end
       return {d0, 0.01, 0.0, 0.0, 0.0}
    end
@@ -500,26 +513,26 @@ function MagnetarWind:build_m2(runtime_cfg)
 		       relativistic=true,
 		       magnetized=true,
 		       geometry='spherical'}
+   local mps = self.model_parameters
    local N = runtime_cfg.resolution or 64
    local r0 = 1.0
-   local r1 = self.model_parameters.r_outer[1]
+   local r1 = mps.r_outer
    build_args.upper[1] = r1
    build_args.resolution[1] = N * math.floor(math.log10(r1/r0))
    build_args.resolution[2] = N
    build_args.resolution[3] = N * 2
-   if not self.model_parameters.three_d[1] then
+   if not mps.three_d then
       build_args.resolution[3] = 1
    end
-   local m2 = m2app.m2Application(build_args)
    local function wind_inner_boundary_flux(V0)
       local nhat = m2lib.dvec4(0,1,0,0)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       local p = 0.5 * (V0.x0[3] + V0.x1[3])
       if V0.global_index[1] == -1 then
 	 local d = 1.0
-	 local B = self.model_parameters.B_wind[1]
-	 local g = self.model_parameters.g_wind[1]
-	 local h = self.model_parameters.g_pert[1]
+	 local B = mps.B_wind
+	 local g = mps.g_wind
+	 local h = mps.g_pert
 	 g = g * (1.0 + h * math.sin(6*p)^2)
 	 V0.prim.v1 =(1.0 - g^-2)^0.5
 	 V0.prim.v2 = 0.0
@@ -535,6 +548,7 @@ function MagnetarWind:build_m2(runtime_cfg)
 	 V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
+   local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
