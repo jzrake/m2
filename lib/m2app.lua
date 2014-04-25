@@ -224,14 +224,14 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
       local h5face = hdf5.Group(h5file, 'face_magnetic_flux')
 
       for _,field in ipairs(struct.members('m2prim')) do
-	 self:_log('writing '..h5prim:path()..'/'..field, 1)
+	 self:_log('writing '..h5prim:path()..'/'..field, 1, 4)
 	 local h5d = hdf5.DataSet(h5prim, field, 'r+', {shape=file.exten})
 	 local data = self:get_volume_data(field)
 	 h5d:write(data, mems.space, file.space)
 	 h5d:close()
       end
       for field=1,3 do
-	 self:_log('writing '..h5face:path()..'/'..field, 1)
+	 self:_log('writing '..h5face:path()..'/'..field, 1, 4)
 	 local h5d = hdf5.DataSet(h5face, field, 'r+', {shape=file.exten})
 	 local data = self:get_face_data(field)
 	 h5d:write(data, mems.space, file.space)
@@ -329,8 +329,8 @@ function m2Application:global_shape()
    return S
 end
 
-function m2Application:_log(msg, indent)
-   self._logger:log_message(debug.getinfo(2).name, msg, indent)
+function m2Application:_log(msg, indent, lookback)
+   self._logger:log_message(debug.getinfo(lookback or 2).name, msg, indent)
 end
 
 

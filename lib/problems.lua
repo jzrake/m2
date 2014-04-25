@@ -476,6 +476,7 @@ function MagnetarWind:__init__()
       d_star={100, 'star density (wind density is 1.0)'},
       B_wind={8.00, 'wind toroidal field value'},
       g_wind={8.00, 'wind Lorentz factor'},
+      g_pert={0.00, 'fractional azimuthal variation in wind Lorentz factor'},
    }
    self.initial_data_cell = function(x)
       local d0
@@ -513,10 +514,13 @@ function MagnetarWind:build_m2(runtime_cfg)
    local function wind_inner_boundary_flux(V0)
       local nhat = m2lib.dvec4(0,1,0,0)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
+      local p = 0.5 * (V0.x0[3] + V0.x1[3])
       if V0.global_index[1] == -1 then
 	 local d = 1.0
 	 local B = self.model_parameters.B_wind[1]
 	 local g = self.model_parameters.g_wind[1]
+	 local h = self.model_parameters.g_pert[1]
+	 g = g * (1.0 + h * math.sin(6*p)^2)
 	 V0.prim.v1 =(1.0 - g^-2)^0.5
 	 V0.prim.v2 = 0.0
 	 V0.prim.v3 = 0.0
@@ -541,9 +545,9 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   --m2:set_quartic_solver(m2app.to_enum 'quartic_none') -- NONE to pass top-down test
-   --m2:set_quartic_solver(m2app.to_enum 'quartic_algorithmic')
-   m2:set_quartic_solver(m2app.to_enum 'quartic_full_complex')
+   --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- NONE to pass top-down test
+   --m2:set_quartic_solver(m2lib.M2_QUARTIC_ALGORITHMIC)
+   m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
    m2:set_problem(self)
    return m2
 end
