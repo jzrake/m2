@@ -34,6 +34,7 @@ ZULU_L = zulu/libzulu.a
 GLUI_L = glui/libglui.a
 INC = -Izulu -Ilua
 
+LIB += $(CLIBS)
 LIB += $(LUA_L)
 LIB += $(ZULU_L)
 

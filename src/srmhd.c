@@ -210,7 +210,7 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
   const double A0 =    K*V4 + L*V2       +   bn*bn;
 
   double roots[4];
-  int nr;
+  int nr = 0;
 
   switch (quartic_solver) {
   case M2_QUARTIC_ALGORITHMIC:

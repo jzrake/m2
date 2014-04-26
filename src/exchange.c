@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <mpi.h>
 #include "m2.h"
 
