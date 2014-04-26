@@ -867,6 +867,7 @@ static int L_m2_self_test(lua_State *L)
 /* problem-specific C-level callbacks */
 void jet_boundary_conditions_cell(m2sim *m2);
 void jet_add_physical_source_terms(m2vol *V);
+int luaopen_m2jet(lua_State *L);
 
 int luaopen_m2lib(lua_State *L)
 {
@@ -991,7 +992,9 @@ int main(int argc, char **argv)
   luaL_requiref(L, "serpent", luaopen_serpent, 0); lua_pop(L, 1);
   luaL_requiref(L, "lfs", luaopen_lfs, 0); lua_pop(L, 1);
   luaL_requiref(L, "struct", luaopen_struct, 0); lua_pop(L, 1);
+
   luaL_requiref(L, "m2lib", luaopen_m2lib, 0); lua_pop(L, 1);
+  luaL_requiref(L, "m2jet", luaopen_m2jet, 0); lua_pop(L, 1);
 
   // Set the Lua path
   // ---------------------------------------------------------------------------

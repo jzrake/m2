@@ -3,6 +3,14 @@
 
 #define NU_PARAMETER 0.75 /* nu parameter */
 
+typedef struct jet_model_parameters
+{
+  double ambient_density;
+  double ambient_pressure;
+  double nu_parameter;
+} jet_mps;
+
+
 void jet_boundary_conditions_cell(m2sim *m2)
 {
   int *L = m2->local_grid_size;
@@ -114,4 +122,47 @@ void jet_add_physical_source_terms(m2vol *V)
   double Fr = -1.0 / (r*r);
   V->consA[S11] += dt * dV * d0 * Fr;
   V->consA[TAU] += dt * dV * d0 * Fr * vr;
+}
+
+
+
+/* ========================================================================== */
+/* Jet problem Lua interface                                                  */
+/* ========================================================================== */
+#include <stddef.h>
+#include "struct.h"
+
+static int L_model_parameters__init(lua_State *L)
+{
+  jet_mps *m = (jet_mps *) lua_struct_checkstruct(L, 1, "jet_model_parameters");
+  m->ambient_density = 1.0;
+  m->ambient_pressure = 0.01;
+  m->nu_parameter = 0.75;
+  return 0;
+}
+
+int luaopen_m2jet(lua_State *L)
+{
+#define MD(m) {#m, offsetof(jet_mps, m), LSTRUCT_DOUBLE}
+  lua_struct_member_t members[] = {
+    MD(ambient_density),
+    MD(ambient_pressure),
+    MD(nu_parameter),
+    {NULL, 0, 0},
+  };
+#undef MD
+  lua_newtable(L); /* jet module */
+  lua_struct_t type = lua_struct_newtype(L);
+  type.type_name = "jet_model_parameters";
+  type.alloc_size = sizeof(jet_mps);
+  type.members = members;
+  type.__init = L_model_parameters__init;
+  lua_struct_register(L, type);
+
+  lua_pushlightuserdata(L, jet_boundary_conditions_cell);
+  lua_setfield(L, -2, "jet_boundary_conditions_cell");
+  lua_pushlightuserdata(L, jet_add_physical_source_terms);
+  lua_setfield(L, -2, "jet_add_physical_source_terms");
+
+  return 1;
 }

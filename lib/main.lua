@@ -38,6 +38,8 @@ local function main()
    parser:option '--tpl-cadence' :convert(tonumber)
    parser:option '--msg-cadence' :convert(tonumber)
    parser:option '--rkorder' :convert(tonumber)
+   parser:option '--plm-parameter' :convert(tonumber)
+   parser:option '--cfl-parameter' :convert(tonumber)
    parser:option '-N' '--resolution' :convert(tonumber)
    parser:option '-m' '--model-parameters' :convert(
       function(mp)

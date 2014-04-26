@@ -171,8 +171,12 @@ function DensityWave:__init__()
    local doc = { }
    self.model_parameters = mps
    self.model_parameters_doc = doc
+
+   -- ==========================================================================
    mps.dims = 1; doc.dims = 'domain dimensionality'
    mps.B0 = 0.0; doc.B0 = 'magnetic field strength'
+   -- ==========================================================================
+
    local pi = math.pi
    local L = 1
    self.initial_data_cell = function(x)
@@ -334,8 +338,12 @@ function ContactWave:__init__()
    local doc = { }
    self.model_parameters = mps
    self.model_parameters_doc = doc
+
+   -- ==========================================================================
    mps.vt = 0.0; doc.vt = 'transverse velocity magnitude'
    mps.Bt = 0.0; doc.Bt = 'transverse magnetic field strength'
+   -- ==========================================================================
+
    self.initial_data_cell = function(x)
       local vt = mps.vt
       if x[1] < 0.5 then
@@ -368,7 +376,11 @@ function BlastMHD:__init__()
    local doc = { }
    self.model_parameters = mps
    self.model_parameters_doc = doc
+
+   -- ==========================================================================
    mps.three_d = false; doc.three_d = 'run in three dimensions'
+   -- ==========================================================================
+
    self.initial_data_cell = function(x)
       local r = (x[1]^2 + x[2]^2 + x[3]^2)^0.5
       if r < 0.1 then
@@ -484,13 +496,16 @@ function MagnetarWind:__init__()
    self.model_parameters = mps
    self.model_parameters_doc = doc
 
+   -- ==========================================================================
    mps.three_d = false; doc.three_d='run in three dimensions'
    mps.r_outer=100; doc.r_outer='outer radius (inner is 1.0)'
    mps.r_cavity=10; doc.r_cavity='cavity radius'
-   mps.d_star=100; doc.r_d_star='star density (wind density is 1.0)'
+   mps.d_star=100;  doc.d_star='star density (wind density is 1.0)'
    mps.B_wind=8.00; doc.B_wind='wind toroidal field value'
    mps.g_wind=8.00; doc.g_wind='wind Lorentz factor'
    mps.g_pert=0.00; doc.g_pert='fractional azimuthal variation in g_wind'
+   -- ==========================================================================
+
    self.initial_data_cell = function(x)
       local d0
       if x[1] < mps.r_cavity  then
@@ -553,8 +568,8 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
-   m2:set_cfl_parameter(0.4)
-   m2:set_plm_parameter(1.5)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.4)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 1.5)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
