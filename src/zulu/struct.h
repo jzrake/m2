@@ -1,6 +1,6 @@
 #ifndef LUA_STRUCT_H
 #define LUA_STRUCT_H
-
+#include <lua.h>
 
 enum {
   LSTRUCT_ORPHAN  = -99119911,
