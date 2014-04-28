@@ -100,7 +100,7 @@ clean :
 	$(RM) $(OBJ) $(DEP) $(EXE)
 
 $(LUA_L) : .FORCE
-	$(MAKE) -C lua $(PLAT)
+	$(MAKE) -C lua $(PLAT) CC=$(CC) MYLIBS="$(CLIBS)"
 
 $(ZULU_L) : .FORCE
 	$(MAKE) -C zulu lib MAKEFILE_IN=$(MAKEFILE_IN)

@@ -11,7 +11,7 @@ class PlotDriver(object):
     def show(self):
         import matplotlib.pyplot as plt
         if self._hardcopy:
-            plt.savefig(self._hardcopy)
+            plt.savefig(self._hardcopy, dpi=600)
             plt.clf()
         else:
             plt.show()
