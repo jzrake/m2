@@ -25,20 +25,20 @@ class SerialToParallel(object):
 
 class RestartedToContinuous(object):
 
-    def set_up(self, problem, **kwargs):
+    def set_up(self, problem, np=8, **kwargs):
         # continuous
-        runner = sim_runner.SimulationRunner(problem, usempi=True, np=1)
+        runner = sim_runner.SimulationRunner(problem, usempi=True, np=np)
         runner.update_args(**kwargs)
         runner.update_args(tmax=0.2)
         self.answer1 = runner.run()
 
         # restarted
-        runner = sim_runner.SimulationRunner(problem, usempi=True, np=1)
+        runner = sim_runner.SimulationRunner(problem, usempi=True, np=np)
         runner.update_args(**kwargs)
         runner.update_args(tmax=0.1)
         runner.run(remove_chkpt=False)
 
-        runner = sim_runner.SimulationRunner(problem, usempi=True, np=1)
+        runner = sim_runner.SimulationRunner(problem, usempi=True, np=np)
         runner.update_args(**kwargs)
         runner.update_args(tmax=0.2, restart='chkpt.final.h5')
         self.answer2 = runner.run(remove_chkpt=True)
@@ -135,12 +135,16 @@ class BlastMHDAntisymmetry2D(unittest.TestCase, TestAntisymmetry2D):
     def setUp(self):
         self.set_up('BlastMHD', usempi=True, np=8, resolution=32)
 
-class BlastSRMHDRestartedToContinuous2D(unittest.TestCase,
+class BlastMHDRestartedToContinuous2D(unittest.TestCase,
                                         RestartedToContinuous):
     def setUp(self):
-        self.set_up('BlastMHD', relativistic=True, resolution=128)
+        self.set_up('BlastMHD', resolution=128)
 
 class BlastMHDRestartedToContinuous3D(unittest.TestCase, RestartedToContinuous):
+    def setUp(self):
+        self.set_up('BlastMHD', resolution=16, model_parameters='three_d=true')
+
+class BlastMHDSerialToParallel3D(unittest.TestCase, SerialToParallel):
     def setUp(self):
         self.set_up('BlastMHD', resolution=16, model_parameters='three_d=true')
 
@@ -166,12 +170,12 @@ class MagnetarWindRestartedToContinuous2D(unittest.TestCase, RestartedToContinuo
 class MagnetarWindSerialToParallel3D(unittest.TestCase, SerialToParallel):
     def setUp(self):
         self.set_up('MagnetarWind', resolution=16, tmax=0.1,
-                    model_parameters='three_d=true,B_wind=0.1')
+                    model_parameters='three_d=true')
 
 class MagnetarWindRestartedToContinuous3D(unittest.TestCase, RestartedToContinuous):
     def setUp(self):
-        self.set_up('MagnetarWind', resolution=8,
-                    model_parameters='three_d=true,B_wind=0.1')
+        self.set_up('MagnetarWind', resolution=16, np=1,
+                    model_parameters='three_d=true')
 
 
 

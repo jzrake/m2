@@ -3,6 +3,7 @@
 class Checkpoint(object):
     def __init__(self, filename):
         import h5py
+        self._file = None # so that instance has attribute even if open fails
         self._file = h5py.File(filename, 'r')
         self._config = { }
         self._status = { }

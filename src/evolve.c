@@ -14,7 +14,7 @@
 
 /* ===================================================== */
 #define DEBUG_SYMMETRY 0
-static void check_symmetry(m2sim *m2, char *msg);
+//static void check_symmetry(m2sim *m2, char *msg);
 /* ===================================================== */
 
 
@@ -722,16 +722,6 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
 	VC->prim.B1 = V1 ? 0.5 * (VC->Bflux1A/A1R + V1->Bflux1A/A1L) : 0.0;
 	VC->prim.B2 = V2 ? 0.5 * (VC->Bflux2A/A2R + V2->Bflux2A/A2L) : 0.0;
 	VC->prim.B3 = V3 ? 0.5 * (VC->Bflux3A/A3R + V3->Bflux3A/A3L) : 0.0;
-
-	/* if (V1 && V2 && V3) { */
-	/*   double divB = */
-	/*     (VC->Bflux1A * VC->area1 - V1->Bflux1A * V1->area1 +  */
-	/*      VC->Bflux2A * VC->area2 - V2->Bflux2A * V2->area2 +  */
-	/*      VC->Bflux3A * VC->area3 - V3->Bflux3A * V3->area3); */
-	/*   if (fabs(divB) > 1e-16) { */
-	/*     printf("large divB: %16.12e\n", divB); */
-	/*   } */
-	/* } */
       }
     }
   }
@@ -859,15 +849,16 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
 void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   m2sim_calculate_gradient(m2);
-  m2sim_calculate_flux(m2); check_symmetry(m2, "A");
-  m2sim_calculate_emf(m2); check_symmetry(m2, "B");
-  m2sim_exchange_flux(m2, dt); check_symmetry(m2, "C");
-  m2sim_add_source_terms(m2, dt); check_symmetry(m2, "D");
-  m2sim_average_runge_kutta(m2, rkparam); check_symmetry(m2, "E");
-  m2sim_enforce_boundary_condition(m2); check_symmetry(m2, "F");
-  m2sim_magnetic_flux_to_cell_center(m2); check_symmetry(m2, "G");
-  m2sim_from_conserved_all(m2); check_symmetry(m2, "H");
-  m2sim_synchronize_guard(m2); check_symmetry(m2, "I");
+  m2sim_calculate_flux(m2);
+  m2sim_synchronize_guard(m2); /* so that Godunov fluxes are communicated */
+  m2sim_calculate_emf(m2);
+  m2sim_exchange_flux(m2, dt);
+  m2sim_add_source_terms(m2, dt);
+  m2sim_average_runge_kutta(m2, rkparam);
+  m2sim_enforce_boundary_condition(m2);
+  m2sim_magnetic_flux_to_cell_center(m2);
+  m2sim_from_conserved_all(m2);
+  m2sim_synchronize_guard(m2);
 }
 
 
