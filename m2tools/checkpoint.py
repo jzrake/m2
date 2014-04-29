@@ -1,4 +1,5 @@
 
+
 class Checkpoint(object):
     def __init__(self, filename):
         import h5py
@@ -99,6 +100,11 @@ class Checkpoint(object):
     @property
     def cell_primitive(self):
         return dict([k,v] for k,v in self._file['cell_primitive'].iteritems())
+
+    @property
+    def face_magnetic_flux(self):
+        return dict([int(k),v] for k,v in
+                    self._file['face_magnetic_flux'].iteritems())
 
 
 if __name__ == "__main__":

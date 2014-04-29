@@ -527,9 +527,10 @@ void m2sim_run_initial_data(m2sim *m2)
     }
   }
 
-
-  /* appends to face-centered B data with curl(A), where A is the emf data on
-     the edges */
+  /* in case data was set manually on interior zones, synch it first */
+  m2sim_synchronize_guard(m2);
+  /* append to face-centered B data with curl(A), where A is the emf data on the
+     edges */
   m2sim_exchange_flux(m2, 1.0);
   m2sim_magnetic_flux_to_cell_center(m2);
   m2sim_from_primitive_all(m2);

@@ -47,7 +47,7 @@ function TestProblem:describe()
    for _,k in ipairs(mp) do
       local v = self.model_parameters[k]
       local d = self.model_parameters_doc[k]
-      print(("%-40s %s"):format(("%12s .......... %s"):format(k, v), d))
+      print(("%-40s %s"):format(("%16s .......... %s"):format(k, v), d))
    end
    print()
 end
@@ -424,6 +424,7 @@ function BlastMHD:build_m2(runtime_cfg)
    m2:set_plm_parameter(2.0)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE)
    m2:set_problem(self)
    return m2
 end
@@ -436,11 +437,19 @@ Jet.explanation = [[
 -- Stability of relativistic magnetized jets
 --------------------------------------------------------------------------------]]
 function Jet:__init__()
+   local m2jet = require 'm2jet'
+   local mps = m2jet.jet_model_parameters()
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
    self.initial_data_cell = function(x)
-      return {1.0, 0.01, 0.0, 0.0, 0.0}
+      return {mps.ambient_density,
+	      mps.mabient_pressure,
+	      0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
-      local nu = 0.75 -- nu parameter
+      local nu = mps.nu_parameter
       local r = x[1]
       local t = x[2]
       local R = r * math.sin(t)
@@ -574,9 +583,9 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- NONE to pass top-down test
+   m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
    --m2:set_quartic_solver(m2lib.M2_QUARTIC_ALGORITHMIC)
-   m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
+   --m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
    m2:set_problem(self)
    return m2
 end

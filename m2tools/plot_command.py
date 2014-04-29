@@ -87,7 +87,7 @@ class RectangularPlot2d(PlotDriver):
         import matplotlib.pyplot as plt
         import numpy as np
         data = self._chkpt.cell_primitive[self._args.field][:,:]
-        plt.imshow(data)
+        plt.imshow(data, interpolation='nearest', origin='lower')
         plt.colorbar()
         plt.axis('equal')
         self.show()
