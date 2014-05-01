@@ -80,7 +80,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[6] = B2;
   Uin[7] = B3;
 
-  srmhd_c2p_set_pressure_floor(c2p, 1e-10);
+  /* srmhd_c2p_set_pressure_floor(c2p, 1e-10); */
   srmhd_c2p_set_gamma(c2p, gamma_law_index);
   srmhd_c2p_new_state(c2p, Uin);
   srmhd_c2p_estimate_from_cons(c2p);
@@ -221,8 +221,7 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     break;
   }
 
-  if (nr == 2 || nr == 4) {
-    /* if nr=2, the slow wave has same speed as the entropy wave */
+  if (nr == 4) {
     evals[0] = roots[0];
     evals[1] = (bn - sqrt(C) * vn * u0) / (b0 - sqrt(C) * u0);
     evals[2] = roots[1];

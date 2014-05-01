@@ -955,11 +955,13 @@ void check_symmetry(m2sim *m2, char *msg)
 	  NOTZERO(V0->prim.p - V1->prim.p) ||
 	  NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
 	  NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
-	printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) flux1[B3] = (%+14.12e %+14.12e) "
-	       "B3 = (%+14.12e %+14.12e)\n",
+	printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) "
+	       "flux1[B3] = (%+14.12e %+14.12e) "
+	       "flux1[DD] = (%+14.12e %+14.12e)\n",
 	       msg, V0->global_index[1], V0->global_index[2],
-	       V0->emf2, V1->emf2, V0->flux1[B33], V1->flux1[B33],
-	       V0->Bflux1A, V1->Bflux1A);
+	       V0->flux1[B33], V1->flux1[B33],
+	       V0->emf2, V1->emf2,
+	       V0->flux1[DDD], V1->flux1[DDD]);
       }
     }
   }

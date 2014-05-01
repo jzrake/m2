@@ -146,8 +146,6 @@ local function outflow_bc_flux(axis)
 	 local V1 = V0:neighbor(axis, 1)
 	 if V1 == nil then
 	    return
-	 elseif V1.zone_type == m2lib.M2_ZONE_TYPE_SHELL then
-	    V0[flux] = m2lib.dvec8()
 	 else
 	    V0[flux] = V1.aux:fluxes(nhat)
 	 end
@@ -577,15 +575,15 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
-   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.4)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 1.5)
-   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE_AND_FOUR_VELOCITY)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
+   --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
    --m2:set_quartic_solver(m2lib.M2_QUARTIC_ALGORITHMIC)
-   --m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
+   m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
    m2:set_problem(self)
    return m2
 end

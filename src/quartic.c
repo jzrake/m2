@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
  * FILE: quartic.c
  *
- * AUTHOR: Jonathan Zrake, NYU CCPP (adapted from Mathematica code)
+ * AUTHOR: Jonathan Zrake, KIPAC (adapted from Mathematica code)
  *
  * DESCRIPTION: Implementation of exact solution to the quartic polynomial
  *
@@ -10,18 +10,23 @@
 
 #include <math.h>
 #include <complex.h>
-#include <stdlib.h>
 
-typedef double complex Complex;
-static int compare(const void *x, const void *y);
-static int solve_cubic_equation(double c3, double c2, double c1, double c0,
-				double roots[3]);
+static int do_root_polish = 1;
+static void polish_newton(double as[4], double roots[4], int good[4]);
 
+int m2_solve_quartic_equation1(double d4, double d3,
+			       double d2, double d1, double d0,
+			       double roots[4])
+{
+  return 0;
+}
 
 int m2_solve_quartic_equation2(double d4, double d3,
 			       double d2, double d1, double d0,
 			       double roots[4])
 {
+  typedef double complex Complex;
+
   Complex a3 = d3 / d4;
   Complex a2 = d2 / d4;
   Complex a1 = d1 / d4;
@@ -32,7 +37,8 @@ int m2_solve_quartic_equation2(double d4, double d3,
   Complex Q = cpow(X,3);
   Complex S = csqrt(-4*Q + cpow(P,2));
   Complex T = -8*a1 + 4*a2*a3 - a3*a3*a3;
-  Complex B = cabs(P + S) < 1e-15 ? 0.0 : (cpow(2,W)*X)/(3.*cpow(P + S,W));
+  Complex B = cabs(P + S) == 0.0 ? 0.0 : (cpow(2,W)*X)/(3.*cpow(P + S,W));
+  //Complex B = (cpow(2,W)*X)/(3.*cpow(P + S,W));
   Complex U = (-2*a2)/3. + (a3*a3)/4. + B;
   Complex C = csqrt(U + cpow(P + S,W)/(3.*cpow(2,W)))/2.;
   Complex D = cpow(P + S,W)/(3.*cpow(2,W));
@@ -49,171 +55,81 @@ int m2_solve_quartic_equation2(double d4, double d3,
   roots[2] = creal(r2);
   roots[3] = creal(r3);
 
-  if (roots[0] != roots[0] ||
-      roots[1] != roots[1] ||
-      roots[2] != roots[2] ||
-      roots[3] != roots[3]) {
-    /* set breakpoint */
-    return 0;
+  if (do_root_polish) {
+    double as[4] = {a0, a1, a2, a3};
+    int good[4];
+    polish_newton(as, roots, good);
+    return good[0] + good[1] + good[2] + good[3];
   }
+  else {
+    return 4;
+  }
+}
 
-  /* int nr = 0; */
-  /* if (fabs(cimag(r0)) < 1e-10) ++nr; */
-  /* if (fabs(cimag(r1)) < 1e-10) ++nr; */
-  /* if (fabs(cimag(r2)) < 1e-10) ++nr; */
-  /* if (fabs(cimag(r3)) < 1e-10) ++nr; */
-
-  /* the check for realness of roots is hard to make robust */
-  //qsort(roots, 4, sizeof(double), compare);
-  return 4;
+void polish_newton(double as[4], double roots[4], int good[4])
+{
+  int n, i;
+  double f, g, h, x;
+  for (n=0; n<4; ++n) {
+    i = 0;
+    x = roots[n];
+    good[n] = 1;
+    do {
+      i += 1;
+      f = x*x*x*x + as[3]*x*x*x + as[2]*x*x + as[1]*x + as[0];
+      g = x*x*x*4 + as[3]*x*x*3 + as[2]*x*2 + as[1]*1;
+      if (g != 0.0) {
+	x -= f/g;
+      }
+      if (x != 0.0) {
+	h = f / x;
+      }
+      else {
+	h = f;
+      }
+      if (i == 100) { /* root is not a root */
+	x = 0.0;
+	good[n] = 0;
+	break;
+      }
+    } while (fabs(h) > 1e-14);
+    roots[n] = x;
+  }
 }
 
 
-
-/*------------------------------------------------------------------------------
- *
- * AUTHOR: Jonathan Zrake, NYU CCPP (adapted from C++ code by Weiqun Zhang)
- *
- * DESCRIPTION: Implementation of exact solution to the quartic polynomial
- *
- * REFERENCES:
- *------------------------------------------------------------------------------
- */
-int m2_solve_quartic_equation1(double d4, double d3,
-			       double d2, double d1, double d0,
-			       double roots[4])
+#ifdef __MAIN__
+#include <stdio.h>
+void test_roots(double a, double b, double c, double d)
 {
-  int nr, nr12, nr34;
-  double r1, r2, r3, r4;
-  double a3 = d3/d4;
-  double a2 = d2/d4;
-  double a1 = d1/d4;
-  double a0 = d0/d4;
-  double au2 = -a2;
-  double au1 = (a1*a3 - 4.0*a0) ;
-  double au0 = 4.0*a0*a2 - a1*a1 - a0*a3*a3;
-  double x1, x3, roots3[3];
-  double u1;
+  double d0 = a*b*c*d;
+  double d1 = -a*b*c - a*b*d - a*c*d - b*c*d;
+  double d2 = a*b + a*c + b*c + a*d + b*d + c*d;
+  double d3 = -a - b - c - d;
+  double d4 = 1.0;
 
-  nr = solve_cubic_equation(1.0, au2, au1, au0, roots3);
-  x1 = roots3[0];
-  x3 = roots3[2];
+  double r[4];
+  m2_solve_quartic_equation2(d4, d3, d2, d1, d0, r);
 
-  if (nr == 1) {
-    u1 = x1;
-  }
-  else {
-    u1 = (x1 > x3) ? x1 : x3;
-  }
-
-  double R2 = 0.25*a3*a3 + u1 - a2;
-  double R = (R2>0.0) ? sqrt(R2) : 0.0;
-  double D2, E2;
-
-  if (R != 0.0) {
-    double foo1 = 0.75*a3*a3 - R2 - 2.0*a2;
-    double foo2 = 0.25*(4.0*a3*a2 - 8.0*a1 - a3*a3*a3) / R;
-    D2 = foo1 + foo2;
-    E2 = foo1 - foo2;
-  }
-  else {
-    double foo1 = 0.75*a3*a3 - 2.0*a2;
-    double foo2 = 2.0 * sqrt(u1*u1 - 4.0*a0);
-    D2 = foo1 + foo2;
-    E2 = foo1 - foo2;
-  }
-
-  if (D2 >= 0.0) {
-    double D = sqrt(D2);
-    r1 = -0.25*a3 + 0.5*R - 0.5*D;
-    r2 = -0.25*a3 + 0.5*R + 0.5*D;
-    nr12 = 2;
-  }
-  else {
-    r1 = r2 = -0.25*a3 + 0.5*R;
-    nr12 = 0;
-  }
-
-  if (E2 >= 0.0) {
-    double E = sqrt(E2);
-    r3 = -0.25*a3 - 0.5*R - 0.5*E;
-    r4 = -0.25*a3 - 0.5*R + 0.5*E;
-    nr34 = 2;
-  }
-  else {
-    r3 = r4 = -0.25*a3 - 0.5*R;
-    nr34 = 0;
-  }
-
-  int i = 0;
-  if (nr12 != 0) {
-    roots[i++] = r1;
-    roots[i++] = r2;
-  }
-  if (nr34 != 0) {
-    roots[i++] = r3;
-    roots[i++] = r4;
-  }
-
-  //qsort(roots, nr12 + nr34, sizeof(double), compare);
-  qsort(roots, 4, sizeof(double), compare);
-
-  return nr12 + nr34;
+  printf("r0 = [%+12.10e %+12.10e] error=%6.4e\n", a, r[0], fabs((a - r[0])/a));
+  printf("r1 = [%+12.10e %+12.10e] error=%6.4e\n", b, r[1], fabs((b - r[1])/b));
+  printf("r2 = [%+12.10e %+12.10e] error=%6.4e\n", c, r[2], fabs((c - r[2])/c));
+  printf("r3 = [%+12.10e %+12.10e] error=%6.4e\n", d, r[3], fabs((d - r[3])/d));
 }
-
-
-int solve_cubic_equation(double c3, double c2, double c1, double c0,
-			 double roots[3])
+int main()
 {
-  double a2 = c2/c3;
-  double a1 = c1/c3;
-  double a0 = c0/c3;
-  double q = a1/3.0 - a2*a2/9.0;
-  double r = (a1*a2 - 3.0*a0)/6.0 - a2*a2*a2 / 27.0;
-  double delta = q*q*q + r*r;
-  double *x1 = &roots[0];
-  double *x2 = &roots[1];
-  double *x3 = &roots[2];
-  int nr;
+  int n=0;
+  do {
+    do_root_polish = n++;
+    printf("\ndo_root_polish = %d\n", do_root_polish);
+    test_roots(-2e+0, -1e+0, +1e+0, +2e+0);
+    test_roots(-9e-1, -9e-1, +9e-1, +9e-1);
+    test_roots(-9e-1, -9e-8, +9e-8, +9e-1);
+    test_roots(-9e-1, -9e-10, +9e-10, +9e-1);
+    test_roots(-9e-1, -9e-12, +9e-12, +9e-1);
+    test_roots(-9e-1, -9e-14, +9e-14, +9e-1);
 
-  if (delta>0.0) {
-    double s1 = r + sqrt(delta);
-    s1 = (s1>=0.0) ? pow(s1,1./3.) : -pow(-s1,1./3.);
-
-    double s2 = r - sqrt(delta);
-    s2 = (s2>=0.0) ? pow(s2,1./3.) : -pow(-s2,1./3.);
-
-    *x1 = (s1+s2) - a2/3.0;
-    *x2 = *x3 = -0.5 * (s1+s2) - a2/3.0;
-    nr = 1;
-  }
-  else if (delta < 0.0) {
-    double theta = acos(r/sqrt(-q*q*q)) / 3.0;
-    double costh = cos(theta);
-    double sinth = sin(theta);
-    double sq = sqrt(-q);
-
-    *x1 = 2.0*sq*costh - a2/3.0;
-    *x2 = -sq*costh - a2/3.0 - sqrt(3.) * sq * sinth;
-    *x3 = -sq*costh - a2/3.0 + sqrt(3.) * sq * sinth;
-
-    nr = 3;
-  }
-  else {
-    double s = (r>=0.0) ? pow(r,1./3.) : -pow(-r,1./3.);
-    *x1 = 2.0*s - a2/3.0;
-    *x2 = *x3 = -s - a2/3.0;
-
-    nr = 3;
-  }
-  return nr;
-}
-
-
-int compare(const void *x, const void *y)
-{
-  double xx = *(double*)x, yy = *(double*)y;
-  if (xx < yy) return -1;
-  if (xx > yy) return +1;
+  } while (n != 2);
   return 0;
 }
+#endif /* __MAIN __ */
