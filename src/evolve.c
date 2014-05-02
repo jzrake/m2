@@ -9,16 +9,15 @@
 #endif
 #include "riemann.h"
 
-#define ENABLE_PLM 1
-
-
 /* ===================================================== */
+#define ENABLE_PLM 1
 #define DEBUG_SYMMETRY 0
 //static void check_symmetry(m2sim *m2, char *msg);
 /* ===================================================== */
 
 
-static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
+static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
+			     int suppress_extrapolation)
 {
   int q;
   m2riemann_problem R = { .m2 = VL->m2 };
@@ -37,33 +36,35 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
   m2prim *PR = &R.Pr;
   m2aux *AL = &R.Al;
   m2aux *AR = &R.Ar;
-
-  n[0] = 0.0;
-  n[1] = 0.0;
-  n[2] = 0.0;
-  n[3] = 0.0;
+  int err[6];
+  int E = !suppress_extrapolation;
 
   if (VL->zone_type == M2_ZONE_TYPE_SHELL ||
       VR->zone_type == M2_ZONE_TYPE_SHELL) {
     return;
   }
 
+  n[0] = 0.0;
+  n[1] = 0.0;
+  n[2] = 0.0;
+  n[3] = 0.0;
   n[axis] = 1.0;
+
   m2vol_to_interpolated(VL, yl, 1);
   m2vol_to_interpolated(VR, yr, 1);
 
   switch (axis) {
   case 1:
-    for (q=0; q<8; ++q) yL[q] = yl[q] + VL->grad1[q] * (VL->x1[1] - xL);
-    for (q=0; q<8; ++q) yR[q] = yr[q] + VR->grad1[q] * (VR->x0[1] - xR);
+    for (q=0; q<8; ++q) yL[q] = yl[q] + E*VL->grad1[q] * (VL->x1[1] - xL);
+    for (q=0; q<8; ++q) yR[q] = yr[q] + E*VR->grad1[q] * (VR->x0[1] - xR);
     break;
   case 2:
-    for (q=0; q<8; ++q) yL[q] = yl[q] + VL->grad2[q] * (VL->x1[2] - xL);
-    for (q=0; q<8; ++q) yR[q] = yr[q] + VR->grad2[q] * (VR->x0[2] - xR);
+    for (q=0; q<8; ++q) yL[q] = yl[q] + E*VL->grad2[q] * (VL->x1[2] - xL);
+    for (q=0; q<8; ++q) yR[q] = yr[q] + E*VR->grad2[q] * (VR->x0[2] - xR);
     break;
   case 3:
-    for (q=0; q<8; ++q) yL[q] = yl[q] + VL->grad3[q] * (VL->x1[3] - xL);
-    for (q=0; q<8; ++q) yR[q] = yr[q] + VR->grad3[q] * (VR->x0[3] - xR);
+    for (q=0; q<8; ++q) yL[q] = yl[q] + E*VL->grad3[q] * (VL->x1[3] - xL);
+    for (q=0; q<8; ++q) yR[q] = yr[q] + E*VR->grad3[q] * (VR->x0[3] - xR);
     break;
   }
 
@@ -83,22 +84,34 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F)
   case 3: UL[B33] = UR[B33] = PL->B3 = PR->B3 = VL->Bflux3A / VL->area3; break;
   }
 
-  m2sim_from_primitive(VL->m2, PL, NULL, NULL, 1.0, UL, AL);
-  m2sim_from_primitive(VR->m2, PR, NULL, NULL, 1.0, UR, AR);
-  m2aux_eigenvalues(AL, n, lamL);
-  m2aux_eigenvalues(AR, n, lamR);
-  m2aux_fluxes(AL, n, FL);
-  m2aux_fluxes(AR, n, FR);
+  err[0] = m2sim_from_primitive(VL->m2, PL, NULL, NULL, 1.0, UL, AL);
+  err[1] = m2sim_from_primitive(VR->m2, PR, NULL, NULL, 1.0, UR, AR);
+  err[2] = m2aux_eigenvalues(AL, n, lamL);
+  err[3] = m2aux_eigenvalues(AR, n, lamR);
+  err[4] = m2aux_fluxes(AL, n, FL);
+  err[5] = m2aux_fluxes(AR, n, FR);
 
-  R.Sl = M2_MIN3(lamL[0], lamR[0], 0.0);
-  R.Sr = M2_MAX3(lamL[7], lamR[7], 0.0);
-
-  switch (VL->m2->riemann_solver) {
-  case M2_RIEMANN_HLLE: riemann_solver_hlle(&R); break;
-  case M2_RIEMANN_HLLC: riemann_solver_hllc(&R); break;
-  default: MSG(FATAL, "invalid riemann solver"); break;
+  if (err[2] || err[3]) {
+    if (suppress_extrapolation) {
+      MSGF(FATAL, "eigenvalues for %d-interface [%d %d %d] could not be found",
+	   axis, VL->global_index[1], VL->global_index[2], VL->global_index[3]);
+    }
+    else {
+      riemann_solver(VL, VR, axis, F, 1);
+      return;
+    }
   }
-  memcpy(F, R.F_hat, 8 * sizeof(double));
+  else {
+    R.Sl = M2_MIN3(lamL[0], lamR[0], 0.0);
+    R.Sr = M2_MAX3(lamL[7], lamR[7], 0.0);
+
+    switch (VL->m2->riemann_solver) {
+    case M2_RIEMANN_HLLE: riemann_solver_hlle(&R); break;
+    case M2_RIEMANN_HLLC: riemann_solver_hllc(&R); break;
+    default: MSG(FATAL, "invalid riemann solver"); break;
+    }
+    memcpy(F, R.F_hat, 8 * sizeof(double));
+  }
 }
 
 static double plm_gradient(double *xs, double *fs, double plm)
@@ -157,13 +170,13 @@ void m2sim_calculate_flux(m2sim *m2)
 	V3 = M2_VOL(i+0, j+0, k+1);
 
 	if (V1 == NULL) m2aux_fluxes(&V0->aux, n1, V0->flux1);
-	else riemann_solver(V0, V1, 1, V0->flux1);
+	else riemann_solver(V0, V1, 1, V0->flux1, 0);
 
 	if (V2 == NULL) m2aux_fluxes(&V0->aux, n2, V0->flux2);
-	else riemann_solver(V0, V2, 2, V0->flux2);
+	else riemann_solver(V0, V2, 2, V0->flux2, 0);
 
 	if (V3 == NULL) m2aux_fluxes(&V0->aux, n3, V0->flux3);
-	else riemann_solver(V0, V3, 3, V0->flux3);
+	else riemann_solver(V0, V3, 3, V0->flux3, 0);
       }
     }
   }
@@ -193,6 +206,80 @@ void m2sim_calculate_flux(m2sim *m2)
 	    m2->boundary_conditions_flux3(V0);
 	  }
 	}
+      }
+    }
+  }
+}
+
+void m2sim_calculate_diffusive_flux(m2sim *m2, double r)
+{
+  int i, j, k, q;
+  int *L = m2->local_grid_size;
+  int *G = m2->domain_resolution;
+  m2vol *V0, *V1, *V2, *V3;
+  double dx;
+
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
+
+	V0 = M2_VOL(i+0, j+0, k+0);
+	V1 = M2_VOL(i+1, j+0, k+0);
+	V2 = M2_VOL(i+0, j+1, k+0);
+	V3 = M2_VOL(i+0, j+0, k+1);
+
+	V0->emf1 = 0.0;
+	V0->emf2 = 0.0;
+	V0->emf3 = 0.0;
+
+	if (V1 && (V0->zone_health != M2_ZONE_HEALTH_GOOD ||
+		   V1->zone_health != M2_ZONE_HEALTH_GOOD)) {
+	  //printf("%d %d %d\n", i,j,k);
+	  dx = 0.5*(V1->x1[1] - V0->x0[1]);
+	  for (q=0; q<8; ++q) {
+	    if (q == TAU) {
+	      V0->flux1[q] = -r * (V1->consA[q]/V1->volume -
+				   V0->consA[q]/V0->volume) / dx;
+	    }
+	    else {
+	      V0->flux1[q] = 0.0;
+	    }
+	  }
+	}
+	else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
+
+	if (V2 && (V0->zone_health != M2_ZONE_HEALTH_GOOD ||
+		   V2->zone_health != M2_ZONE_HEALTH_GOOD)) {
+	  //printf("%d %d %d\n", i,j,k);
+	  dx = 0.5*(V2->x1[2] - V0->x0[2]);
+	  for (q=0; q<8; ++q) {
+	    if (q == TAU) {
+	      V0->flux2[q] = -r * (V2->consA[q]/V2->volume -
+				   V0->consA[q]/V0->volume) / dx;
+	    }
+	    else {
+	      V0->flux2[q] = 0.0;
+	    }
+	  }
+	}
+	else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
+
+	if (V3 && (V0->zone_health != M2_ZONE_HEALTH_GOOD ||
+		   V3->zone_health != M2_ZONE_HEALTH_GOOD)) {
+	  //printf("%d %d %d\n", i,j,k);
+	  dx = 0.5*(V3->x1[3] - V0->x0[3]);
+	  for (q=0; q<8; ++q) {
+	    if (q == TAU) {
+	      V0->flux3[q] = -r * (V3->consA[q]/V3->volume -
+				   V0->consA[q]/V0->volume) / dx;
+	    }
+	    else {
+	      V0->flux3[q] = 0.0;
+	    }
+	  }
+	}
+	else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
+
       }
     }
   }
@@ -730,7 +817,7 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
 
 int m2sim_from_conserved_all(m2sim *m2)
 {
-  int n, error;
+  int n, error, num_bad = 0;
   int *L = m2->local_grid_size;
   m2vol *V;
   double B[4];
@@ -750,14 +837,41 @@ int m2sim_from_conserved_all(m2sim *m2)
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
 				 &V->aux, &V->prim);
     if (error) {
-      m2_print_state(&V->prim, &V->aux, V->consA);
-      MSGF(FATAL, "at global index [%d %d %d]",
-    	   V->global_index[1],
-    	   V->global_index[2],
-    	   V->global_index[3]);
+      V->zone_health = M2_ZONE_HEALTH_BAD;
+      //m2_print_state(&V->prim, &V->aux, V->consA);
+      /* MSGF(FATAL, "at global index [%d %d %d]", */
+      /* 	   V->global_index[1], */
+      /* 	   V->global_index[2], */
+      /* 	   V->global_index[3]); */
+    }
+    else {
+      V->zone_health = M2_ZONE_HEALTH_GOOD;
     }
   }
-  return 0;
+
+  for (n=0; n<L[0]; ++n) {
+    V = m2->volumes + n;
+    num_bad += V->zone_health == M2_ZONE_HEALTH_BAD;
+  }
+
+  if (num_bad > 0) {
+    if (m2->status.num_diffusive_steps ==
+	m2->max_diffusive_steps) {
+      MSGF(FATAL, "from_conserved failed even after %d diffusive steps",
+	   m2->max_diffusive_steps);
+    }
+    else {
+      m2sim_calculate_diffusive_flux(m2, 1e-3);
+      m2sim_exchange_flux(m2, 1.0);
+      m2->status.num_diffusive_steps += 1;
+      printf("taking diffusive step %d (num_bad=%d)\n",
+	     m2->status.num_diffusive_steps, num_bad);
+      return m2sim_from_conserved_all(m2);
+    }
+  }
+  else {
+    return 0;
+  }
 }
 
 
@@ -849,15 +963,15 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
 void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   m2sim_calculate_gradient(m2);
-  m2sim_calculate_flux(m2);
+  m2sim_calculate_flux(m2); /* FAILURES: bad eigenvalues */
   m2sim_synchronize_guard(m2); /* so that Godunov fluxes are communicated */
   m2sim_calculate_emf(m2);
   m2sim_exchange_flux(m2, dt);
   m2sim_add_source_terms(m2, dt);
-  m2sim_average_runge_kutta(m2, rkparam);
+  m2sim_average_runge_kutta(m2, rkparam); /* FAILURES: negative TAU or DDD */
   m2sim_enforce_boundary_condition(m2);
   m2sim_magnetic_flux_to_cell_center(m2);
-  m2sim_from_conserved_all(m2);
+  m2sim_from_conserved_all(m2); /* FAILURES: c2p failure, negative pressure */
   m2sim_synchronize_guard(m2);
 }
 
@@ -879,6 +993,7 @@ void m2sim_drive(m2sim *m2)
   m2sim_cache_conserved(m2);
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
   m2->status.time_step = dt;
+  m2->status.num_diffusive_steps = 0;
 
   double cad = m2->cadence_checkpoint_tpl;
   double now = m2->status.time_simulation;

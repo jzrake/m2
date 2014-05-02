@@ -582,8 +582,8 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
    --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
-   --m2:set_quartic_solver(m2lib.M2_QUARTIC_ALGORITHMIC)
    m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
+   m2:set_max_diffusive_steps(48)
    m2:set_problem(self)
    return m2
 end

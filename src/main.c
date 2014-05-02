@@ -372,6 +372,7 @@ int register_m2status(lua_State *L)
     MD(time_last_analysis),
     MI(checkpoint_number_hdf5),
     MI(checkpoint_number_tpl),
+    MI(num_diffusive_steps),
     {"message", offsetof(m2sim_status, message), LSTRUCT_STRING, NULL, 1024},
     {NULL, 0, 0},
   };
@@ -793,6 +794,7 @@ int register_m2sim(lua_State *L)
     MI(interpolation_fields),
     MI(riemann_solver),
     MI(quartic_solver),
+    MI(max_diffusive_steps),
     MD(plm_parameter),
     MD(cfl_parameter),
     MD(gamma_law_index),

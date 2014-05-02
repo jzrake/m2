@@ -21,11 +21,12 @@ extern "C" {
   srmhd_c2p *srmhd_c2p_new();
   void srmhd_c2p_del(srmhd_c2p *c2p);
   void srmhd_c2p_set_gamma(srmhd_c2p *c2p, double adiabatic_gamma);
-  void srmhd_c2p_set_pressure_floor(srmhd_c2p *c2p, double pf);
   void srmhd_c2p_new_state(srmhd_c2p *c2p, const double *U);
   void srmhd_c2p_estimate_from_cons(srmhd_c2p *c2p);
   void srmhd_c2p_set_starting_prim(srmhd_c2p *c2p, const double *P);
   void srmhd_c2p_get_starting_prim(srmhd_c2p *c2p, double *P);
+  int srmhd_c2p_set_pressure_floor(srmhd_c2p *c2p, double pf);
+  int srmhd_c2p_put_pressure_floor(srmhd_c2p *c2p);
   int srmhd_c2p_reconstruct_prim(srmhd_c2p *c2p, double Z, double W, double *P);
   int srmhd_c2p_solve_anton2dzw(srmhd_c2p *c2p, double *P);
   int srmhd_c2p_solve_noble1dw(srmhd_c2p *c2p, double *P);

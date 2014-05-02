@@ -73,6 +73,10 @@ enum m2flag {
   M2_ZONE_TYPE_FULL,
   M2_ZONE_TYPE_GUARD,
   M2_ZONE_TYPE_SHELL, /* indicates that only faces and edges are used */
+
+  /* Zone status */
+  M2_ZONE_HEALTH_GOOD,
+  M2_ZONE_HEALTH_BAD,
 } ;
 
 /* indices into cons[AB] and flux[123] arrays */
@@ -139,6 +143,7 @@ struct m2vol
   double emf2;
   double emf3;
   char zone_type;
+  char zone_health;
   m2sim *m2;
   m2aux aux;
 } ;
@@ -154,6 +159,7 @@ struct m2sim_status
   int iteration_number;
   int checkpoint_number_tpl;
   int checkpoint_number_hdf5;
+  int num_diffusive_steps;
   char message[1024];
 } ;
 
@@ -177,6 +183,7 @@ struct m2sim
   int interpolation_fields;
   int riemann_solver;
   int quartic_solver;
+  int max_diffusive_steps;
   double plm_parameter;
   double cfl_parameter;
   double gamma_law_index;

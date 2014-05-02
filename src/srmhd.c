@@ -80,7 +80,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[6] = B2;
   Uin[7] = B3;
 
-  /* srmhd_c2p_set_pressure_floor(c2p, 1e-10); */
+  srmhd_c2p_set_pressure_floor(c2p, 1e-8 * U[DDD]);
   srmhd_c2p_set_gamma(c2p, gamma_law_index);
   srmhd_c2p_new_state(c2p, Uin);
   srmhd_c2p_estimate_from_cons(c2p);
@@ -91,7 +91,7 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   if (error) {
     error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
     if (error == SRMHD_C2P_SUCCESS) {
-      MSG(INFO, "got a success with anton2dzw after noble1dw failed");
+      //MSG(INFO, "got a success with anton2dzw after noble1dw failed");
     }
   }
   if (error) {
@@ -118,6 +118,16 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   double pb = 0.5 * bb;
   double ub = 0.5 * bb;
   double H0 = dg + (ug + ub) + (pg + pb);
+
+  /* in case a pressure floor was used, the input conserved state is made
+     consistent with it */
+  if (srmhd_c2p_put_pressure_floor(c2p)) {
+    U[DDD] = dV * (dg * u0);
+    U[TAU] = dV * (H0 * u0 * u0 - b0 * b0 - (pg + pb) - dg * u0);
+    U[S11] = dV * (H0 * u0 * u1 - b0 * b1);
+    U[S22] = dV * (H0 * u0 * u2 - b0 * b2);
+    U[S33] = dV * (H0 * u0 * u3 - b0 * b3);
+  }
 
   if (aux) {
     aux->velocity_four_vector[0] = u0;
@@ -230,17 +240,17 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     evals[5] = roots[2];
     evals[6] = (bn + sqrt(C) * vn * u0) / (b0 + sqrt(C) * u0);
     evals[7] = roots[3];
+    return 0;
   }
   else {
     m2_print_state(NULL, aux, NULL);
-    printf("A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n",
-    	   A0, A1, A2, A3, A4);
-    printf("x = [%+12.10f %+12.10f %+12.10f %+12.10f]\n",
-    	   roots[0], roots[1], roots[2], roots[3]);
-    MSGF(FATAL, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    MSGF(INFO, "A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n",
+	 A0, A1, A2, A3, A4);
+    MSGF(INFO, "x = [%+12.10f %+12.10f %+12.10f %+12.10f]\n",
+	 roots[0], roots[1], roots[2], roots[3]);
+    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    return 1;
   }
-
-  return 0;
 }
 
 

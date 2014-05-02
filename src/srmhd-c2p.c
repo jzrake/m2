@@ -43,6 +43,7 @@ struct srmhd_c2p {
   double smlZ;
   double smlW;
 
+  int AppliedPressureFloor;
   int Iterations;
   double AdiabaticGamma;
   double gamf;
@@ -64,6 +65,7 @@ srmhd_c2p *srmhd_c2p_new()
   c2p->smlZ = 0.0;
   c2p->smlW = 1.0;
   c2p->Iterations = 0;
+  c2p->AppliedPressureFloor = 0;
   c2p->AdiabaticGamma = 1.4;
   c2p->PressureFloor = -1.0;
   return c2p;
@@ -73,6 +75,10 @@ void srmhd_c2p_del(srmhd_c2p *c2p)
   free(c2p);
 }
 
+int srmhd_c2p_put_pressure_floor(srmhd_c2p *c2p)
+{
+  return c2p->AppliedPressureFloor;
+}
 
 // Set method for the adiabatic index (defaults to 1.4)
 // -----------------------------------------------------------------------------
@@ -89,9 +95,10 @@ int srmhd_c2p_get_iterations(srmhd_c2p *c2p)
   return c2p->Iterations;
 }
 
-void srmhd_c2p_set_pressure_floor(srmhd_c2p *c2p, double pf)
+int srmhd_c2p_set_pressure_floor(srmhd_c2p *c2p, double pf)
 {
   c2p->PressureFloor = pf;
+  return pf < 0.0;
 }
 
 // Provide a new conserved state in memory. Before the solver is executed, the
@@ -157,6 +164,7 @@ int srmhd_c2p_reconstruct_prim(srmhd_c2p *c2p, double Z, double W, double *Pout)
     /* printf("setting pressure floor, p=%4.3e -> %2.1e\n", */
     /*     P[pre], PressureFloor); */
     P[pre] = c2p->PressureFloor;
+    c2p->AppliedPressureFloor = 1;
   }
 
   int error = srmhd_c2p_check_prim(c2p, P);
