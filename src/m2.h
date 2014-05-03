@@ -79,6 +79,13 @@ enum m2flag {
   M2_ZONE_HEALTH_BAD,
 } ;
 
+enum { M2_BIT_BAD_EIGENVALUES,
+       M2_BIT_FAILED_CONSERVED_INVERSION,
+       M2_BIT_NEGATIVE_PRESSURE,
+       M2_BIT_NEGATIVE_ENERGY,
+       M2_BIT_NEGATIVE_DENSITY,
+} ;
+
 /* indices into cons[AB] and flux[123] arrays */
 enum { TAU, S11, S22, S33, DDD, B11, B22, B33 };
 /* indices into prim array if not m2prim struct */
@@ -159,7 +166,9 @@ struct m2sim_status
   int iteration_number;
   int checkpoint_number_tpl;
   int checkpoint_number_hdf5;
-  int num_diffusive_steps;
+  int error_code;
+  int drive_attempt;
+  int num_failures[8];
   char message[1024];
 } ;
 
@@ -183,7 +192,8 @@ struct m2sim
   int interpolation_fields;
   int riemann_solver;
   int quartic_solver;
-  int max_diffusive_steps;
+  int suppress_extrapolation_at_unhealthy_zones;
+  double pressure_floor;
   double plm_parameter;
   double cfl_parameter;
   double gamma_law_index;
@@ -247,19 +257,19 @@ void m2sim_index_to_position(m2sim *m2, double index[4], double x[4]);
 void m2sim_volume_at_position(m2sim *m2, double x[4], m2vol **V, double dx[4]);
 void m2sim_primitive_at_position(m2sim *m2, double x[4], m2prim *P);
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4]);
-void m2sim_calculate_gradient(m2sim *m2);
-void m2sim_calculate_flux(m2sim *m2);
-void m2sim_calculate_emf(m2sim *m2);
-void m2sim_exchange_flux(m2sim *m2, double dt);
-void m2sim_add_source_terms(m2sim *m2, double dt);
-void m2sim_cache_conserved(m2sim *m2);
-void m2sim_average_runge_kutta(m2sim *m2, double b);
-void m2sim_magnetic_flux_to_cell_center(m2sim *m2);
-void m2sim_enforce_boundary_condition(m2sim *m2);
-void m2sim_synchronize_guard(m2sim *m2);
-void m2sim_print(m2sim *m2);
+int m2sim_calculate_gradient(m2sim *m2);
+int m2sim_calculate_flux(m2sim *m2);
+int m2sim_calculate_emf(m2sim *m2);
+int m2sim_exchange_flux(m2sim *m2, double dt);
+int m2sim_add_source_terms(m2sim *m2, double dt);
+int m2sim_average_runge_kutta(m2sim *m2, double b);
+int m2sim_magnetic_flux_to_cell_center(m2sim *m2);
+int m2sim_cache_conserved(m2sim *m2);
+int m2sim_enforce_boundary_condition(m2sim *m2);
+int m2sim_synchronize_guard(m2sim *m2);
 int m2sim_save_checkpoint_tpl(m2sim *m2, const char *fname);
 int m2sim_load_checkpoint_tpl(m2sim *m2, const char *fname);
+void m2sim_print(m2sim *m2);
 void m2sim_write_ascii_1d(m2sim *m2, const char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, const char *fname);
 void m2sim_run_analysis(m2sim *m2);

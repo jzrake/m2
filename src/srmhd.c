@@ -80,7 +80,8 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   Uin[6] = B2;
   Uin[7] = B3;
 
-  srmhd_c2p_set_pressure_floor(c2p, 1e-8 * U[DDD]);
+  /* if user set pressure_floor negative then it's disabled */
+  srmhd_c2p_set_pressure_floor(c2p, m2->pressure_floor * U[DDD]);
   srmhd_c2p_set_gamma(c2p, gamma_law_index);
   srmhd_c2p_new_state(c2p, Uin);
   srmhd_c2p_estimate_from_cons(c2p);
@@ -95,9 +96,9 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     }
   }
   if (error) {
-    MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));
+    //MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));
     srmhd_c2p_del(c2p);
-    return 1;
+    return 1<<M2_BIT_FAILED_CONSERVED_INVERSION;
   }
 
   double v1 = Pin[2];
@@ -159,7 +160,12 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
   }
 
   srmhd_c2p_del(c2p);
-  return 0;
+  if (srmhd_c2p_put_pressure_floor(c2p)) {
+    return 1<<M2_BIT_NEGATIVE_PRESSURE;
+  }
+  else {
+    return 0;
+  }
 }
 
 

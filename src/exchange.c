@@ -121,7 +121,7 @@ void m2sim_delete_mpi_types(m2sim *m2)
   m2->mpi_types = NULL;
 }
 
-void m2sim_synchronize_guard(m2sim *m2)
+int m2sim_synchronize_guard(m2sim *m2)
 {
   if (m2->cart_comm == NULL) {
     MSG(FATAL, "guard zone synch without MPI is not yet implemented [TODO]");
@@ -160,4 +160,5 @@ void m2sim_synchronize_guard(m2sim *m2)
   for (n=0; n<m2->local_grid_size[0]; ++n) {
     m2->volumes[n].aux.m2 = m2;
   }
+  return 0;
 }

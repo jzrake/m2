@@ -140,6 +140,24 @@ function m2Application:print_config()
    print()
 end
 
+function m2Application:get_config(keys)
+   if keys then
+      local cfg = { }
+      for _,k in ipairs(keys) do
+	 cfg[k] = self._m2[k]
+      end
+      return cfg
+   else
+      return struct.items(self._m2)
+   end
+end
+
+function m2Application:update_config(config)
+   for k,v in pairs(config) do
+      self._m2[k] = v
+   end
+end
+
 function m2Application:print_status()
    print()
    self:_log(serpent.block(struct.items(self._m2.status), {nocode=true}), 1)
@@ -255,7 +273,9 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
 	 h5config[member] = tostring(self._m2[member])
       end
       for i,member in ipairs(struct.members(self.status)) do
-	 h5status[member] = self.status[member]
+	 if member ~= 'num_failures' then
+	    h5status[member] = self.status[member]
+	 end
       end
       if self._problem then
 	 self._problem:write_hdf5_problem_data(h5file)
@@ -310,7 +330,10 @@ function m2Application:read_checkpoint_hdf5(fname)
    -- Read status and problem meta-data from HDF5
    -----------------------------------------------------------------------------
    for i,member in ipairs(struct.members(self.status)) do
-      self.status[member] = h5status[member]:value()
+      local h5mem = h5status[member]
+      if h5mem then -- in case status struct has new members since checkpoint
+	 self.status[member] = h5mem:value()
+      end
    end
    if self._problem then
       self._problem:read_hdf5_problem_data(h5file)

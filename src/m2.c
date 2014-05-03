@@ -55,7 +55,6 @@ void m2sim_new(m2sim *m2)
   m2->interpolation_fields = M2_PRIMITIVE;
   m2->riemann_solver = M2_RIEMANN_HLLE;
   m2->quartic_solver = M2_QUARTIC_FULL_COMPLEX;
-  m2->max_diffusive_steps = 0;
   m2->plm_parameter = 1.5;
   m2->cfl_parameter = 0.4;
   m2->gamma_law_index = 4./3;
@@ -89,7 +88,9 @@ void m2sim_new(m2sim *m2)
   m2->status.time_last_analysis = 0.0;
   m2->status.checkpoint_number_hdf5 = 0;
   m2->status.checkpoint_number_tpl = 0;
-  m2->status.num_diffusive_steps = 0;
+  m2->status.drive_attempt = 0;
+  m2->suppress_extrapolation_at_unhealthy_zones = 1;
+  m2->pressure_floor = -1.0; /* disabled */
 }
 void m2sim_del(m2sim *m2)
 {

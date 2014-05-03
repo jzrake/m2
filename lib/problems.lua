@@ -51,6 +51,9 @@ function TestProblem:describe()
    end
    print()
 end
+function TestProblem:reconfigure_after_failure(m2, attempt)
+   return false
+end
 function TestProblem:run(user_config_callback, restart_file)
    -----------------------------------------------------------------------------
    -- Build runtime_cfg table from with precedence given first to the
@@ -124,9 +127,40 @@ function TestProblem:run(user_config_callback, restart_file)
 
       if m2.status.iteration_number > 0 and
 	 m2.status.iteration_number % runtime_cfg.msg_cadence == 0 then
-	 log:log_message('run', m2.status:get_message(), 0)
+	 log:log_message('run', m2.status:get_message())
       end
-      m2:drive()
+
+      local keep_trying = true
+      local cached_config = m2:get_config{
+	 -- only these values should be modified by the failure handler
+	 'cfl_parameter',
+	 'plm_parameter',
+	 'quartic_solver',
+	 'riemann_solver',
+	 'rk_order',
+	 'suppress_extrapolation_at_unhealthy_zones'}
+
+      m2.status.drive_attempt = 0
+      while keep_trying do
+      	 m2:drive()
+      	 if m2.status.error_code ~= 0 then
+      	    m2.status.drive_attempt = m2.status.drive_attempt + 1
+	    log:log_message('run', m2.status:get_message())
+      	    keep_trying = self:reconfigure_after_failure(
+	       m2,
+	       m2.status.drive_attempt)
+	 else
+	    keep_trying = false
+      	 end
+      end
+
+      if m2.status.error_code ~= 0 then
+	 log:log_message('run', 'exiting due to failures')
+	 break
+      end
+
+      if m2.status.drive_attempt > 0 then m2:update_config(cached_config) end
+
       collectgarbage()
    end
 
@@ -583,11 +617,35 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
    --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
    m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
-   m2:set_max_diffusive_steps(48)
+   m2:set_suppress_extrapolation_at_unhealthy_zones(1)
+   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
    m2:set_problem(self)
    return m2
 end
-
+function MagnetarWind:reconfigure_after_failure(m2, attempt)
+   local responses = {
+      function()
+	 print('reduce cfl -> 0.2', attempt)
+	 m2:set_cfl_parameter(0.2)
+      end,
+      function()
+	 print('reduce plm -> 1.0', attempt)
+	 print('reduce cfl -> 0.1', attempt)
+	 m2:set_plm_parameter(1.0)
+	 m2:set_cfl_parameter(0.1)
+      end,
+      function()
+	 print('reduce plm -> 0.0', attempt)
+	 m2:set_plm_parameter(0.0)
+      end,
+   }
+   if responses[attempt] then
+      responses[attempt]()
+      return true
+   else
+      return false
+   end
+end
 
 
 return {DensityWave  = DensityWave,

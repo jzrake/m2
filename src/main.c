@@ -53,6 +53,50 @@ int register_ivec4(lua_State *L)
 
 
 
+/* -----------------------------------------------------------------------------
+ *
+ * ivec8
+ *
+ * -------------------------------------------------------------------------- */
+static int L_ivec8__tostring(lua_State *L)
+{
+  int *v = (int *) lua_struct_checkstruct(L, 1, "ivec8");
+  lua_pushfstring(L, "[%d %d %d %d %d %d %d %d]",
+		  v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+  return 1;
+}
+static int L_ivec8__init(lua_State *L)
+{
+  int n;
+  int *v = (int*) lua_struct_checkstruct(L, 1, "ivec8");
+  for (n=0; n<8; ++n) v[n] = luaL_optinteger(L, n+2, 0);
+  return 0;
+}
+int register_ivec8(lua_State *L)
+{
+  lua_struct_member_t members[] = {
+    {"0", 0*sizeof(int), LSTRUCT_INT},
+    {"1", 1*sizeof(int), LSTRUCT_INT},
+    {"2", 2*sizeof(int), LSTRUCT_INT},
+    {"3", 3*sizeof(int), LSTRUCT_INT},
+    {"4", 4*sizeof(int), LSTRUCT_INT},
+    {"5", 5*sizeof(int), LSTRUCT_INT},
+    {"6", 6*sizeof(int), LSTRUCT_INT},
+    {"7", 7*sizeof(int), LSTRUCT_INT},
+    {NULL, 0, 0},
+  };
+  lua_struct_t type = lua_struct_newtype(L);
+  type.type_name = "ivec8";
+  type.alloc_size = 8 * sizeof(int);
+  type.members = members;
+  type.__tostring = L_ivec8__tostring;
+  type.__init = L_ivec8__init;
+  lua_struct_register(L, type);
+  return 0;
+}
+
+
+
 
 /* -----------------------------------------------------------------------------
  *
@@ -361,8 +405,9 @@ static int L_m2sim_status_get_message(lua_State *L)
 }
 int register_m2status(lua_State *L)
 {
-#define MI(m) {#m, offsetof(m2sim_status, m), LSTRUCT_INT}
-#define MD(m) {#m, offsetof(m2sim_status, m), LSTRUCT_DOUBLE}
+#define MI(m)   {#m, offsetof(m2sim_status, m), LSTRUCT_INT}
+#define MD(m)   {#m, offsetof(m2sim_status, m), LSTRUCT_DOUBLE}
+#define MS(m,n) {#m, offsetof(m2sim_status, m), LSTRUCT_STRUCT, n}
   lua_struct_member_t members[] = {
     MI(iteration_number),
     MD(time_simulation),
@@ -372,7 +417,9 @@ int register_m2status(lua_State *L)
     MD(time_last_analysis),
     MI(checkpoint_number_hdf5),
     MI(checkpoint_number_tpl),
-    MI(num_diffusive_steps),
+    MI(error_code),
+    MI(drive_attempt),
+    MS(num_failures, "ivec8"),
     {"message", offsetof(m2sim_status, message), LSTRUCT_STRING, NULL, 1024},
     {NULL, 0, 0},
   };
@@ -382,6 +429,7 @@ int register_m2status(lua_State *L)
   };
 #undef MI
 #undef MD
+#undef MS
   lua_struct_t type = lua_struct_newtype(L);
   type.type_name = "m2sim_status";
   type.alloc_size = sizeof(m2sim_status);
@@ -794,7 +842,8 @@ int register_m2sim(lua_State *L)
     MI(interpolation_fields),
     MI(riemann_solver),
     MI(quartic_solver),
-    MI(max_diffusive_steps),
+    MI(suppress_extrapolation_at_unhealthy_zones),
+    MD(pressure_floor),
     MD(plm_parameter),
     MD(cfl_parameter),
     MD(gamma_law_index),
@@ -880,6 +929,7 @@ int luaopen_m2lib(lua_State *L)
   register_m2prim(L);
   register_m2status(L);
   register_ivec4(L);
+  register_ivec8(L);
   register_dvec4(L);
   register_dvec8(L);
 

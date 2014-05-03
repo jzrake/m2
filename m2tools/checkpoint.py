@@ -49,12 +49,12 @@ class Checkpoint(object):
         return self._fromstring(self._config['domain_resolution'], int)
 
     @property
-    def domain_extent_upper(self):        
+    def domain_extent_upper(self):
         cfg = self._config
         return self._fromstring(self._config['domain_extent_upper'], float)
 
     @property
-    def domain_extent_lower(self):        
+    def domain_extent_lower(self):
         cfg = self._config
         return self._fromstring(self._config['domain_extent_lower'], float)
 

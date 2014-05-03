@@ -17,7 +17,7 @@
 
 
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
-			     int suppress_extrapolation)
+                           int suppress_extrapolation)
 {
   int q;
   m2riemann_problem R = { .m2 = VL->m2 };
@@ -37,7 +37,13 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
   m2aux *AL = &R.Al;
   m2aux *AR = &R.Ar;
   int err[6];
-  int E = !suppress_extrapolation;
+  int E = 1;
+
+  if (suppress_extrapolation) E = 0;
+  if (VL->m2->suppress_extrapolation_at_unhealthy_zones) {
+    if (VL->zone_health != 0) E = 0;
+    if (VR->zone_health != 0) E = 0;
+  }
 
   if (VL->zone_type == M2_ZONE_TYPE_SHELL ||
       VR->zone_type == M2_ZONE_TYPE_SHELL) {
@@ -91,10 +97,13 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
   err[4] = m2aux_fluxes(AL, n, FL);
   err[5] = m2aux_fluxes(AR, n, FR);
 
+  if (err[2]) VL->zone_health |= (1<<M2_BIT_BAD_EIGENVALUES);
+  if (err[3]) VR->zone_health |= (1<<M2_BIT_BAD_EIGENVALUES);
+
   if (err[2] || err[3]) {
     if (suppress_extrapolation) {
       MSGF(FATAL, "eigenvalues for %d-interface [%d %d %d] could not be found",
-	   axis, VL->global_index[1], VL->global_index[2], VL->global_index[3]);
+           axis, VL->global_index[1], VL->global_index[2], VL->global_index[3]);
     }
     else {
       riemann_solver(VL, VR, axis, F, 1);
@@ -137,7 +146,7 @@ static double plm_gradient(double *xs, double *fs, double plm)
 
   if (g != g) {
     MSGF(FATAL, "got NAN gradient: [%f %f %f] [%f %f %f]",
-	 xs[0], xs[1], xs[2], fs[0], fs[1], fs[2]);
+         xs[0], xs[1], xs[2], fs[0], fs[1], fs[2]);
   }
 
   return g;
@@ -146,7 +155,7 @@ static double plm_gradient(double *xs, double *fs, double plm)
 }
 
 
-void m2sim_calculate_flux(m2sim *m2)
+int m2sim_calculate_flux(m2sim *m2)
 {
   int i, j, k;
   int *L = m2->local_grid_size;
@@ -164,19 +173,19 @@ void m2sim_calculate_flux(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
-	V0 = M2_VOL(i+0, j+0, k+0);
-	V1 = M2_VOL(i+1, j+0, k+0);
-	V2 = M2_VOL(i+0, j+1, k+0);
-	V3 = M2_VOL(i+0, j+0, k+1);
+        V0 = M2_VOL(i+0, j+0, k+0);
+        V1 = M2_VOL(i+1, j+0, k+0);
+        V2 = M2_VOL(i+0, j+1, k+0);
+        V3 = M2_VOL(i+0, j+0, k+1);
 
-	if (V1 == NULL) m2aux_fluxes(&V0->aux, n1, V0->flux1);
-	else riemann_solver(V0, V1, 1, V0->flux1, 0);
+        if (V1 == NULL) m2aux_fluxes(&V0->aux, n1, V0->flux1);
+        else riemann_solver(V0, V1, 1, V0->flux1, 0);
 
-	if (V2 == NULL) m2aux_fluxes(&V0->aux, n2, V0->flux2);
-	else riemann_solver(V0, V2, 2, V0->flux2, 0);
+        if (V2 == NULL) m2aux_fluxes(&V0->aux, n2, V0->flux2);
+        else riemann_solver(V0, V2, 2, V0->flux2, 0);
 
-	if (V3 == NULL) m2aux_fluxes(&V0->aux, n3, V0->flux3);
-	else riemann_solver(V0, V3, 3, V0->flux3, 0);
+        if (V3 == NULL) m2aux_fluxes(&V0->aux, n3, V0->flux3);
+        else riemann_solver(V0, V3, 3, V0->flux3, 0);
       }
     }
   }
@@ -184,108 +193,35 @@ void m2sim_calculate_flux(m2sim *m2)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-	V0 = M2_VOL(i, j, k);
-	if (m2->periodic_dimension[1] == 0 &&
-	    (V0->global_index[1] == -1 ||
-	     V0->global_index[1] == G[1] - 1)) {
-	  if (m2->boundary_conditions_flux1) {
-	    m2->boundary_conditions_flux1(V0);
-	  }
-	}
-	if (m2->periodic_dimension[2] == 0 &&
-	    (V0->global_index[2] == -1 ||
-	     V0->global_index[2] == G[2] - 1)) {
-	  if (m2->boundary_conditions_flux2) {
-	    m2->boundary_conditions_flux2(V0);
-	  }
-	}
-	if (m2->periodic_dimension[3] == 0 &&
-	    (V0->global_index[3] == -1 ||
-	     V0->global_index[3] == G[3] - 1)) {
-	  if (m2->boundary_conditions_flux3) {
-	    m2->boundary_conditions_flux3(V0);
-	  }
-	}
+        V0 = M2_VOL(i, j, k);
+        if (m2->periodic_dimension[1] == 0 &&
+            (V0->global_index[1] == -1 ||
+             V0->global_index[1] == G[1] - 1)) {
+          if (m2->boundary_conditions_flux1) {
+            m2->boundary_conditions_flux1(V0);
+          }
+        }
+        if (m2->periodic_dimension[2] == 0 &&
+            (V0->global_index[2] == -1 ||
+             V0->global_index[2] == G[2] - 1)) {
+          if (m2->boundary_conditions_flux2) {
+            m2->boundary_conditions_flux2(V0);
+          }
+        }
+        if (m2->periodic_dimension[3] == 0 &&
+            (V0->global_index[3] == -1 ||
+             V0->global_index[3] == G[3] - 1)) {
+          if (m2->boundary_conditions_flux3) {
+            m2->boundary_conditions_flux3(V0);
+          }
+        }
       }
     }
   }
+  return 0;
 }
 
-void m2sim_calculate_diffusive_flux(m2sim *m2, double r)
-{
-  int i, j, k, q;
-  int *L = m2->local_grid_size;
-  int *G = m2->domain_resolution;
-  m2vol *V0, *V1, *V2, *V3;
-  double dx;
-
-  for (i=0; i<L[1]; ++i) {
-    for (j=0; j<L[2]; ++j) {
-      for (k=0; k<L[3]; ++k) {
-
-	V0 = M2_VOL(i+0, j+0, k+0);
-	V1 = M2_VOL(i+1, j+0, k+0);
-	V2 = M2_VOL(i+0, j+1, k+0);
-	V3 = M2_VOL(i+0, j+0, k+1);
-
-	V0->emf1 = 0.0;
-	V0->emf2 = 0.0;
-	V0->emf3 = 0.0;
-
-	if (V1 && (V0->zone_health != M2_ZONE_HEALTH_GOOD ||
-		   V1->zone_health != M2_ZONE_HEALTH_GOOD)) {
-	  //printf("%d %d %d\n", i,j,k);
-	  dx = 0.5*(V1->x1[1] - V0->x0[1]);
-	  for (q=0; q<8; ++q) {
-	    if (q == TAU) {
-	      V0->flux1[q] = -r * (V1->consA[q]/V1->volume -
-				   V0->consA[q]/V0->volume) / dx;
-	    }
-	    else {
-	      V0->flux1[q] = 0.0;
-	    }
-	  }
-	}
-	else for (q=0; q<8; ++q) V0->flux1[q] = 0.0;
-
-	if (V2 && (V0->zone_health != M2_ZONE_HEALTH_GOOD ||
-		   V2->zone_health != M2_ZONE_HEALTH_GOOD)) {
-	  //printf("%d %d %d\n", i,j,k);
-	  dx = 0.5*(V2->x1[2] - V0->x0[2]);
-	  for (q=0; q<8; ++q) {
-	    if (q == TAU) {
-	      V0->flux2[q] = -r * (V2->consA[q]/V2->volume -
-				   V0->consA[q]/V0->volume) / dx;
-	    }
-	    else {
-	      V0->flux2[q] = 0.0;
-	    }
-	  }
-	}
-	else for (q=0; q<8; ++q) V0->flux2[q] = 0.0;
-
-	if (V3 && (V0->zone_health != M2_ZONE_HEALTH_GOOD ||
-		   V3->zone_health != M2_ZONE_HEALTH_GOOD)) {
-	  //printf("%d %d %d\n", i,j,k);
-	  dx = 0.5*(V3->x1[3] - V0->x0[3]);
-	  for (q=0; q<8; ++q) {
-	    if (q == TAU) {
-	      V0->flux3[q] = -r * (V3->consA[q]/V3->volume -
-				   V0->consA[q]/V0->volume) / dx;
-	    }
-	    else {
-	      V0->flux3[q] = 0.0;
-	    }
-	  }
-	}
-	else for (q=0; q<8; ++q) V0->flux3[q] = 0.0;
-
-      }
-    }
-  }
-}
-
-void m2sim_calculate_gradient(m2sim *m2)
+int m2sim_calculate_gradient(m2sim *m2)
 {
   int i, j, k, q, n;
   int *L = m2->local_grid_size;
@@ -300,79 +236,79 @@ void m2sim_calculate_gradient(m2sim *m2)
       for (k=0; k<L[3]; ++k) {
 
 
-	/* ----------------------- */
-	/* gradient in x-direction */
-	/* ----------------------- */
-	V[0] = M2_VOL(i-1, j, k);
-	V[1] = M2_VOL(i+0, j, k);
-	V[2] = M2_VOL(i+1, j, k);
-	if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL && 
-	    V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
-	  for (n=0; n<3; ++n) {
-	    x[n] = m2vol_coordinate_centroid(V[n], 1);
-	  }
-	  m2vol_to_interpolated(V[0], &ys[0], 3);
-	  m2vol_to_interpolated(V[1], &ys[1], 3);
-	  m2vol_to_interpolated(V[2], &ys[2], 3);
-	  for (q=0; q<8; ++q) {
-	    V[1]->grad1[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
-	  }
-	}
-	else {
-	  for (q=0; q<8; ++q) {
-	    V[1]->grad1[q] = 0.0;
-	  }
-	}
+        /* ----------------------- */
+        /* gradient in x-direction */
+        /* ----------------------- */
+        V[0] = M2_VOL(i-1, j, k);
+        V[1] = M2_VOL(i+0, j, k);
+        V[2] = M2_VOL(i+1, j, k);
+        if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL &&
+            V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
+          for (n=0; n<3; ++n) {
+            x[n] = m2vol_coordinate_centroid(V[n], 1);
+          }
+          m2vol_to_interpolated(V[0], &ys[0], 3);
+          m2vol_to_interpolated(V[1], &ys[1], 3);
+          m2vol_to_interpolated(V[2], &ys[2], 3);
+          for (q=0; q<8; ++q) {
+            V[1]->grad1[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
+          }
+        }
+        else {
+          for (q=0; q<8; ++q) {
+            V[1]->grad1[q] = 0.0;
+          }
+        }
 
 
-	/* ----------------------- */
-	/* gradient in y-direction */
-	/* ----------------------- */
-	V[0] = M2_VOL(i, j-1, k);
-	V[1] = M2_VOL(i, j+0, k);
-	V[2] = M2_VOL(i, j+1, k);
-	if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL && 
-	    V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
-	  for (n=0; n<3; ++n) {
-	    x[n] = m2vol_coordinate_centroid(V[n], 2);
-	  }
-	  m2vol_to_interpolated(V[0], &ys[0], 3);
-	  m2vol_to_interpolated(V[1], &ys[1], 3);
-	  m2vol_to_interpolated(V[2], &ys[2], 3);
-	  for (q=0; q<8; ++q) {
-	    V[1]->grad2[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
-	  }
-	}
-	else {
-	  for (q=0; q<8; ++q) {
-	    V[1]->grad2[q] = 0.0;
-	  }
-	}
+        /* ----------------------- */
+        /* gradient in y-direction */
+        /* ----------------------- */
+        V[0] = M2_VOL(i, j-1, k);
+        V[1] = M2_VOL(i, j+0, k);
+        V[2] = M2_VOL(i, j+1, k);
+        if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL &&
+            V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
+          for (n=0; n<3; ++n) {
+            x[n] = m2vol_coordinate_centroid(V[n], 2);
+          }
+          m2vol_to_interpolated(V[0], &ys[0], 3);
+          m2vol_to_interpolated(V[1], &ys[1], 3);
+          m2vol_to_interpolated(V[2], &ys[2], 3);
+          for (q=0; q<8; ++q) {
+            V[1]->grad2[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
+          }
+        }
+        else {
+          for (q=0; q<8; ++q) {
+            V[1]->grad2[q] = 0.0;
+          }
+        }
 
 
-	/* ----------------------- */
-	/* gradient in z-direction */
-	/* ----------------------- */
-	V[0] = M2_VOL(i, j, k-1);
-	V[1] = M2_VOL(i, j, k+0);
-	V[2] = M2_VOL(i, j, k+1);
-	if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL && 
-	    V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
-	  for (n=0; n<3; ++n) {
-	    x[n] = m2vol_coordinate_centroid(V[n], 3);
-	  }
-	  m2vol_to_interpolated(V[0], &ys[0], 3);
-	  m2vol_to_interpolated(V[1], &ys[1], 3);
-	  m2vol_to_interpolated(V[2], &ys[2], 3);
-	  for (q=0; q<8; ++q) {
-	    V[1]->grad3[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
-	  }
-	}
-	else {
-	  for (q=0; q<8; ++q) {
-	    V[1]->grad3[q] = 0.0;
-	  }
-	}
+        /* ----------------------- */
+        /* gradient in z-direction */
+        /* ----------------------- */
+        V[0] = M2_VOL(i, j, k-1);
+        V[1] = M2_VOL(i, j, k+0);
+        V[2] = M2_VOL(i, j, k+1);
+        if (V[0] && V[0]->zone_type != M2_ZONE_TYPE_SHELL &&
+            V[2] && V[2]->zone_type != M2_ZONE_TYPE_SHELL && ENABLE_PLM) {
+          for (n=0; n<3; ++n) {
+            x[n] = m2vol_coordinate_centroid(V[n], 3);
+          }
+          m2vol_to_interpolated(V[0], &ys[0], 3);
+          m2vol_to_interpolated(V[1], &ys[1], 3);
+          m2vol_to_interpolated(V[2], &ys[2], 3);
+          for (q=0; q<8; ++q) {
+            V[1]->grad3[q] = plm_gradient(x, &ys[3*q], m2->plm_parameter);
+          }
+        }
+        else {
+          for (q=0; q<8; ++q) {
+            V[1]->grad3[q] = 0.0;
+          }
+        }
       }
     }
   }
@@ -383,6 +319,7 @@ void m2sim_calculate_gradient(m2sim *m2)
   else {
     /* guard zones will just have zero gradient */
   }
+  return 0;
 }
 
 static void _calculate_emf1(m2sim *m2)
@@ -455,9 +392,9 @@ static double _calculate_emf_single(m2emf_descr emfs[4], int axis)
   else if (emf01->F1[DDD]  > 0.0) dEdy1 =              2 * (E01 - E0h)/dy;
 
   return 0.25 * (E0h + 0.5*dx*dEdx0 +
-		 E1h - 0.5*dx*dEdx1 +
-		 Eh0 + 0.5*dy*dEdy0 +
-		 Eh1 - 0.5*dy*dEdy1);
+                 E1h - 0.5*dx*dEdx1 +
+                 Eh0 + 0.5*dy*dEdy0 +
+                 Eh1 - 0.5*dy*dEdy1);
 }
 
 static void _calculate_emf2(m2sim *m2)
@@ -477,22 +414,22 @@ static void _calculate_emf2(m2sim *m2)
       vols[3] = M2_VOL(i+1, j+1, 0);
 
       if (vols[1] == NULL ||
-	  vols[2] == NULL ||
-	  vols[3] == NULL) {
-	bnd = 1;
+          vols[2] == NULL ||
+          vols[3] == NULL) {
+        bnd = 1;
       }
       else {
-	for (n=0; n<4; ++n) {
-	  emfs[n].F1 = vols[n]->flux1;
-	  emfs[n].F2 = vols[n]->flux2;
-	  emfs[n].x0 = vols[n]->x0;
-	  emfs[n].x1 = vols[n]->x1;
-	  emfs[n].v1 = vols[n]->prim.v1;
-	  emfs[n].v2 = vols[n]->prim.v2;
-	  emfs[n].B1 = vols[n]->prim.B1;
-	  emfs[n].B2 = vols[n]->prim.B2;
-	}
-	bnd = 0;
+        for (n=0; n<4; ++n) {
+          emfs[n].F1 = vols[n]->flux1;
+          emfs[n].F2 = vols[n]->flux2;
+          emfs[n].x0 = vols[n]->x0;
+          emfs[n].x1 = vols[n]->x1;
+          emfs[n].v1 = vols[n]->prim.v1;
+          emfs[n].v2 = vols[n]->prim.v2;
+          emfs[n].B1 = vols[n]->prim.B1;
+          emfs[n].B2 = vols[n]->prim.B2;
+        }
+        bnd = 0;
       }
       vols[0]->emf1 = -vols[0]->flux2[B33] * vols[0]->line1;
       vols[0]->emf2 = +vols[0]->flux1[B33] * vols[0]->line2;
@@ -512,54 +449,54 @@ static void _calculate_emf3(m2sim *m2)
     for (j=0; j<L[2]-1; ++j) {
       for (k=0; k<L[3]-1; ++k) {
 
-	vols[1][0] = M2_VOL(i, j,   k  );
-	vols[1][1] = M2_VOL(i, j+1, k  );
-	vols[1][2] = M2_VOL(i, j,   k+1);
-	vols[1][3] = M2_VOL(i, j+1, k+1);
-	vols[2][0] = M2_VOL(i,   j, k  );
-	vols[2][1] = M2_VOL(i,   j, k+1);
-	vols[2][2] = M2_VOL(i+1, j, k  );
-	vols[2][3] = M2_VOL(i+1, j, k+1);
-	vols[3][0] = M2_VOL(i,   j,   k);
-	vols[3][1] = M2_VOL(i+1, j,   k);
-	vols[3][2] = M2_VOL(i,   j+1, k);
-	vols[3][3] = M2_VOL(i+1, j+1, k);
+        vols[1][0] = M2_VOL(i, j,   k  );
+        vols[1][1] = M2_VOL(i, j+1, k  );
+        vols[1][2] = M2_VOL(i, j,   k+1);
+        vols[1][3] = M2_VOL(i, j+1, k+1);
+        vols[2][0] = M2_VOL(i,   j, k  );
+        vols[2][1] = M2_VOL(i,   j, k+1);
+        vols[2][2] = M2_VOL(i+1, j, k  );
+        vols[2][3] = M2_VOL(i+1, j, k+1);
+        vols[3][0] = M2_VOL(i,   j,   k);
+        vols[3][1] = M2_VOL(i+1, j,   k);
+        vols[3][2] = M2_VOL(i,   j+1, k);
+        vols[3][3] = M2_VOL(i+1, j+1, k);
 
-	for (m=1; m<4; ++m) {
-	  for (n=0; n<4; ++n) {
-	    emfs[m][n].x0 = vols[m][n]->x0;
-	    emfs[m][n].x1 = vols[m][n]->x1;
-	    switch (m) {
-	    case 1:
-	      emfs[m][n].F1 = vols[m][n]->flux2;
-	      emfs[m][n].F2 = vols[m][n]->flux3;
-	      emfs[m][n].v1 = vols[m][n]->prim.v2;
-	      emfs[m][n].v2 = vols[m][n]->prim.v3;
-	      emfs[m][n].B1 = vols[m][n]->prim.B2;
-	      emfs[m][n].B2 = vols[m][n]->prim.B3;
-	      break;
-	    case 2:
-	      emfs[m][n].F1 = vols[m][n]->flux3;
-	      emfs[m][n].F2 = vols[m][n]->flux1;
-	      emfs[m][n].v1 = vols[m][n]->prim.v3;
-	      emfs[m][n].v2 = vols[m][n]->prim.v1;
-	      emfs[m][n].B1 = vols[m][n]->prim.B3;
-	      emfs[m][n].B2 = vols[m][n]->prim.B1;
-	      break;
-	    case 3:
-	      emfs[m][n].F1 = vols[m][n]->flux1;
-	      emfs[m][n].F2 = vols[m][n]->flux2;
-	      emfs[m][n].v1 = vols[m][n]->prim.v1;
-	      emfs[m][n].v2 = vols[m][n]->prim.v2;
-	      emfs[m][n].B1 = vols[m][n]->prim.B1;
-	      emfs[m][n].B2 = vols[m][n]->prim.B2;
-	      break;
-	    }
-	  }
-	}
-	vols[1][0]->emf1 = _calculate_emf_single(emfs[1], 1)*vols[1][0]->line1;
-	vols[1][0]->emf2 = _calculate_emf_single(emfs[2], 2)*vols[1][0]->line2;
-	vols[1][0]->emf3 = _calculate_emf_single(emfs[3], 3)*vols[1][0]->line3;
+        for (m=1; m<4; ++m) {
+          for (n=0; n<4; ++n) {
+            emfs[m][n].x0 = vols[m][n]->x0;
+            emfs[m][n].x1 = vols[m][n]->x1;
+            switch (m) {
+            case 1:
+              emfs[m][n].F1 = vols[m][n]->flux2;
+              emfs[m][n].F2 = vols[m][n]->flux3;
+              emfs[m][n].v1 = vols[m][n]->prim.v2;
+              emfs[m][n].v2 = vols[m][n]->prim.v3;
+              emfs[m][n].B1 = vols[m][n]->prim.B2;
+              emfs[m][n].B2 = vols[m][n]->prim.B3;
+              break;
+            case 2:
+              emfs[m][n].F1 = vols[m][n]->flux3;
+              emfs[m][n].F2 = vols[m][n]->flux1;
+              emfs[m][n].v1 = vols[m][n]->prim.v3;
+              emfs[m][n].v2 = vols[m][n]->prim.v1;
+              emfs[m][n].B1 = vols[m][n]->prim.B3;
+              emfs[m][n].B2 = vols[m][n]->prim.B1;
+              break;
+            case 3:
+              emfs[m][n].F1 = vols[m][n]->flux1;
+              emfs[m][n].F2 = vols[m][n]->flux2;
+              emfs[m][n].v1 = vols[m][n]->prim.v1;
+              emfs[m][n].v2 = vols[m][n]->prim.v2;
+              emfs[m][n].B1 = vols[m][n]->prim.B1;
+              emfs[m][n].B2 = vols[m][n]->prim.B2;
+              break;
+            }
+          }
+        }
+        vols[1][0]->emf1 = _calculate_emf_single(emfs[1], 1)*vols[1][0]->line1;
+        vols[1][0]->emf2 = _calculate_emf_single(emfs[2], 2)*vols[1][0]->line2;
+        vols[1][0]->emf3 = _calculate_emf_single(emfs[3], 3)*vols[1][0]->line3;
       }
     }
   }
@@ -607,22 +544,22 @@ static void _exchange_flux2(m2sim *m2, double dt)
       V2 = V2 ? V2 : V0;
 
       for (q=0; q<5; ++q) {
-	V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
-	V0->consA[q] += dt * V1->area1 * V1->flux1[q];
-	V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
-	V0->consA[q] += dt * V2->area2 * V2->flux2[q];
+        V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
+        V0->consA[q] += dt * V1->area1 * V1->flux1[q];
+        V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
+        V0->consA[q] += dt * V2->area2 * V2->flux2[q];
       }
 
       if (m2->magnetized) {
-	V0->Bflux1A -= dt * V0->emf3;
-	V0->Bflux1A += dt * V2->emf3;
-	V0->Bflux2A += dt * V0->emf3;
-	V0->Bflux2A -= dt * V1->emf3;
+        V0->Bflux1A -= dt * V0->emf3;
+        V0->Bflux1A += dt * V2->emf3;
+        V0->Bflux2A += dt * V0->emf3;
+        V0->Bflux2A -= dt * V1->emf3;
 
-	V0->Bflux3A -= dt * V0->emf2;
-	V0->Bflux3A += dt * V1->emf2;
-	V0->Bflux3A += dt * V0->emf1;
-	V0->Bflux3A -= dt * V2->emf1;
+        V0->Bflux3A -= dt * V0->emf2;
+        V0->Bflux3A += dt * V1->emf2;
+        V0->Bflux3A += dt * V0->emf1;
+        V0->Bflux3A -= dt * V2->emf1;
       }
     }
   }
@@ -638,48 +575,48 @@ static void _exchange_flux3(m2sim *m2, double dt)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
-	V0 = M2_VOL(i,   j, k  );
-	V1 = M2_VOL(i-1, j, k  );
-	V2 = M2_VOL(i, j-1, k  );
-	V3 = M2_VOL(i, j,   k-1);
+        V0 = M2_VOL(i,   j, k  );
+        V1 = M2_VOL(i-1, j, k  );
+        V2 = M2_VOL(i, j-1, k  );
+        V3 = M2_VOL(i, j,   k-1);
 
-	V1 = V1 ? V1 : V0;
-	V2 = V2 ? V2 : V0;
-	V3 = V3 ? V3 : V0;
+        V1 = V1 ? V1 : V0;
+        V2 = V2 ? V2 : V0;
+        V3 = V3 ? V3 : V0;
 
-	for (q=0; q<5; ++q) {
-	  V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
-	  V0->consA[q] += dt * V1->area1 * V1->flux1[q];
-	  V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
-	  V0->consA[q] += dt * V2->area2 * V2->flux2[q];
-	  V0->consA[q] -= dt * V0->area3 * V0->flux3[q];
-	  V0->consA[q] += dt * V3->area3 * V3->flux3[q];
-	}
+        for (q=0; q<5; ++q) {
+          V0->consA[q] -= dt * V0->area1 * V0->flux1[q];
+          V0->consA[q] += dt * V1->area1 * V1->flux1[q];
+          V0->consA[q] -= dt * V0->area2 * V0->flux2[q];
+          V0->consA[q] += dt * V2->area2 * V2->flux2[q];
+          V0->consA[q] -= dt * V0->area3 * V0->flux3[q];
+          V0->consA[q] += dt * V3->area3 * V3->flux3[q];
+        }
 
-	if (m2->magnetized) {
-	  V0->Bflux1A += dt * V2->emf3;
-	  V0->Bflux1A -= dt * V0->emf3;
-	  V0->Bflux1A += dt * V0->emf2;
-	  V0->Bflux1A -= dt * V3->emf2;
+        if (m2->magnetized) {
+          V0->Bflux1A += dt * V2->emf3;
+          V0->Bflux1A -= dt * V0->emf3;
+          V0->Bflux1A += dt * V0->emf2;
+          V0->Bflux1A -= dt * V3->emf2;
 
-	  V0->Bflux2A += dt * V3->emf1;
-	  V0->Bflux2A -= dt * V0->emf1;
-	  V0->Bflux2A += dt * V0->emf3;
-	  V0->Bflux2A -= dt * V1->emf3;
+          V0->Bflux2A += dt * V3->emf1;
+          V0->Bflux2A -= dt * V0->emf1;
+          V0->Bflux2A += dt * V0->emf3;
+          V0->Bflux2A -= dt * V1->emf3;
 
-	  V0->Bflux3A += dt * V1->emf2;
-	  V0->Bflux3A -= dt * V0->emf2;
-	  V0->Bflux3A += dt * V0->emf1;
-	  V0->Bflux3A -= dt * V2->emf1;
-	}
+          V0->Bflux3A += dt * V1->emf2;
+          V0->Bflux3A -= dt * V0->emf2;
+          V0->Bflux3A += dt * V0->emf1;
+          V0->Bflux3A -= dt * V2->emf1;
+        }
       }
     }
   }
 }
 
-void m2sim_calculate_emf(m2sim *m2)
+int m2sim_calculate_emf(m2sim *m2)
 {
-  if (!m2->magnetized) return;
+  if (!m2->magnetized) return 0;
   int *G = m2->domain_resolution;
   int ndim = 0;
   ndim += G[1] > 1;
@@ -690,9 +627,10 @@ void m2sim_calculate_emf(m2sim *m2)
   case 2: _calculate_emf2(m2); break;
   case 3: _calculate_emf3(m2); break;
   }
+  return 0;
 }
 
-void m2sim_exchange_flux(m2sim *m2, double dt)
+int m2sim_exchange_flux(m2sim *m2, double dt)
 {
   int *G = m2->domain_resolution;
   int ndim = 0;
@@ -704,10 +642,11 @@ void m2sim_exchange_flux(m2sim *m2, double dt)
   case 2: _exchange_flux2(m2, dt); break;
   case 3: _exchange_flux3(m2, dt); break;
   }
+  return 0;
 }
 
 
-void m2sim_add_source_terms(m2sim *m2, double dt)
+int m2sim_add_source_terms(m2sim *m2, double dt)
 {
   int n;
   int *L = m2->local_grid_size;
@@ -727,10 +666,11 @@ void m2sim_add_source_terms(m2sim *m2, double dt)
       m2->add_physical_source_terms(V);
     }
   }
+  return 0;
 }
 
 
-void m2sim_cache_conserved(m2sim *m2)
+int m2sim_cache_conserved(m2sim *m2)
 {
   int n;
   int *L = m2->local_grid_size;
@@ -748,10 +688,11 @@ void m2sim_cache_conserved(m2sim *m2)
     V->Bflux2B = V->Bflux2A;
     V->Bflux3B = V->Bflux3A;
   }
+  return 0;
 }
 
 
-void m2sim_average_runge_kutta(m2sim *m2, double b)
+int m2sim_average_runge_kutta(m2sim *m2, double b)
 {
   int n, q;
   int *L = m2->local_grid_size;
@@ -771,10 +712,11 @@ void m2sim_average_runge_kutta(m2sim *m2, double b)
     V->Bflux2A = b * V->Bflux2A + (1.0 - b) * V->Bflux2B;
     V->Bflux3A = b * V->Bflux3A + (1.0 - b) * V->Bflux3B;
   }
+  return 0;
 }
 
 
-void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
+int m2sim_magnetic_flux_to_cell_center(m2sim *m2)
 /*
  * Convert the face-centered magnetic flux to a pointwise magnetic field at the
  * cell center. Although the left-most cell along each axis is given a
@@ -794,24 +736,25 @@ void m2sim_magnetic_flux_to_cell_center(m2sim *m2)
   for (i=0; i<L[1]; ++i) {
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
-	VC = M2_VOL(i, j, k);
-	V1 = (G[1] > 1) ? M2_VOL(i-1, j, k) : VC;
-	V2 = (G[2] > 1) ? M2_VOL(i, j-1, k) : VC;
-	V3 = (G[3] > 1) ? M2_VOL(i, j, k-1) : VC;
+        VC = M2_VOL(i, j, k);
+        V1 = (G[1] > 1) ? M2_VOL(i-1, j, k) : VC;
+        V2 = (G[2] > 1) ? M2_VOL(i, j-1, k) : VC;
+        V3 = (G[3] > 1) ? M2_VOL(i, j, k-1) : VC;
 
-	A1R = (VC && VC->area1 > 1e-12) ? VC->area1 : 1.0;
-	A2R = (VC && VC->area2 > 1e-12) ? VC->area2 : 1.0;
-	A3R = (VC && VC->area3 > 1e-12) ? VC->area3 : 1.0;
-	A1L = (V1 && V1->area1 > 1e-12) ? V1->area1 : 1.0;
-	A2L = (V2 && V2->area2 > 1e-12) ? V2->area2 : 1.0;
-	A3L = (V3 && V3->area3 > 1e-12) ? V3->area3 : 1.0;
+        A1R = (VC && VC->area1 > 1e-12) ? VC->area1 : 1.0;
+        A2R = (VC && VC->area2 > 1e-12) ? VC->area2 : 1.0;
+        A3R = (VC && VC->area3 > 1e-12) ? VC->area3 : 1.0;
+        A1L = (V1 && V1->area1 > 1e-12) ? V1->area1 : 1.0;
+        A2L = (V2 && V2->area2 > 1e-12) ? V2->area2 : 1.0;
+        A3L = (V3 && V3->area3 > 1e-12) ? V3->area3 : 1.0;
 
-	VC->prim.B1 = V1 ? 0.5 * (VC->Bflux1A/A1R + V1->Bflux1A/A1L) : 0.0;
-	VC->prim.B2 = V2 ? 0.5 * (VC->Bflux2A/A2R + V2->Bflux2A/A2L) : 0.0;
-	VC->prim.B3 = V3 ? 0.5 * (VC->Bflux3A/A3R + V3->Bflux3A/A3L) : 0.0;
+        VC->prim.B1 = V1 ? 0.5 * (VC->Bflux1A/A1R + V1->Bflux1A/A1L) : 0.0;
+        VC->prim.B2 = V2 ? 0.5 * (VC->Bflux2A/A2R + V2->Bflux2A/A2L) : 0.0;
+        VC->prim.B3 = V3 ? 0.5 * (VC->Bflux3A/A3R + V3->Bflux3A/A3L) : 0.0;
       }
     }
   }
+  return 0;
 }
 
 
@@ -835,43 +778,22 @@ int m2sim_from_conserved_all(m2sim *m2)
     B[2] = V->prim.B2;
     B[3] = V->prim.B3;
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
-				 &V->aux, &V->prim);
-    if (error) {
-      V->zone_health = M2_ZONE_HEALTH_BAD;
-      //m2_print_state(&V->prim, &V->aux, V->consA);
-      /* MSGF(FATAL, "at global index [%d %d %d]", */
-      /* 	   V->global_index[1], */
-      /* 	   V->global_index[2], */
-      /* 	   V->global_index[3]); */
-    }
-    else {
-      V->zone_health = M2_ZONE_HEALTH_GOOD;
-    }
+                                 &V->aux, &V->prim);
+    V->zone_health |= error;
   }
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    num_bad += V->zone_health == M2_ZONE_HEALTH_BAD;
+    num_bad += V->zone_health & (1<<M2_BIT_FAILED_CONSERVED_INVERSION);
   }
+#if M2_HAVE_MPI
+  if (m2->cart_comm) {
+    MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
+    MPI_Allreduce(MPI_IN_PLACE, &num_bad, 1, MPI_INT, MPI_SUM, cart_comm);
+  }
+#endif
 
-  if (num_bad > 0) {
-    if (m2->status.num_diffusive_steps ==
-	m2->max_diffusive_steps) {
-      MSGF(FATAL, "from_conserved failed even after %d diffusive steps",
-	   m2->max_diffusive_steps);
-    }
-    else {
-      m2sim_calculate_diffusive_flux(m2, 1e-3);
-      m2sim_exchange_flux(m2, 1.0);
-      m2->status.num_diffusive_steps += 1;
-      printf("taking diffusive step %d (num_bad=%d)\n",
-	     m2->status.num_diffusive_steps, num_bad);
-      return m2sim_from_conserved_all(m2);
-    }
-  }
-  else {
-    return 0;
-  }
+  return num_bad > 0;
 }
 
 
@@ -889,7 +811,7 @@ int m2sim_from_primitive_all(m2sim *m2)
       /* continue; */
     }
     m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-			 V->consA, &V->aux);
+                         V->consA, &V->aux);
   }
   return 0;
 }
@@ -912,19 +834,19 @@ double m2sim_minimum_courant_time(m2sim *m2)
     for (n=0; n<L[0]; ++n) {
       V = m2->volumes + n;
       if (V->zone_type != M2_ZONE_TYPE_FULL) {
-	continue;
+        continue;
       }
       dt = m2vol_minimum_dimension(V) / m2aux_maximum_wavespeed(&V->aux, &err);
       if (err) {
-	MSG(INFO, "got bad wavespeed");
-	m2_print_state(NULL, &V->aux, NULL);
-	MSGF(FATAL, "at global index [%d %d %d]",
-	     V->global_index[1],
-	     V->global_index[2],
-	     V->global_index[3]);
+        MSG(INFO, "got bad wavespeed");
+        m2_print_state(NULL, &V->aux, NULL);
+        MSGF(FATAL, "at global index [%d %d %d]",
+             V->global_index[1],
+             V->global_index[2],
+             V->global_index[3]);
       }
       if (dt < mindt || mindt < 0.0) {
-	mindt = dt;
+        mindt = dt;
       }
     }
 #ifdef _OPENMP
@@ -932,7 +854,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
 #endif
     {
       if (mindt < globalmindt || globalmindt < 0.0) {
-	globalmindt = mindt;
+        globalmindt = mindt;
       }
     }
   }
@@ -941,7 +863,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
   if (m2->cart_comm) {
     MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
     MPI_Allreduce(MPI_IN_PLACE, &globalmindt, 1, MPI_DOUBLE, MPI_MIN,
-		  cart_comm);
+                  cart_comm);
   }
 #endif
 
@@ -949,7 +871,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
 }
 
 
-void m2sim_enforce_boundary_condition(m2sim *m2)
+int m2sim_enforce_boundary_condition(m2sim *m2)
 {
   if (m2->boundary_conditions_cell == NULL) {
 
@@ -957,43 +879,63 @@ void m2sim_enforce_boundary_condition(m2sim *m2)
   else {
     m2->boundary_conditions_cell(m2);
   }
+  return 0;
 }
 
 
-void m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
+int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
-  m2sim_calculate_gradient(m2);
-  m2sim_calculate_flux(m2); /* FAILURES: bad eigenvalues */
-  m2sim_synchronize_guard(m2); /* so that Godunov fluxes are communicated */
-  m2sim_calculate_emf(m2);
-  m2sim_exchange_flux(m2, dt);
-  m2sim_add_source_terms(m2, dt);
-  m2sim_average_runge_kutta(m2, rkparam); /* FAILURES: negative TAU or DDD */
-  m2sim_enforce_boundary_condition(m2);
-  m2sim_magnetic_flux_to_cell_center(m2);
-  m2sim_from_conserved_all(m2); /* FAILURES: c2p failure, negative pressure */
-  m2sim_synchronize_guard(m2);
+  int err = 0;
+  err += m2sim_calculate_gradient(m2);
+  err += m2sim_calculate_flux(m2); /* FAILURES: bad eigenvalues */
+  err += m2sim_synchronize_guard(m2); /* so that Godunov fluxes are communicated */
+  err += m2sim_calculate_emf(m2);
+  err += m2sim_exchange_flux(m2, dt);
+  err += m2sim_add_source_terms(m2, dt);
+  err += m2sim_average_runge_kutta(m2, rkparam); /* FAILURES: negative TAU or DDD */
+  err += m2sim_enforce_boundary_condition(m2);
+  err += m2sim_magnetic_flux_to_cell_center(m2);
+  err += m2sim_from_conserved_all(m2); /* FAILURES: c2p failure, negative pressure */
+  err += m2sim_synchronize_guard(m2);
+  return err;
 }
 
 
 void m2sim_drive(m2sim *m2)
 {
   double dt;
-  int rk_order = m2->rk_order;
+  int n, q, err, rk_order = m2->rk_order;
+  int *L = m2->local_grid_size;
   double kzps; /* kilozones per second */
   char checkpoint_name[1024];
-
-#ifdef _OPENMP
-  double start_wtime, stop_wtime;
-#else
-  clock_t start_cycle, stop_cycle;
-#endif
 
   m2sim_run_analysis(m2);
   m2sim_cache_conserved(m2);
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
   m2->status.time_step = dt;
-  m2->status.num_diffusive_steps = 0;
+
+  for (q=0; q<8; ++q) {
+    m2->status.num_failures[q] = 0;
+  }
+
+
+  /* ======================================================================== */
+  /* Mark all zones as healthy on first attempt */
+  /* ======================================================================== */
+  if (m2->status.drive_attempt == 0) {
+    for (n=0; n<L[0]; ++n) {
+      m2->volumes[n].zone_health = 0;
+    }
+  }
+
+
+  /* ======================================================================== */
+  /* Cache the primitive variables in case a reset is needed                  */
+  /* ======================================================================== */
+  m2prim *cached_prim = (m2prim *) malloc(L[0] * sizeof(m2prim));
+  for (n=0; n<L[0]; ++n) {
+    cached_prim[n] = m2->volumes[n].prim;
+  }
 
   double cad = m2->cadence_checkpoint_tpl;
   double now = m2->status.time_simulation;
@@ -1003,50 +945,117 @@ void m2sim_drive(m2sim *m2)
     m2->status.checkpoint_number_tpl += 1;
     m2->status.time_last_checkpoint_tpl += cad;
     snprintf(checkpoint_name, sizeof(checkpoint_name), "chkpt.%04d.m2",
-	     m2->status.checkpoint_number_tpl);
+             m2->status.checkpoint_number_tpl);
     m2sim_save_checkpoint_tpl(m2, checkpoint_name);
   }
 
+
+  /* ======================================================================== */
+  /* Start the clock                                                          */
+  /* ======================================================================== */
 #ifdef _OPENMP
+  double start_wtime, stop_wtime;
   start_wtime = omp_get_wtime();
 #else
+  clock_t start_cycle, stop_cycle;
   start_cycle = clock();
 #endif
 
+
+  /* ======================================================================== */
+  /* Take Runge-Kutta substeps                                                */
+  /* ======================================================================== */
   switch (rk_order) {
   case 1:
-    m2sim_runge_kutta_substep(m2, dt, 1.0);
+    err = m2sim_runge_kutta_substep(m2, dt, 1.0); if (err) {err=1; break;}
     break;
   case 2:
-    m2sim_runge_kutta_substep(m2, dt, 1.0);
-    m2sim_runge_kutta_substep(m2, dt, 0.5);
+    err = m2sim_runge_kutta_substep(m2, dt, 1.0); if (err) {err=1; break;}
+    err = m2sim_runge_kutta_substep(m2, dt, 0.5); if (err) {err=2; break;}
     break;
   case 3:
-    m2sim_runge_kutta_substep(m2, dt, 1.0);
-    m2sim_runge_kutta_substep(m2, dt, 1.0/4.0);
-    m2sim_runge_kutta_substep(m2, dt, 2.0/3.0);
+    err = m2sim_runge_kutta_substep(m2, dt, 1.0/1.0); if (err) {err=1; break;}
+    err = m2sim_runge_kutta_substep(m2, dt, 1.0/4.0); if (err) {err=2; break;}
+    err = m2sim_runge_kutta_substep(m2, dt, 2.0/3.0); if (err) {err=3; break;}
     break;
   }
 
-#ifdef _OPENMP
-  stop_wtime = omp_get_wtime();
-  kzps = 1e-3 * m2->local_grid_size[0] / (stop_wtime - start_wtime);
-#else
-  stop_cycle = clock();
-  kzps = 1e-3 * m2->local_grid_size[0] / (stop_cycle - start_cycle) *
-    CLOCKS_PER_SEC;
+
+  /* ======================================================================== */
+  /* Sum up the different kinds of errors                                     */
+  /* ======================================================================== */
+  for (n=0; n<L[0]; ++n) {
+    m2vol *V = m2->volumes + n;
+    for (q=0; q<8; ++q) {
+      m2->status.num_failures[q] += V->zone_health & (1<<q);
+    }
+  }
+#if M2_HAVE_MPI
+  if (m2->cart_comm) {
+    MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
+    MPI_Allreduce(MPI_IN_PLACE, m2->status.num_failures, 8,
+		  MPI_INT,
+		  MPI_SUM, cart_comm);
+  }
 #endif
 
-  m2->status.iteration_number += 1;
-  m2->status.time_simulation += dt;
 
-  /* print status message */
+  if (err) {
+    /* ====================================================================== */
+    /* Reset data to before the step was attempted                            */
+    /* ====================================================================== */
+    for (n=0; n<L[0]; ++n) {
+      m2vol *V = m2->volumes + n;
+      V->prim = cached_prim[n]; /* recover cell-centered prim */
+      V->Bflux1A = V->Bflux1B; /* recover face-centered flux */
+      V->Bflux2A = V->Bflux2B;
+      V->Bflux3A = V->Bflux3B;
+      for (q=0; q<5; ++q) {
+        V->consA[q] = V->consB[q]; /* recover conserved variables */
+      }
+      /* recover auxiliary variables */
+      m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
+                           NULL, &V->aux);
+    }
+    /* print status message */
+    m2->status.error_code = 1;
+  }
+  else {
+    /* ====================================================================== */
+    /* Successful step                                                        */
+    /* ====================================================================== */
+    m2->status.iteration_number += 1;
+    m2->status.time_simulation += dt;
+    m2->status.error_code = 0;
+  }
+
+
+#ifdef _OPENMP
+    stop_wtime = omp_get_wtime();
+    kzps = 1e-3 * m2->local_grid_size[0] / (stop_wtime - start_wtime);
+#else
+    stop_cycle = clock();
+    kzps = 1e-3 * m2->local_grid_size[0] / (stop_cycle - start_cycle) *
+      CLOCKS_PER_SEC;
+#endif
+
+
+  /* ======================================================================== */
+  /* Print status message                                                     */
+  /* ======================================================================== */
   snprintf(m2->status.message, 1024,
-	   "%08d: t=%5.4f dt=%5.4e kzps=%4.3f",
+	   "%08d(%d): t=%5.4f dt=%5.4e kzps=%4.3f [%d %d %d %d %d]",
 	   m2->status.iteration_number,
+	   m2->status.drive_attempt,
 	   m2->status.time_simulation,
 	   dt,
-	   kzps);
+	   kzps,
+	   m2->status.num_failures[0],
+	   m2->status.num_failures[1],
+	   m2->status.num_failures[2],
+	   m2->status.num_failures[3],
+	   m2->status.num_failures[4]);
+  free(cached_prim);
 }
 
 
@@ -1066,17 +1075,17 @@ void check_symmetry(m2sim *m2, char *msg)
       m2vol *V1 = M2_VOL(i, L[2] - j, 0);
 
       if (NOTZERO(V0->emf2 - V1->emf2) ||
-	  NOTZERO(V0->prim.d - V1->prim.d) ||
-	  NOTZERO(V0->prim.p - V1->prim.p) ||
-	  NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
-	  NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
-	printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) "
-	       "flux1[B3] = (%+14.12e %+14.12e) "
-	       "flux1[DD] = (%+14.12e %+14.12e)\n",
-	       msg, V0->global_index[1], V0->global_index[2],
-	       V0->flux1[B33], V1->flux1[B33],
-	       V0->emf2, V1->emf2,
-	       V0->flux1[DDD], V1->flux1[DDD]);
+          NOTZERO(V0->prim.d - V1->prim.d) ||
+          NOTZERO(V0->prim.p - V1->prim.p) ||
+          NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
+          NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
+        printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) "
+               "flux1[B3] = (%+14.12e %+14.12e) "
+               "flux1[DD] = (%+14.12e %+14.12e)\n",
+               msg, V0->global_index[1], V0->global_index[2],
+               V0->flux1[B33], V1->flux1[B33],
+               V0->emf2, V1->emf2,
+               V0->flux1[DDD], V1->flux1[DDD]);
       }
     }
   }
@@ -1089,8 +1098,8 @@ void check_symmetry(m2sim *m2, char *msg)
       m2vol *V1 = M2_VOL(i, L[2] - j-1, 0);
 
       if (NOTZERO(V0->emf1 + V1->emf1)) {
-	printf("%s [%d %d]: emf1 = (%+14.12e %+14.12e)\n",
-	       msg, i, j, V0->emf1, V1->emf1);
+        printf("%s [%d %d]: emf1 = (%+14.12e %+14.12e)\n",
+               msg, i, j, V0->emf1, V1->emf1);
       }
     }
   }
