@@ -2,40 +2,40 @@
 #include "hydro.h"
 
 
-#define SYSTEM_CHOICE(m2,E)						\
-  do {									\
-    if (0) { }								\
-    else if (m2->relativistic == 1 && m2->magnetized == 1) {		\
-      return srmhd_##E;							\
-    }									\
-    else if (m2->relativistic == 1 && m2->magnetized == 0) {		\
-      return srhyd_##E;							\
-    }									\
-    else if (m2->relativistic == 0 && m2->magnetized == 1) {		\
-      return nrmhd_##E;							\
-    }									\
-    else if (m2->relativistic == 0 && m2->magnetized == 0) {		\
-      return nrhyd_##E;							\
-    }									\
-    else {								\
-      MSG(FATAL, "unknown physics");					\
-      return -1;							\
-    }									\
-  } while (0)								\
+#define SYSTEM_CHOICE(m2,E)           \
+  do {                  \
+    if (0) { }                \
+    else if (m2->relativistic == 1 && m2->magnetized == 1) {    \
+      return srmhd_##E;             \
+    }                 \
+    else if (m2->relativistic == 1 && m2->magnetized == 0) {    \
+      return srhyd_##E;             \
+    }                 \
+    else if (m2->relativistic == 0 && m2->magnetized == 1) {    \
+      return nrmhd_##E;             \
+    }                 \
+    else if (m2->relativistic == 0 && m2->magnetized == 0) {    \
+      return nrhyd_##E;             \
+    }                 \
+    else {                \
+      MSG(FATAL, "unknown physics");          \
+      return -1;              \
+    }                 \
+  } while (0)               \
 
 
 int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
-			 double *U, m2aux *aux)
+    double *U, m2aux *aux)
 {
   SYSTEM_CHOICE(m2, from_primitive(m2, P, B, X, dV, U, aux));
 }
 int m2sim_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
-			 m2aux *aux, m2prim *P)
+       m2aux *aux, m2prim *P)
 {
   SYSTEM_CHOICE(m2, from_conserved(m2, U, B, X, dV, aux, P));
 }
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
-			 m2prim *P, double *U)
+       m2prim *P, double *U)
 {
   SYSTEM_CHOICE(m2, from_auxiliary(m2, aux, X, dV, P, U));
 }
@@ -58,7 +58,7 @@ int m2vol_from_primitive(m2vol *V)
   SYSTEM_CHOICE(m2, from_primitive(m2, P, B, NULL, dV, U, A));
 }
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
-				       double *U)
+               double *U)
 {
   if (aux->m2->geometry == M2_CARTESIAN) {
     return 0;
@@ -84,7 +84,7 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     const double B2 = b2 * u0 - b0 * u2;
     const double p  = aux->gas_pressure + aux->magnetic_pressure;
     U[S11] += dt * ((-f0 + f1)*(-r0 + r1)*
-		    (-(b2*B2) + u0*(p + S2*v2))*(-z0 + z1))/u0;
+        (-(b2*B2) + u0*(p + S2*v2))*(-z0 + z1))/u0;
     U[S22] += dt * ((f0 - f1)*(r0 - r1)*(-(B1*b2) + S1*u0*v2)*(z0 - z1))/u0;
     U[S33] += dt * 0.0;
     return 0;
@@ -118,15 +118,15 @@ int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
     /* Mathematica made the following mess: */
     /* ------------------------------------ */
     U[S11] += dt * ((B2*b2 + B3*b3 - (2*p + S2*v2 + S3*v3)*u0)*(f0 - f1)*
-		    (cos(t0) - cos(t1))*(-(r0*r0) + r1*r1))/(2.*u0);
+        (cos(t0) - cos(t1))*(-(r0*r0) + r1*r1))/(2.*u0);
     U[S22] += dt * ((r0 - r1)*(r0 + r1)*(f0 - f1)*
-		    ((B1*b2 - S1*v2*u0)*cos(t0) +
-		     (-(B1*b2) + S1*v2*u0)*cos(t1) + (B3*b3 - (p + S3*v3)*u0)*
-		     (sin(t0) - sin(t1))))/(2.*u0);
+        ((B1*b2 - S1*v2*u0)*cos(t0) +
+         (-(B1*b2) + S1*v2*u0)*cos(t1) + (B3*b3 - (p + S3*v3)*u0)*
+         (sin(t0) - sin(t1))))/(2.*u0);
     U[S33] += dt * ((f0 - f1)*((-(B1*b3) + S1*v3*u0)*cos(t0) +
-			       (B1*b3 - S1*v3*u0)*cos(t1) +
-			       (B2*b3 - S2*v3*u0)*(sin(t0) - sin(t1)))*
-		    (-(r0*r0) + r1*r1))/(2.*u0);
+             (B1*b3 - S1*v3*u0)*cos(t1) +
+             (B2*b3 - S2*v3*u0)*(sin(t0) - sin(t1)))*
+        (-(r0*r0) + r1*r1))/(2.*u0);
     return 0;
   }
   else if (aux->m2->geometry == M2_PARABOLIC) {
@@ -313,9 +313,9 @@ double m2aux_maximum_wavespeed(m2aux *aux, int *err)
 {
   double evals[8];
   double n[4] = { 0.0,
-		  aux->velocity_four_vector[1],
-		  aux->velocity_four_vector[2],
-		  aux->velocity_four_vector[3] };
+      aux->velocity_four_vector[1],
+      aux->velocity_four_vector[2],
+      aux->velocity_four_vector[3] };
   double N = sqrt(n[1]*n[1] + n[2]*n[2] + n[3]*n[3]);
   double a;
   if (fabs(N) < 1e-10) { /* if no velocity, then just use sound speed */

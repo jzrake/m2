@@ -29,10 +29,10 @@ function TestProblem:update_model_parameters(user_mp)
    local problem_mp = self.model_parameters or { }
    for k,v in pairs(user_mp or { }) do
       if problem_mp[k] ~= nil then
-	 problem_mp[k] = v
+         problem_mp[k] = v
       else
-	 error(("problem class '%s' does not accept model parameter '%s'")
-	       :format(class.classname(self), k))
+         error(("problem class '%s' does not accept model parameter '%s'")
+         :format(class.classname(self), k))
       end
    end
 end
@@ -71,7 +71,7 @@ function TestProblem:run(user_config_callback, restart_file)
       local h5f = hdf5.File(restart_file, 'r')
       local err, restored_runtime_cfg = serpent.load(h5f['runtime_cfg']:value())
       for k,v in pairs(restored_runtime_cfg) do
-	 runtime_cfg[k] = v
+         runtime_cfg[k] = v
       end
       h5f:close()
    end
@@ -87,15 +87,15 @@ function TestProblem:run(user_config_callback, restart_file)
    m2:print_config()
    log:log_message('run', serpent.block(runtime_cfg), 1)
    log:log_message('run', ("domain decomposition: [%d %d %d]")
-		   :format(dims[1], dims[2], dims[3]), 1)
+   :format(dims[1], dims[2], dims[3]), 1)
 
    if restart_file then
       m2:read_checkpoint_hdf5(restart_file)
       m2:run_initial_data()
    else
       m2:run_initial_data(self.initial_data_cell,
-			  self.initial_data_face,
-			  self.initial_data_edge)
+      self.initial_data_face,
+      self.initial_data_edge)
    end
    self:describe()
 
@@ -112,51 +112,52 @@ function TestProblem:run(user_config_callback, restart_file)
       local num = m2.status.checkpoint_number_hdf5
 
       if cad > 0.0 and now - las > cad then
-	 -- Print and then update the status
-	 num = num + 1
-	 m2:print_status()
-	 m2.status.checkpoint_number_hdf5 = num
-	 m2.status.time_last_checkpoint_hdf5 = las + cad
+         -- Print and then update the status
+         num = num + 1
+         m2:print_status()
+         m2.status.checkpoint_number_hdf5 = num
+         m2.status.time_last_checkpoint_hdf5 = las + cad
 
-	 -- Write data, config, status, problem data, and serialized runtime_cfg
-	 -- into the checkpoint file
-	 m2:write_checkpoint_hdf5(
-	    ('%s/chkpt.%04d.h5'):format(runtime_cfg.output_path, num),
-	    {runtime_cfg=runtime_cfg})
+         -- Write data, config, status, problem data, and serialized runtime_cfg
+         -- into the checkpoint file
+         m2:write_checkpoint_hdf5(
+         ('%s/chkpt.%04d.h5'):format(runtime_cfg.output_path, num),
+         {runtime_cfg=runtime_cfg})
       end
 
       if m2.status.iteration_number > 0 and
-	 m2.status.iteration_number % runtime_cfg.msg_cadence == 0 then
-	 log:log_message('run', m2.status:get_message())
+         m2.status.iteration_number % runtime_cfg.msg_cadence == 0 then
+         log:log_message('run', m2.status:get_message())
       end
 
       local keep_trying = true
       local cached_config = m2:get_config{
-	 -- only these values should be modified by the failure handler
-	 'cfl_parameter',
-	 'plm_parameter',
-	 'quartic_solver',
-	 'riemann_solver',
-	 'rk_order',
-	 'suppress_extrapolation_at_unhealthy_zones'}
+         -- only these values should be modified by the failure handler
+         'cfl_parameter',
+         'plm_parameter',
+         'quartic_solver',
+         'riemann_solver',
+         'rk_order',
+         'suppress_extrapolation_at_unhealthy_zones'
+      }
 
       m2.status.drive_attempt = 0
       while keep_trying do
-      	 m2:drive()
-      	 if m2.status.error_code ~= 0 then
-      	    m2.status.drive_attempt = m2.status.drive_attempt + 1
-	    log:log_message('run', m2.status:get_message())
-      	    keep_trying = self:reconfigure_after_failure(
-	       m2,
-	       m2.status.drive_attempt)
-	 else
-	    keep_trying = false
-      	 end
+         m2:drive()
+         if m2.status.error_code ~= 0 then
+            m2.status.drive_attempt = m2.status.drive_attempt + 1
+            keep_trying = self:reconfigure_after_failure(
+            m2,
+            m2.status.drive_attempt)
+            print(m2.status.num_failures)
+         else
+            keep_trying = false
+         end
       end
 
       if m2.status.error_code ~= 0 then
-	 log:log_message('run', 'exiting due to failures')
-	 break
+         log:log_message('run', 'exiting due to failures')
+         break
       end
 
       if m2.status.drive_attempt > 0 then m2:update_config(cached_config) end
@@ -165,8 +166,8 @@ function TestProblem:run(user_config_callback, restart_file)
    end
 
    m2:write_checkpoint_hdf5(
-      ('%s/chkpt.final.h5'):format(runtime_cfg.output_path),
-      {runtime_cfg=runtime_cfg})
+   ('%s/chkpt.final.h5'):format(runtime_cfg.output_path),
+   {runtime_cfg=runtime_cfg})
 end
 
 
@@ -177,17 +178,13 @@ local function outflow_bc_flux(axis)
    nhat[axis] = 1.0
    local function bc(V0)
       if V0.global_index[axis] == -1 then
-	 local V1 = V0:neighbor(axis, 1)
-	 if V1 == nil then
-	    return
-	 else
-	    V0[flux] = V1.aux:fluxes(nhat)
-	 end
+         local V1 = V0:neighbor(axis, 1)
+         V0[flux] = V1.aux:fluxes(nhat)
       else
-	 V0[flux] = V0.aux:fluxes(nhat)
+         V0[flux] = V0.aux:fluxes(nhat)
       end
-   end
-   return bc
+  end
+  return bc
 end
 
 
@@ -233,13 +230,13 @@ function DensityWave:build_m2(runtime_cfg)
    local N2 = dims >= 2 and (runtime_cfg.resolution or 64) or 1
    local N3 = dims >= 3 and (runtime_cfg.resolution or 64) or 1
    local build_args = {lower={0.0, 0.0, 0.0},
-		       upper={1.0, 1.0, 1.0},
-		       resolution={N1,N2,N3},
-		       periods={true,true,true},
-		       scaling={'linear'},
-		       relativistic=false,
-		       magnetized=false,
-		       geometry='cartesian'}
+   upper={1.0, 1.0, 1.0},
+   resolution={N1,N2,N3},
+   periods={true,true,true},
+   scaling={'linear'},
+   relativistic=false,
+   magnetized=false,
+   geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local m2 = m2app.m2Application(build_args)
@@ -263,13 +260,13 @@ end
 local Shocktube = class.class('Shocktube', TestProblem)
 function Shocktube:build_m2(runtime_cfg)
    local build_args = {lower={0.0, 0.0, 0.0},
-		       upper={1.0, 1.0, 1.0},
-		       resolution={512,1,1},
-		       periods={false,false,false},
-		       scaling={'linear'},
-		       relativistic=false,
-		       magnetized=true,
-		       geometry='cartesian'}
+   upper={1.0, 1.0, 1.0},
+   resolution={512,1,1},
+   periods={false,false,false},
+   scaling={'linear'},
+   relativistic=false,
+   magnetized=true,
+   geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    if runtime_cfg.resolution then
@@ -306,16 +303,16 @@ function BrioWu:__init__()
    self.gamma_law_index = 2.0
    self.initial_data_cell = function(x)
       if x[1] < 0.5 then
-	 return {1.000, 1.0, 0.0, 0.0, 0.0}
+         return {1.000, 1.0, 0.0, 0.0, 0.0}
       else
-	 return {0.125, 0.1, 0.0, 0.0, 0.0}
+         return {0.125, 0.1, 0.0, 0.0, 0.0}
       end
    end
    self.initial_data_face = function(x, n)
       if x[1] < 0.5 then
-	 return {0.75*n[1] + n[2]}
+         return {0.75*n[1] + n[2]}
       else
-	 return {0.75*n[1] - n[2]}
+         return {0.75*n[1] - n[2]}
       end
    end
 end
@@ -342,16 +339,16 @@ end
 function RyuJones:__init__()
    self.initial_data_cell = function(x)
       if x[1] < 0.5 then
-	 return {1.08, 0.95, 1.2, 0.01, 0.5}
+         return {1.08, 0.95, 1.2, 0.01, 0.5}
       else
-	 return {1.00, 1.00, 0.0, 0.00, 0.0}
+         return {1.00, 1.00, 0.0, 0.00, 0.0}
       end
    end
    self.initial_data_face = function(x, n)
       if x[1] < 0.5 then
-	 return {2.0*n[1] + 4.0*n[2] + 2.0*n[3]}
+         return {2.0*n[1] + 4.0*n[2] + 2.0*n[3]}
       else
-	 return {2.0*n[1] + 3.6*n[2] + 2.0*n[3]}
+         return {2.0*n[1] + 3.6*n[2] + 2.0*n[3]}
       end
    end
 end
@@ -379,17 +376,17 @@ function ContactWave:__init__()
    self.initial_data_cell = function(x)
       local vt = mps.vt
       if x[1] < 0.5 then
-	 return {1.00, 1.00, 0.0, vt, vt}
+         return {1.00, 1.00, 0.0, vt, vt}
       else
-	 return {0.10, 1.00, 0.0,-vt,-vt}
+         return {0.10, 1.00, 0.0,-vt,-vt}
       end
    end
    self.initial_data_face = function(x, n)
       local Bt = mps.Bt
       if x[1] < 0.5 then
-	 return {1.0*n[1] + Bt*n[2] + Bt*n[3]}
+         return {1.0*n[1] + Bt*n[2] + Bt*n[3]}
       else
-	 return {1.0*n[1] - Bt*n[2] - Bt*n[3]}
+         return {1.0*n[1] - Bt*n[2] - Bt*n[3]}
       end
    end
 end
@@ -416,9 +413,9 @@ function BlastMHD:__init__()
    self.initial_data_cell = function(x)
       local r = (x[1]^2 + x[2]^2 + x[3]^2)^0.5
       if r < 0.1 then
-	 return {1.0, 10.0, 0.0, 0.0, 0.0}
+         return {1.0, 10.0, 0.0, 0.0, 0.0}
       else
-	 return {1.0, 0.10, 0.0, 0.0, 0.0}
+         return {1.0, 0.10, 0.0, 0.0, 0.0}
       end
    end
    self.initial_data_face = function(x, n)
@@ -431,13 +428,13 @@ function BlastMHD:set_runtime_defaults(runtime_cfg)
 end
 function BlastMHD:build_m2(runtime_cfg)
    local build_args = {lower={-0.5,-0.5,-0.5},
-		       upper={ 0.5, 0.5, 0.5},
-		       resolution={64,64,1},
-		       periods={true,true,true},
-		       scaling={'linear', 'linear', 'linear'},
-		       relativistic=false,
-		       magnetized=true,
-		       geometry='cartesian'}
+   upper={ 0.5, 0.5, 0.5},
+   resolution={64,64,1},
+   periods={true,true,true},
+   scaling={'linear', 'linear', 'linear'},
+   relativistic=false,
+   magnetized=true,
+   geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    if runtime_cfg.resolution then
@@ -477,8 +474,8 @@ function Jet:__init__()
 
    self.initial_data_cell = function(x)
       return {mps.ambient_density,
-	      mps.mabient_pressure,
-	      0.0, 0.0, 0.0}
+      mps.mabient_pressure,
+      0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
       local nu = mps.nu_parameter
@@ -498,13 +495,13 @@ function Jet:build_m2(runtime_cfg)
    local r1 = 100.0
    local N = runtime_cfg.resolution or 64
    local build_args = {lower={r0, 0.0, 0.0},
-		       upper={r1, math.pi/2, 2*math.pi},
-		       resolution={ },
-		       periods={false,false,true},
-		       scaling={'logarithmic', 'linear', 'linear'},
-		       relativistic=false,
-		       magnetized=true,
-		       geometry='spherical'}
+   upper={r1, math.pi/2, 2*math.pi},
+   resolution={ },
+   periods={false,false,true},
+   scaling={'logarithmic', 'linear', 'linear'},
+   relativistic=false,
+   magnetized=true,
+   geometry='spherical'}
    build_args.resolution[1] = N / 2 * math.floor(math.log10(r1/r0))
    build_args.resolution[2] = N / 2
    build_args.resolution[3] = 1
@@ -550,9 +547,9 @@ function MagnetarWind:__init__()
    self.initial_data_cell = function(x)
       local d0
       if x[1] < mps.r_cavity  then
-      	 d0 = 0.1
+         d0 = 0.1
       else
-      	 d0 = mps.d_star
+         d0 = mps.d_star
       end
       return {d0, 0.01, 0.0, 0.0, 0.0}
    end
@@ -562,13 +559,15 @@ function MagnetarWind:set_runtime_defaults(runtime_cfg)
 end
 function MagnetarWind:build_m2(runtime_cfg)
    local build_args = {lower={  1.0, 0.0, 0.0},
-		       upper={100.0, math.pi, 2*math.pi},
-		       resolution={128,64,1},
-		       periods={false,false,true},
-		       scaling={'logarithmic', 'linear', 'linear'},
-		       relativistic=true,
-		       magnetized=true,
-		       geometry='spherical'}
+   upper={100.0, math.pi, 2*math.pi},
+   resolution={128,64,1},
+   periods={false,false,true},
+   scaling={'logarithmic', 'linear', 'linear'},
+   relativistic=true,
+   magnetized=true,
+   geometry='spherical'}
+   if runtime_cfg.newtonian then build_args.relativistic = false end
+   if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local mps = self.model_parameters
    local N = runtime_cfg.resolution or 64
    local r0 = 1.0
@@ -585,23 +584,23 @@ function MagnetarWind:build_m2(runtime_cfg)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       local p = 0.5 * (V0.x0[3] + V0.x1[3])
       if V0.global_index[1] == -1 then
-	 local d = 1.0
-	 local B = mps.B_wind
-	 local g = mps.g_wind
-	 local h = mps.g_pert
-	 g = g * (1.0 + h * math.sin(6*p)^2)
-	 V0.prim.v1 =(1.0 - g^-2)^0.5
-	 V0.prim.v2 = 0.0
-	 V0.prim.v3 = 0.0
-	 V0.prim.B1 = 0.0
-	 V0.prim.B2 = 0.0
-	 V0.prim.B3 = B * math.sin(t)
-	 V0.prim.d = d
-	 V0.prim.p = d * 0.01
-	 V0:from_primitive()
-	 V0.flux1 = V0.aux:fluxes(nhat)
+         local d = 1.0
+         local B = mps.B_wind
+         local g = mps.g_wind
+         local h = mps.g_pert
+         g = g * (1.0 + h * math.sin(6*p)^2)
+         V0.prim.v1 =(1.0 - g^-2)^0.5
+         V0.prim.v2 = 0.0
+         V0.prim.v3 = 0.0
+         V0.prim.B1 = 0.0
+         V0.prim.B2 = 0.0
+         V0.prim.B3 = B * math.sin(t)
+         V0.prim.d = d
+         V0.prim.p = d * 0.01
+         V0:from_primitive()
+         V0.flux1 = V0.aux:fluxes(nhat)
       else
-	 V0.flux1 = V0.aux:fluxes(nhat)
+         V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
    local m2 = m2app.m2Application(build_args)
@@ -615,8 +614,8 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   --m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
-   m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
+   m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
+   --m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
    m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
    m2:set_problem(self)
@@ -624,19 +623,16 @@ function MagnetarWind:build_m2(runtime_cfg)
 end
 function MagnetarWind:reconfigure_after_failure(m2, attempt)
    local responses = {
-      function()
-	 print('reduce cfl -> 0.2', attempt)
-	 m2:set_cfl_parameter(0.2)
+     function()
+         print('reduce cfl -> 0.1', attempt)
+         print('reduce plm -> 1.0', attempt)
+         m2:set_cfl_parameter(0.1)
+         m2:set_plm_parameter(1.0)
+         m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE)
       end,
       function()
-	 print('reduce plm -> 1.0', attempt)
-	 print('reduce cfl -> 0.1', attempt)
-	 m2:set_plm_parameter(1.0)
-	 m2:set_cfl_parameter(0.1)
-      end,
-      function()
-	 print('reduce plm -> 0.0', attempt)
-	 m2:set_plm_parameter(0.0)
+         print('reduce plm -> 0.0', attempt)
+         m2:set_plm_parameter(0.0)
       end,
    }
    if responses[attempt] then
@@ -648,10 +644,12 @@ function MagnetarWind:reconfigure_after_failure(m2, attempt)
 end
 
 
-return {DensityWave  = DensityWave,
-	RyuJones     = RyuJones,
-	BrioWu       = BrioWu,
-	ContactWave  = ContactWave,
-	BlastMHD     = BlastMHD,
-	Jet          = Jet,
-	MagnetarWind = MagnetarWind}
+return {
+   DensityWave  = DensityWave,
+   RyuJones     = RyuJones,
+   BrioWu       = BrioWu,
+   ContactWave  = ContactWave,
+   BlastMHD     = BlastMHD,
+   Jet          = Jet,
+   MagnetarWind = MagnetarWind
+}

@@ -12,7 +12,7 @@
 /* ===================================================== */
 #define ENABLE_PLM 1
 #define DEBUG_SYMMETRY 0
-//static void check_symmetry(m2sim *m2, char *msg);
+static void check_symmetry(m2sim *m2, char *msg);
 /* ===================================================== */
 
 
@@ -218,6 +218,21 @@ int m2sim_calculate_flux(m2sim *m2)
       }
     }
   }
+ /*for (i=1; i<2; ++i) {*/
+    /*for (k=0; k<1; ++k) {*/
+      /*V0 = M2_VOL(i, 0, k);*/
+      /*printf("S: [%d %d %d] [%+12.10e %+12.10e %+12.10e %+12.10e %+12.10e]\n",*/
+          /*V0->global_index[1], V0->global_index[2],*/
+          /*V0->global_index[3], V0->flux2[DDD], V0->flux2[TAU],*/
+          /*V0->flux2[B11], V0->flux2[B22], V0->flux2[B33]); */
+
+      /*V0 = M2_VOL(i, 16, k);*/
+      /*printf("N: [%d %d %d] [%+12.10e %+12.10e %+12.10e %+12.10e %+12.10e]\n",*/
+          /*V0->global_index[1], V0->global_index[2],*/
+          /*V0->global_index[3], V0->flux2[DDD], V0->flux2[TAU],*/
+          /*V0->flux2[B11], V0->flux2[B22], V0->flux2[B33]); */
+    /*}*/
+  /*}*/
   return 0;
 }
 
@@ -442,12 +457,13 @@ static void _calculate_emf3(m2sim *m2)
 {
   int i, j, k, n, m;
   int *L = m2->local_grid_size;
+  int bnd[4];
   m2vol *vols[4][4];
   m2emf_descr emfs[4][4];
 
-  for (i=0; i<L[1]-1; ++i) {
-    for (j=0; j<L[2]-1; ++j) {
-      for (k=0; k<L[3]-1; ++k) {
+  for (i=0; i<L[1]; ++i) {
+    for (j=0; j<L[2]; ++j) {
+      for (k=0; k<L[3]; ++k) {
 
         vols[1][0] = M2_VOL(i, j,   k  );
         vols[1][1] = M2_VOL(i, j+1, k  );
@@ -463,41 +479,53 @@ static void _calculate_emf3(m2sim *m2)
         vols[3][3] = M2_VOL(i+1, j+1, k);
 
         for (m=1; m<4; ++m) {
-          for (n=0; n<4; ++n) {
-            emfs[m][n].x0 = vols[m][n]->x0;
-            emfs[m][n].x1 = vols[m][n]->x1;
-            switch (m) {
-            case 1:
-              emfs[m][n].F1 = vols[m][n]->flux2;
-              emfs[m][n].F2 = vols[m][n]->flux3;
-              emfs[m][n].v1 = vols[m][n]->prim.v2;
-              emfs[m][n].v2 = vols[m][n]->prim.v3;
-              emfs[m][n].B1 = vols[m][n]->prim.B2;
-              emfs[m][n].B2 = vols[m][n]->prim.B3;
-              break;
-            case 2:
-              emfs[m][n].F1 = vols[m][n]->flux3;
-              emfs[m][n].F2 = vols[m][n]->flux1;
-              emfs[m][n].v1 = vols[m][n]->prim.v3;
-              emfs[m][n].v2 = vols[m][n]->prim.v1;
-              emfs[m][n].B1 = vols[m][n]->prim.B3;
-              emfs[m][n].B2 = vols[m][n]->prim.B1;
-              break;
-            case 3:
-              emfs[m][n].F1 = vols[m][n]->flux1;
-              emfs[m][n].F2 = vols[m][n]->flux2;
-              emfs[m][n].v1 = vols[m][n]->prim.v1;
-              emfs[m][n].v2 = vols[m][n]->prim.v2;
-              emfs[m][n].B1 = vols[m][n]->prim.B1;
-              emfs[m][n].B2 = vols[m][n]->prim.B2;
-              break;
+          if (vols[m][1] == NULL ||
+              vols[m][2] == NULL ||
+              vols[m][3] == NULL ||
+              vols[m][0]->zone_type == M2_ZONE_TYPE_SHELL) {
+            bnd[m] = 1;
+          }
+          else {
+            bnd[m] = 0;
+            for (n=0; n<4; ++n) {
+              emfs[m][n].x0 = vols[m][n]->x0;
+              emfs[m][n].x1 = vols[m][n]->x1;
+              switch (m) {
+                case 1:
+                  emfs[m][n].F1 = vols[m][n]->flux2;
+                  emfs[m][n].F2 = vols[m][n]->flux3;
+                  emfs[m][n].v1 = vols[m][n]->prim.v2;
+                  emfs[m][n].v2 = vols[m][n]->prim.v3;
+                  emfs[m][n].B1 = vols[m][n]->prim.B2;
+                  emfs[m][n].B2 = vols[m][n]->prim.B3;
+                  break;
+                case 2:
+                  emfs[m][n].F1 = vols[m][n]->flux3;
+                  emfs[m][n].F2 = vols[m][n]->flux1;
+                  emfs[m][n].v1 = vols[m][n]->prim.v3;
+                  emfs[m][n].v2 = vols[m][n]->prim.v1;
+                  emfs[m][n].B1 = vols[m][n]->prim.B3;
+                  emfs[m][n].B2 = vols[m][n]->prim.B1;
+                  break;
+                case 3:
+                  emfs[m][n].F1 = vols[m][n]->flux1;
+                  emfs[m][n].F2 = vols[m][n]->flux2;
+                  emfs[m][n].v1 = vols[m][n]->prim.v1;
+                  emfs[m][n].v2 = vols[m][n]->prim.v2;
+                  emfs[m][n].B1 = vols[m][n]->prim.B1;
+                  emfs[m][n].B2 = vols[m][n]->prim.B2;
+                  break;
+              }
             }
           }
         }
-        vols[1][0]->emf1 = _calculate_emf_single(emfs[1], 1)*vols[1][0]->line1;
-        vols[1][0]->emf2 = _calculate_emf_single(emfs[2], 2)*vols[1][0]->line2;
-        vols[1][0]->emf3 = _calculate_emf_single(emfs[3], 3)*vols[1][0]->line3;
-      }
+        double l1 = vols[1][0]->line1;
+        double l2 = vols[1][0]->line2;
+        double l3 = vols[1][0]->line3;
+        vols[1][0]->emf1 = bnd[1]?0.0:_calculate_emf_single(emfs[1], 1)*l1;
+        vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
+        vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
+     }
     }
   }
 }
@@ -780,6 +808,10 @@ int m2sim_from_conserved_all(m2sim *m2)
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
                                  &V->aux, &V->prim);
     V->zone_health |= error;
+    if (error == 1<<M2_BIT_FAILED_CONSERVED_INVERSION) {
+      printf("at zone [%d %d %d]\n", V->global_index[1],
+          V->global_index[2], V->global_index[3]);
+    }
   }
 
   for (n=0; n<L[0]; ++n) {
@@ -887,16 +919,27 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   int err = 0;
   err += m2sim_calculate_gradient(m2);
+  check_symmetry(m2, "A");
   err += m2sim_calculate_flux(m2); /* FAILURES: bad eigenvalues */
+  check_symmetry(m2, "B");
   err += m2sim_synchronize_guard(m2); /* so that Godunov fluxes are communicated */
+  check_symmetry(m2, "C");
   err += m2sim_calculate_emf(m2);
+  check_symmetry(m2, "D");
   err += m2sim_exchange_flux(m2, dt);
+  check_symmetry(m2, "E");
   err += m2sim_add_source_terms(m2, dt);
-  err += m2sim_average_runge_kutta(m2, rkparam); /* FAILURES: negative TAU or DDD */
+  check_symmetry(m2, "F");
+  err += m2sim_average_runge_kutta(m2, rkparam);
+  check_symmetry(m2, "G");
   err += m2sim_enforce_boundary_condition(m2);
+  check_symmetry(m2, "H");
   err += m2sim_magnetic_flux_to_cell_center(m2);
-  err += m2sim_from_conserved_all(m2); /* FAILURES: c2p failure, negative pressure */
+  check_symmetry(m2, "I");
+  err += m2sim_from_conserved_all(m2);
+  check_symmetry(m2, "J");
   err += m2sim_synchronize_guard(m2);
+  check_symmetry(m2, "K");
   return err;
 }
 
@@ -916,6 +959,7 @@ void m2sim_drive(m2sim *m2)
 
   for (q=0; q<8; ++q) {
     m2->status.num_failures[q] = 0;
+    /*m2->status.num_failures[q] &= ~(1<<M2_BIT_FAILED_CONSERVED_INVERSION);*/
   }
 
 
@@ -1066,26 +1110,33 @@ void check_symmetry(m2sim *m2, char *msg)
 #if DEBUG_SYMMETRY
 #define NOTZERO(a) (fabs(a)>1e-12)
   int *L = m2->local_grid_size;
-  int i,j;
+  int i,j,k;
 
-  for (i=0; i<L[1]; ++i) {
+  for (i=0; i<L[1]-1; ++i) {
     for (j=1; j<L[2]-1; ++j) {
+      /*for (k=1; k<L[3]-1; ++k) {*/
+      for (k=0; k<1; ++k) {
+        m2vol *V0 = M2_VOL(i,        j, k);
+        m2vol *V1 = M2_VOL(i, L[2] - j, k);
 
-      m2vol *V0 = M2_VOL(i,        j, 0);
-      m2vol *V1 = M2_VOL(i, L[2] - j, 0);
-
-      if (NOTZERO(V0->emf2 - V1->emf2) ||
-          NOTZERO(V0->prim.d - V1->prim.d) ||
-          NOTZERO(V0->prim.p - V1->prim.p) ||
-          NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
-          NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
-        printf("%s [%d %d]: emf2 = (%+14.12e %+14.12e) "
-               "flux1[B3] = (%+14.12e %+14.12e) "
-               "flux1[DD] = (%+14.12e %+14.12e)\n",
-               msg, V0->global_index[1], V0->global_index[2],
-               V0->flux1[B33], V1->flux1[B33],
-               V0->emf2, V1->emf2,
-               V0->flux1[DDD], V1->flux1[DDD]);
+        if (NOTZERO(V0->emf2 - V1->emf2) ||
+            NOTZERO(V0->prim.d - V1->prim.d) ||
+            NOTZERO(V0->prim.p - V1->prim.p) ||
+            NOTZERO(V0->flux1[B33] - V1->flux1[B33]) ||
+            NOTZERO(V0->Bflux1A - V1->Bflux1A)) {
+          printf("%s [%d %d %d]: "
+              "p = (%+14.12e %+14.12e) "
+              "d = (%+14.12e %+14.12e) "
+              "flux1[B3] = (%+14.12e %+14.12e) "
+              "emf1 = (%+14.12e %+14.12e) "
+              "emf2 = (%+14.12e %+14.12e)\n",
+              msg, V0->global_index[1], V0->global_index[2], V0->global_index[3],
+              V0->flux1[B33], V1->flux1[B33],
+              V0->prim.p, V1->prim.p,
+              V0->prim.d, V1->prim.d,
+              V0->emf2, V1->emf2,
+              V0->emf3, V1->emf3);
+        }
       }
     }
   }
@@ -1098,8 +1149,11 @@ void check_symmetry(m2sim *m2, char *msg)
       m2vol *V1 = M2_VOL(i, L[2] - j-1, 0);
 
       if (NOTZERO(V0->emf1 + V1->emf1)) {
-        printf("%s [%d %d]: emf1 = (%+14.12e %+14.12e)\n",
-               msg, i, j, V0->emf1, V1->emf1);
+        printf("%s [%d %d] / [%d %d]: emf1 = (%+14.12e %+14.12e)\n",
+               msg,
+               V0->global_index[1], V0->global_index[2],
+               V1->global_index[1], V1->global_index[2],
+               V0->emf1, V1->emf1);
       }
     }
   }
