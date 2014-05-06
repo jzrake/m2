@@ -44,12 +44,16 @@ local function main()
    parser:option '-N' '--resolution' :convert(tonumber)
    parser:option '-m' '--model-parameters' :convert(
       function(mp)
-	 return load('return {'..mp..'}')()
+         return load('return {'..mp..'}')()
       end)
    parser:option '--riemann-solver' :convert(
       function(rs)
-	 return m2app.to_enum('riemann_'..rs)
-      end)
+         return m2app.to_enum('riemann_'..rs)
+      end):description 'name of riemann solver to use'
+   parser:option '--quartic' :convert(
+      function(rs)
+         return m2app.to_enum('quartic_'..rs)
+      end):description 'name of quartic solver to use'
    parser:option '--restart'
    parser:mutex(parser:flag '--relativistic',
 		parser:flag '--newtonian')

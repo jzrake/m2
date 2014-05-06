@@ -179,6 +179,7 @@ local function outflow_bc_flux(axis)
    local function bc(V0)
       if V0.global_index[axis] == -1 then
          local V1 = V0:neighbor(axis, 1)
+         if V1 == nil then return end
          V0[flux] = V1.aux:fluxes(nhat)
       else
          V0[flux] = V0.aux:fluxes(nhat)
@@ -614,8 +615,7 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
    m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
    m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
-   m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE) -- to pass top-down test
-   --m2:set_quartic_solver(m2lib.M2_QUARTIC_FULL_COMPLEX)
+   m2:set_quartic_solver(runtime_cfg.quartic or m2lib.M2_QUARTIC_FULL_COMPLEX)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
    m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
    m2:set_problem(self)

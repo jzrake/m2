@@ -947,7 +947,7 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 void m2sim_drive(m2sim *m2)
 {
   double dt;
-  int n, q, err, rk_order = m2->rk_order;
+  int n, q, err = 0, rk_order = m2->rk_order;
   int *L = m2->local_grid_size;
   double kzps; /* kilozones per second */
   char checkpoint_name[1024];

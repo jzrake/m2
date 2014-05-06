@@ -150,12 +150,13 @@ class BlastMHDSerialToParallel3D(unittest.TestCase, SerialToParallel):
 
 class MagnetarWindTopDownSymmetry(unittest.TestCase, TestTopDownSymmetry2D):
     """
-    This test currently fails because of inaccuracies in the quartic solver, so
-    it passes when simple eigenvalues are used.
+    This test will fail unless the quartic solver is set to "none". That has
+    to do with limitations in the accuray of the quartic solver.
     """
     def setUp(self):
         self.set_up('MagnetarWind', usempi=False,
-                    np=1, resolution=32, rkorder=1, tmax=0.5)
+                    np=1, resolution=32, rkorder=1, tmax=0.5,
+                    quartic='none')
 
 class MagnetarWindSerialToParallel2D(unittest.TestCase, SerialToParallel):
     def setUp(self):
@@ -165,7 +166,8 @@ class MagnetarWindSerialToParallel2D(unittest.TestCase, SerialToParallel):
 class MagnetarWindRestartedToContinuous2D(unittest.TestCase, RestartedToContinuous):
     def setUp(self):
         self.set_up('MagnetarWind', resolution=64,
-                    model_parameters='three_d=false,B_wind=0.1')
+                    model_parameters='three_d=false,B_wind=0.1',
+                    quartic='none')
 
 class MagnetarWindSerialToParallel3D(unittest.TestCase, SerialToParallel):
     def setUp(self):
@@ -175,7 +177,8 @@ class MagnetarWindSerialToParallel3D(unittest.TestCase, SerialToParallel):
 class MagnetarWindRestartedToContinuous3D(unittest.TestCase, RestartedToContinuous):
     def setUp(self):
         self.set_up('MagnetarWind', resolution=16, np=1,
-                    model_parameters='three_d=true')
+                    model_parameters='three_d=true',
+                    quartic='none')
 
 
 
