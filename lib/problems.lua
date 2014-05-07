@@ -600,6 +600,7 @@ function MagnetarWind:build_m2(runtime_cfg)
          V0.prim.p = d * 0.01
          V0:from_primitive()
          V0.flux1 = V0.aux:fluxes(nhat)
+         --if V0.global_index[3] == 0 then print (V0.line2, V0.emf1, V0.emf2, V0.emf3) end
       else
          V0.flux1 = V0.aux:fluxes(nhat)
       end

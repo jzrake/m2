@@ -36,6 +36,10 @@ class Checkpoint(object):
         self._file = None
 
     @property
+    def filename(self):
+        return self._file.filename
+
+    @property
     def config(self):
         config = { }
         for k,v in self._config.iteritems():

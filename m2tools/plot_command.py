@@ -13,14 +13,20 @@ class PlotDriver(object):
 
     _hardcopy = None
     _plot_axes = None
+    _show_mode = 'show'
 
     def show(self):
         import matplotlib.pyplot as plt
-        if self._hardcopy:
+        if self._show_mode == 'hold':
+            pass
+        elif self._hardcopy:
             plt.savefig(self._hardcopy, dpi=600)
             plt.clf()
         else:
             plt.show()
+
+    def set_show_mode(self, mode):
+        self._show_mode = mode
 
     def set_hardcopy(self, hardcopy):
         self._hardcopy = hardcopy
@@ -90,12 +96,52 @@ class RectangularPlot2d(PlotDriver):
         self._args = args
 
     def plot(self):
+        import pprint
         import matplotlib.pyplot as plt
         import numpy as np
-        data = self._chkpt.cell_primitive[self._args.field][:,:]
+
+        pprint.pprint(self._chkpt.status)
+        pprint.pprint(self._chkpt.config)
+
+        args = self._args
+
+        self._chkpt.set_selection(slicer[:,:])
+        data = self._chkpt.get_field(args.field)
+
+        self.get_plot_axes()
         plt.imshow(data, interpolation='nearest', origin='lower')
         plt.colorbar()
         plt.axis('equal')
+        plt.title(self._chkpt.filename+'/'+args.field)
+        self.show()
+
+
+
+class RectangularPlot3d(PlotDriver):
+    
+    def __init__(self, chkpt, args):
+        self._chkpt = chkpt
+        self._args = args
+
+    def plot(self):
+        import pprint
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        pprint.pprint(self._chkpt.status)
+        pprint.pprint(self._chkpt.config)
+
+        args = self._args
+
+        nz = self._chkpt.domain_resolution[3]
+        self._chkpt.set_selection(slicer[:,:,nz/2])
+        data = self._chkpt.get_field(args.field)
+
+        self.get_plot_axes()
+        plt.imshow(data, interpolation='nearest', origin='lower')
+        plt.colorbar()
+        plt.axis('equal')
+        plt.title(self._chkpt.filename+'/'+args.field)
         self.show()
 
 
@@ -115,10 +161,12 @@ class PolarPlot(PlotDriver):
         pprint.pprint(self._chkpt.config)
 
         args = self._args
+        self.get_plot_axes()
 
         if self._chkpt.domain_resolution[3] == 1:
             print "r-theta in axial symmetry"
-            data = self._chkpt.cell_primitive[self._args.field][1:,1:]
+            self._chkpt.set_selection(slicer[1:,1:])
+            data = self._chkpt.get_field(args.field)
             R, T = self._chkpt.cell_edge_meshgrid
             X = +R * np.sin(T)
             Z = +R * np.cos(T)
@@ -129,7 +177,7 @@ class PolarPlot(PlotDriver):
         elif not args.equatorial:
             print "r-theta slice"
             self._chkpt.set_selection(slicer[1:,1:,0])
-            data = self._chkpt.get_field(self._args.field)
+            data = self._chkpt.get_field(args.field)
             R, T, P = self._chkpt.cell_edge_meshgrid
             R = R[...,0]
             T = T[...,0]
@@ -151,6 +199,7 @@ class PolarPlot(PlotDriver):
             Y = Y[:,nt/2,:]
             plt.pcolormesh(X, Y, data, vmin=args.vmin, vmax=args.vmax)
 
+        plt.title(self._chkpt.filename+'/'+args.field)
         plt.colorbar()
         plt.axis('equal')
         self.show()
@@ -161,7 +210,7 @@ class PlotCommand(command.Command):
     _alias = "plot"
 
     def configure_parser(self, parser):
-        parser.add_argument('filename')
+        parser.add_argument('filenames', nargs='+')
         parser.add_argument('--field', default='d')
         parser.add_argument('--vmin', type=float, default=None)
         parser.add_argument('--vmax', type=float, default=None)
@@ -169,16 +218,27 @@ class PlotCommand(command.Command):
         parser.add_argument('-o', '--output')
 
     def run(self, args):
-        chkpt = checkpoint.Checkpoint(args.filename)
-        chkpt.add_derived_field('gamma', transforms.LorentzFactor())
-        if chkpt.geometry == 'cartesian':
-            if (chkpt.domain_resolution == 1).sum() == 2:
-                plotter = ShocktubePlot1d(chkpt, args)
-            elif (chkpt.domain_resolution == 1).sum() == 1:
-                plotter = RectangularPlot2d(chkpt, args)
+        for filename in args.filenames:
+            chkpt = checkpoint.Checkpoint(filename)
+            chkpt.add_derived_field('gamma', transforms.LorentzFactor())
+            print (filename)
+            if chkpt.geometry == 'cartesian':
+                if (chkpt.domain_resolution == 1).sum() == 2:
+                    plotter = ShocktubePlot1d(chkpt, args)
 
-        elif chkpt.geometry == 'spherical':
-            plotter = PolarPlot(chkpt, args)
+                elif (chkpt.domain_resolution == 1).sum() == 1:
+                    plotter = RectangularPlot2d(chkpt, args)
 
-        plotter.set_hardcopy(args.output)
-        plotter.plot() 
+                elif (chkpt.domain_resolution == 1).sum() == 0:
+                    plotter = RectangularPlot3d(chkpt, args)
+
+            elif chkpt.geometry == 'spherical':
+                plotter = PolarPlot(chkpt, args)
+
+            plotter.set_show_mode('hold')
+            #plotter.set_hardcopy(args.output)
+            plotter.plot()
+
+        import matplotlib.pyplot as plt
+        plt.show()
+

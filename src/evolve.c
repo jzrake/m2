@@ -481,10 +481,7 @@ static void _calculate_emf3(m2sim *m2)
         for (m=1; m<4; ++m) {
           if (vols[m][1] == NULL ||
               vols[m][2] == NULL ||
-              vols[m][3] == NULL ||
-              /*vols[m][0]->zone_type == M2_ZONE_TYPE_SHELL) {*/
-            /* temporary kludge for emf's at poles */
-              vols[m][0]->global_index[2] == -1) {
+              vols[m][3] == NULL) {
             bnd[m] = 1;
           }
           else {
@@ -520,14 +517,28 @@ static void _calculate_emf3(m2sim *m2)
               }
             }
           }
+
+          double l1 = vols[1][0]->line1;
+          double l2 = vols[1][0]->line2;
+          double l3 = vols[1][0]->line3;
+          vols[1][0]->emf1 = bnd[1]?0.0:_calculate_emf_single(emfs[1], 1)*l1;
+          vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
+          vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
+
+          if (vols[1][0]->global_index[1] == -1) {
+            double E20 = vols[2][0] ? vols[2][0]->flux1[B33] : 0.0;
+            double E21 = vols[2][1] ? vols[2][1]->flux1[B33] : 0.0;
+            vols[1][0]->emf1 = 0.0;
+            vols[1][0]->emf2 = 0.5 * vols[1][0]->line2 * (E20 + E21);
+            vols[1][0]->emf3 = 0.0;
+          }
+          if (vols[1][0]->global_index[2] == -1) {
+            vols[1][0]->emf1 = 0.0;
+            vols[1][0]->emf2 = 0.0;
+            vols[1][0]->emf3 = 0.0;
+          }
         }
-        double l1 = vols[1][0]->line1;
-        double l2 = vols[1][0]->line2;
-        double l3 = vols[1][0]->line3;
-        vols[1][0]->emf1 = bnd[1]?0.0:_calculate_emf_single(emfs[1], 1)*l1;
-        vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
-        vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
-     }
+      }
     }
   }
 }
