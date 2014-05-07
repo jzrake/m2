@@ -543,14 +543,20 @@ function MagnetarWind:__init__()
    mps.B_wind=8.00; doc.B_wind='wind toroidal field value'
    mps.g_wind=8.00; doc.g_wind='wind Lorentz factor'
    mps.g_pert=0.00; doc.g_pert='fractional azimuthal variation in g_wind'
+   mps.d_pert=0.00; doc.d_pert='fractional azimuthal variation in density'
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       local d0
-      if x[1] < mps.r_cavity  then
+      local rc = mps.r_cavity
+      local h = mps.d_pert
+      local r = x[1]
+      local t = x[2]
+      local p = x[3]
+      if r < rc  then
          d0 = 0.1
       else
-         d0 = mps.d_star
+         d0 = mps.d_star * (1 + h*math.sin(t)*math.cos(6*p)*math.exp(-r/rc))
       end
       return {d0, 0.01, 0.0, 0.0, 0.0}
    end
@@ -559,14 +565,18 @@ function MagnetarWind:set_runtime_defaults(runtime_cfg)
    runtime_cfg.tmax = 2.0
 end
 function MagnetarWind:build_m2(runtime_cfg)
-   local build_args = {lower={  1.0, 0.0, 0.0},
-   upper={100.0, math.pi, 2*math.pi},
-   resolution={128,64,1},
-   periods={false,false,true},
-   scaling={'logarithmic', 'linear', 'linear'},
-   relativistic=true,
-   magnetized=true,
-   geometry='spherical'}
+
+   local build_args = {
+      lower={  1.0, 0.0, 0.0},
+      upper={100.0, math.pi, 2*math.pi},
+      resolution={128,64,1},
+      periods={false,false,true},
+      scaling={'logarithmic', 'linear', 'linear'},
+      relativistic=true,
+      magnetized=true,
+      geometry='spherical'
+   }
+
    if runtime_cfg.newtonian then build_args.relativistic = false end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local mps = self.model_parameters
@@ -577,9 +587,11 @@ function MagnetarWind:build_m2(runtime_cfg)
    build_args.resolution[1] = N * math.floor(math.log10(r1/r0))
    build_args.resolution[2] = N
    build_args.resolution[3] = N * 2
+
    if not mps.three_d then
       build_args.resolution[3] = 1
    end
+
    local function wind_inner_boundary_flux(V0)
       local nhat = m2lib.dvec4(0,1,0,0)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
@@ -589,7 +601,7 @@ function MagnetarWind:build_m2(runtime_cfg)
          local B = mps.B_wind
          local g = mps.g_wind
          local h = mps.g_pert
-         g = g * (1.0 + h * math.sin(6*p)^2)
+         g = g * (1.0 + h * math.sin(t) * math.sin(6*p)^2) 
          V0.prim.v1 =(1.0 - g^-2)^0.5
          V0.prim.v2 = 0.0
          V0.prim.v3 = 0.0
@@ -600,11 +612,11 @@ function MagnetarWind:build_m2(runtime_cfg)
          V0.prim.p = d * 0.01
          V0:from_primitive()
          V0.flux1 = V0.aux:fluxes(nhat)
-         --if V0.global_index[3] == 0 then print (V0.line2, V0.emf1, V0.emf2, V0.emf3) end
       else
          V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
+
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
