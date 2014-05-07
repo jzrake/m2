@@ -57,7 +57,7 @@ end
 function MPI_Communicator:call_in_serial(f, ...)
    for n=0,self:size()-1 do
       if n == self:rank() then
-	 f(...)
+         f(...)
       end
       self:barrier()
    end
@@ -66,19 +66,19 @@ function MPI_Communicator:print(rank, ...)
    rank = rank or 0
    if rank == 'all' then
       for n=0,self:size()-1 do
-	 if n == self:rank() then
-	    io.write(('[rank %d] '):format(n))
-	    for _,s in ipairs {...} do
-	       io.write(tostring(s)..'  ')
-	    end
-	    io.write('\n')
-	 end
-	 self:barrier()
+         if n == self:rank() then
+            io.write(('[rank %d] '):format(n))
+            for _,s in ipairs {...} do
+               io.write(tostring(s)..'  ')
+            end
+            io.write('\n')
+         end
+         self:barrier()
       end
    else
       if self:rank() == rank then
-	 io.write(...)
-	 io.write('\n')
+         io.write(...)
+         io.write('\n')
       end
    end
 end
@@ -91,7 +91,7 @@ end
 --
 -- =============================================================================
 local MPI_CartesianCommunicator = class.class('MPI_CartesianCommunicator',
-					      MPI_Communicator)
+MPI_Communicator)
 function MPI_CartesianCommunicator:__init__(ndim, sizes, periods)
    local reorder = 1
    local wrapped_ax = integer(ndim)
@@ -109,8 +109,8 @@ function MPI_CartesianCommunicator:__init__(ndim, sizes, periods)
    MPI.Comm_size(parent, pcomm_size)
    MPI.Dims_create(ival(pcomm_size), ndim, proc_sizes)
    MPI.Cart_create(parent, ndim,
-		   proc_sizes,
-		   wrapped_ax, reorder, self._comm)
+   proc_sizes,
+   wrapped_ax, reorder, self._comm)
 end
 function MPI_CartesianCommunicator:__gc__()
    MPI.Comm_free(self._comm)
@@ -150,17 +150,17 @@ function MPI_CartesianCommunicator:partition(shape)
       local R = shape[n] % dims[n]
       local S = math.floor(shape[n] / dims[n])
       if coords[n] < R then
-	 size[n] = S + 1
+         size[n] = S + 1
       else
-	 size[n] = S
+         size[n] = S
       end
       start[n] = 0
       for j=0,coords[n]-1 do
-	 if j < R then
-	    start[n] = start[n] + S + 1
-	 else
-	    start[n] = start[n] + S
-	 end
+         if j < R then
+            start[n] = start[n] + S + 1
+         else
+            start[n] = start[n] + S
+         end
       end
    end
    return start, size
@@ -198,7 +198,7 @@ end
 --
 -- =============================================================================
 local MPI_CartesianCommunicator_S = class.class('MPI_CartesianCommunicator_S',
-						MPI_Communicator_S)
+MPI_Communicator_S)
 function MPI_CartesianCommunicator_S:__init__(ndim, sizes, periods)
    self._ndim = ndim
    self._sizes = sizes
@@ -256,7 +256,7 @@ local function test2()
    local comm = MPI_CartesianCommunicator(3)
    for n=0, comm:size()-1 do
       if n == comm:rank() then
-	 print(comm:rank(), unpack(comm:get 'coords'))
+         print(comm:rank(), unpack(comm:get 'coords'))
       end
       comm:barrier()
    end
@@ -268,8 +268,8 @@ if ... then -- if __name__ == "__main__"
    local parallel = { }
    if next(MPI) then
       if initialized() then
-	 parallel.MPI_Communicator = MPI_Communicator
-	 parallel.MPI_CartesianCommunicator = MPI_CartesianCommunicator
+         parallel.MPI_Communicator = MPI_Communicator
+         parallel.MPI_CartesianCommunicator = MPI_CartesianCommunicator
       end
    end
    if not next(parallel) then

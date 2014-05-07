@@ -1,5 +1,12 @@
 
 
+class SingleField(object):
+    def __init__(self, key):
+        self._key = key
+    def transform(self, prim_selection):
+        return prim_selection[self._key]
+
+
 class Checkpoint(object):
     def __init__(self, filename):
         import h5py
@@ -11,6 +18,10 @@ class Checkpoint(object):
             self._config[k] = v.value
         for k,v in self._file['status'].iteritems():
             self._status[k] = v.value
+        self._selection = slice(None)
+        self._derived_fields = { }
+        for k in self.cell_primitive:
+            self._derived_fields[k] = SingleField(k)
 
     def __del__(self):
         if self._file:
@@ -106,6 +117,23 @@ class Checkpoint(object):
     def face_magnetic_flux(self):
         return dict([int(k),v] for k,v in
                     self._file['face_magnetic_flux'].iteritems())
+
+    def add_derived_field(self, key, transform):
+        self._derived_fields[key] = transform
+
+    def set_selection(self, selection):
+        """
+        Set the selection used by the get_field method to retrieve data from the
+        HDF5 file. Selection is a list of slices.
+        """
+        self._selection = selection
+
+    def get_field(self, key):
+        transform = self._derived_fields[key]
+        prim_selection = { }
+        for k in self.cell_primitive:
+            prim_selection[k] = self.cell_primitive[k][self._selection]
+        return transform.transform(prim_selection)
 
 
 if __name__ == "__main__":

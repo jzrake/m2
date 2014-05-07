@@ -1,6 +1,12 @@
 import command
 import checkpoint
+import transforms
 
+
+class Slicer(object):
+    def __getitem__(self, key): return key
+
+slicer = Slicer()
 
 
 class PlotDriver(object):
@@ -122,7 +128,8 @@ class PolarPlot(PlotDriver):
             plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
         elif not args.equatorial:
             print "r-theta slice"
-            data = self._chkpt.cell_primitive[self._args.field][1:,1:,0]
+            self._chkpt.set_selection(slicer[1:,1:,0])
+            data = self._chkpt.get_field(self._args.field)
             R, T, P = self._chkpt.cell_edge_meshgrid
             R = R[...,0]
             T = T[...,0]
@@ -135,7 +142,8 @@ class PolarPlot(PlotDriver):
         else:
             print "r-phi slice"
             nt = self._chkpt.domain_resolution[2]
-            data = self._chkpt.cell_primitive[self._args.field][1:,nt/2,:]
+            self._chkpt.set_selection(slicer[1:,nt/2,:])
+            data = self._chkpt.get_field(self._args.field)
             R, T, P = self._chkpt.cell_edge_meshgrid
             X = R * np.sin(T) * np.cos(P)
             Y = R * np.sin(T) * np.sin(P)
@@ -162,6 +170,7 @@ class PlotCommand(command.Command):
 
     def run(self, args):
         chkpt = checkpoint.Checkpoint(args.filename)
+        chkpt.add_derived_field('gamma', transforms.LorentzFactor())
         if chkpt.geometry == 'cartesian':
             if (chkpt.domain_resolution == 1).sum() == 2:
                 plotter = ShocktubePlot1d(chkpt, args)
@@ -172,4 +181,4 @@ class PlotCommand(command.Command):
             plotter = PolarPlot(chkpt, args)
 
         plotter.set_hardcopy(args.output)
-        plotter.plot()
+        plotter.plot() 

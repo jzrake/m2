@@ -482,7 +482,9 @@ static void _calculate_emf3(m2sim *m2)
           if (vols[m][1] == NULL ||
               vols[m][2] == NULL ||
               vols[m][3] == NULL ||
-              vols[m][0]->zone_type == M2_ZONE_TYPE_SHELL) {
+              /*vols[m][0]->zone_type == M2_ZONE_TYPE_SHELL) {*/
+            /* temporary kludge for emf's at poles */
+              vols[m][0]->global_index[2] == -1) {
             bnd[m] = 1;
           }
           else {

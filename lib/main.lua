@@ -5,6 +5,7 @@ local logger   = require 'logger'
 local hdf5     = require 'hdf5'
 local MPI      = require 'MPI'
 local parallel = require 'parallel'
+local lfs      = require 'lfs'
 
 local function main()
    -----------------------------------------------------------------------------
@@ -63,6 +64,12 @@ local function main()
 
    local args = parser:parse()
 
+   if args['output-path'] then
+      local comm = parallel.MPI_Communicator()
+      if comm:rank() == 0 then
+         lfs.mkdir(args['output-path'])
+      end
+   end
    if args.restart then
       local h5f = hdf5.File(args.restart, 'r')
       args.ProblemClass = problems[h5f['problem_name']:value()]
