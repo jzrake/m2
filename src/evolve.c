@@ -1,5 +1,6 @@
 #include "m2.h"
 #include <string.h>
+
 #include <math.h>
 #if _OPENMP
 #include <omp.h>
@@ -218,21 +219,6 @@ int m2sim_calculate_flux(m2sim *m2)
       }
     }
   }
- /*for (i=1; i<2; ++i) {*/
-    /*for (k=0; k<1; ++k) {*/
-      /*V0 = M2_VOL(i, 0, k);*/
-      /*printf("S: [%d %d %d] [%+12.10e %+12.10e %+12.10e %+12.10e %+12.10e]\n",*/
-          /*V0->global_index[1], V0->global_index[2],*/
-          /*V0->global_index[3], V0->flux2[DDD], V0->flux2[TAU],*/
-          /*V0->flux2[B11], V0->flux2[B22], V0->flux2[B33]); */
-
-      /*V0 = M2_VOL(i, 16, k);*/
-      /*printf("N: [%d %d %d] [%+12.10e %+12.10e %+12.10e %+12.10e %+12.10e]\n",*/
-          /*V0->global_index[1], V0->global_index[2],*/
-          /*V0->global_index[3], V0->flux2[DDD], V0->flux2[TAU],*/
-          /*V0->flux2[B11], V0->flux2[B22], V0->flux2[B33]); */
-    /*}*/
-  /*}*/
   return 0;
 }
 
@@ -452,7 +438,6 @@ static void _calculate_emf2(m2sim *m2)
     }
   }
 }
-
 static void _calculate_emf3(m2sim *m2)
 {
   int i, j, k, n, m;
@@ -516,28 +501,29 @@ static void _calculate_emf3(m2sim *m2)
                   break;
               }
             }
-          }
+	  }
+	}
 
-          double l1 = vols[1][0]->line1;
-          double l2 = vols[1][0]->line2;
-          double l3 = vols[1][0]->line3;
-          vols[1][0]->emf1 = bnd[1]?0.0:_calculate_emf_single(emfs[1], 1)*l1;
-          vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
-          vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
+	double l1 = vols[1][0]->line1;
+	double l2 = vols[1][0]->line2;
+	double l3 = vols[1][0]->line3;
+	vols[1][0]->emf1 = bnd[1]?0.0:_calculate_emf_single(emfs[1], 1)*l1;
+	vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
+	vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
 
-          if (vols[1][0]->global_index[1] == -1) {
-            double E20 = vols[2][0] ? vols[2][0]->flux1[B33] : 0.0;
-            double E21 = vols[2][1] ? vols[2][1]->flux1[B33] : 0.0;
-            vols[1][0]->emf1 = 0.0;
-            vols[1][0]->emf2 = 0.5 * vols[1][0]->line2 * (E20 + E21);
-            vols[1][0]->emf3 = 0.0;
-          }
-          if (vols[1][0]->global_index[2] == -1) {
-            vols[1][0]->emf1 = 0.0;
-            vols[1][0]->emf2 = 0.0;
-            vols[1][0]->emf3 = 0.0;
-          }
-        }
+	if (vols[1][0]->global_index[1] == -1) {
+	  double E20 = vols[2][0] ? vols[2][0]->flux1[B33] : 0.0;
+	  double E21 = vols[2][1] ? vols[2][1]->flux1[B33] : 0.0;
+	  vols[1][0]->emf1 = 0.0;
+	  vols[1][0]->emf2 = 0.5 * vols[1][0]->line2 * (E20 + E21);
+	  vols[1][0]->emf3 = 0.0;
+	}
+	if (vols[1][0]->global_index[2] == -1) {
+	  vols[1][0]->emf1 = 0.0;
+	  vols[1][0]->emf2 = 0.0;
+	  vols[1][0]->emf3 = 0.0;
+	}
+
       }
     }
   }

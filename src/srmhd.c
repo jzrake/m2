@@ -160,11 +160,13 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->p = pg;
   }
 
-  srmhd_c2p_del(c2p);
+
   if (srmhd_c2p_put_pressure_floor(c2p)) {
+    srmhd_c2p_del(c2p);
     return 1<<M2_BIT_NEGATIVE_PRESSURE;
   }
   else {
+    srmhd_c2p_del(c2p);
     return 0;
   }
 }

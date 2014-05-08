@@ -463,7 +463,7 @@ void m2sim_run_initial_data(m2sim *m2)
 
     V = m2->volumes + n;
 
-    for (q=0; q<5; ++q) {
+    for (q=0; q<8; ++q) {
       V->flux1[q] = 0.0;
       V->flux2[q] = 0.0;
       V->flux3[q] = 0.0;
