@@ -61,6 +61,7 @@ function TestProblem:run(user_config_callback, restart_file)
    -- the restart file if it exists, and finally the problem's
    -- set_runtime_defaults method.
    -----------------------------------------------------------------------------
+
    local runtime_cfg = {
       tmax = 0.4,
       output_path = 'data',
@@ -72,7 +73,8 @@ function TestProblem:run(user_config_callback, restart_file)
       local err, restored_runtime_cfg = serpent.load(h5f['runtime_cfg']:value())
       for k,v in pairs(restored_runtime_cfg) do
          runtime_cfg[k] = v
-      end
+      end -- required so that model_parameters are updated before m2 built
+      self:read_hdf5_problem_data(h5f)
       h5f:close()
    end
    if user_config_callback then

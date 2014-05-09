@@ -270,7 +270,7 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
       local h5config = hdf5.Group(h5file, 'config')
 
       for i,member in ipairs(struct.members(self._m2)) do
-	 h5config[member] = tostring(self._m2[member])
+         h5config[member] = tostring(self._m2[member])
       end
       for i,member in ipairs(struct.members(self.status)) do
 	 if type(self.status[member]) == 'number' then
@@ -280,7 +280,7 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
 	 end
       end
       if self._problem then
-	 self._problem:write_hdf5_problem_data(h5file)
+         self._problem:write_hdf5_problem_data(h5file)
       end
       for k,v in pairs(extras or { }) do
 	 h5file[k] = serpent.block(v)
@@ -335,8 +335,9 @@ function m2Application:read_checkpoint_hdf5(fname)
       local h5mem = h5status[member]
       if h5mem then -- in case status struct has new members since checkpoint
 	 local value = h5mem:value()
-	 if type(value) == 'number' then
-	    self.status[member] = value
+    if type(self.status[member]) == 'number' or
+       type(self.status[member]) == 'string' then
+       self.status[member] = value
 	 end
       end
    end
