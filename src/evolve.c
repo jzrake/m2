@@ -103,25 +103,28 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
 
   if (err[2] || err[3]) {
     if (suppress_extrapolation) {
-      MSGF(FATAL, "eigenvalues for %d-interface [%d %d %d] could not be found",
+      MSGF(INFO, "eigenvalues for %d-interface [%d %d %d] could not be found",
            axis, VL->global_index[1], VL->global_index[2], VL->global_index[3]);
+      lamL[0] = -1.0;
+      lamL[7] = +1.0;
+      lamR[0] = -1.0;
+      lamR[7] = +1.0;
     }
     else {
       riemann_solver(VL, VR, axis, F, 1);
       return;
     }
   }
-  else {
-    R.Sl = M2_MIN3(lamL[0], lamR[0], 0.0);
-    R.Sr = M2_MAX3(lamL[7], lamR[7], 0.0);
 
-    switch (VL->m2->riemann_solver) {
-    case M2_RIEMANN_HLLE: riemann_solver_hlle(&R); break;
-    case M2_RIEMANN_HLLC: riemann_solver_hllc(&R); break;
-    default: MSG(FATAL, "invalid riemann solver"); break;
-    }
-    memcpy(F, R.F_hat, 8 * sizeof(double));
+  R.Sl = M2_MIN3(lamL[0], lamR[0], 0.0);
+  R.Sr = M2_MAX3(lamL[7], lamR[7], 0.0);
+
+  switch (VL->m2->riemann_solver) {
+  case M2_RIEMANN_HLLE: riemann_solver_hlle(&R); break;
+  case M2_RIEMANN_HLLC: riemann_solver_hllc(&R); break;
+  default: MSG(FATAL, "invalid riemann solver"); break;
   }
+  memcpy(F, R.F_hat, 8 * sizeof(double));
 }
 
 static double plm_gradient(double *xs, double *fs, double plm)
