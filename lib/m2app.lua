@@ -273,8 +273,10 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
 	 h5config[member] = tostring(self._m2[member])
       end
       for i,member in ipairs(struct.members(self.status)) do
-	 if member ~= 'num_failures' then
+	 if type(self.status[member]) == 'number' then
 	    h5status[member] = self.status[member]
+	 else
+	    h5status[member] = tostring(self.status[member])
 	 end
       end
       if self._problem then
@@ -332,7 +334,10 @@ function m2Application:read_checkpoint_hdf5(fname)
    for i,member in ipairs(struct.members(self.status)) do
       local h5mem = h5status[member]
       if h5mem then -- in case status struct has new members since checkpoint
-	 self.status[member] = h5mem:value()
+	 local value = h5mem:value()
+	 if type(value) == 'number' then
+	    self.status[member] = value
+	 end
       end
    end
    if self._problem then

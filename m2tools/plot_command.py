@@ -3,10 +3,7 @@ import checkpoint
 import transforms
 
 
-class Slicer(object):
-    def __getitem__(self, key): return key
-
-slicer = Slicer()
+slicer = checkpoint.Slicer()
 
 
 class PlotDriver(object):
@@ -223,13 +220,13 @@ class PlotCommand(command.Command):
             chkpt.add_derived_field('gamma', transforms.LorentzFactor())
             print (filename)
             if chkpt.geometry == 'cartesian':
-                if (chkpt.domain_resolution == 1).sum() == 2:
+                if chkpt.dimensionality == 1:
                     plotter = ShocktubePlot1d(chkpt, args)
 
-                elif (chkpt.domain_resolution == 1).sum() == 1:
+                elif chkpt.dimensionality == 2:
                     plotter = RectangularPlot2d(chkpt, args)
 
-                elif (chkpt.domain_resolution == 1).sum() == 0:
+                elif chkpt.dimensionality == 3:
                     plotter = RectangularPlot3d(chkpt, args)
 
             elif chkpt.geometry == 'spherical':

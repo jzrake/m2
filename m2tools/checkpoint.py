@@ -1,23 +1,46 @@
 
 
+class Slicer(object):
+    """
+    Helper class for creating a multi-dimensional slice
+    """
+    def __getitem__(self, key): return key
+
+
 class SingleField(object):
+    """
+    Field transformation representing a single primitive variable field
+    """
     def __init__(self, key):
         self._key = key
     def transform(self, prim_selection):
         return prim_selection[self._key]
 
 
+class HookedDictionary(dict):
+    def __init__(self, hook):
+        self._hook = hook
+    def __setitem__(self, key, val):
+        self._hook(key, val)
+        super(HookedDictionary, self).__setitem__(key, val)
+
+
 class Checkpoint(object):
-    def __init__(self, filename):
+    """
+    Class representing an m2 HDF5 checkpoint file
+    """
+    def __init__(self, filename, writable=False):
         import h5py
         self._file = None # so that instance has attribute even if open fails
-        self._file = h5py.File(filename, 'r')
+        self._file = h5py.File(filename, None if writable else 'r')
         self._config = { }
-        self._status = { }
+        self._status = HookedDictionary(self._status_set_hook)
+        self._enable_set_hook = False
         for k,v in self._file['config'].iteritems():
             self._config[k] = v.value
         for k,v in self._file['status'].iteritems():
             self._status[k] = v.value
+        self._enable_set_hook = True
         self._selection = slice(None)
         self._derived_fields = { }
         for k in self.cell_primitive:
@@ -26,6 +49,13 @@ class Checkpoint(object):
     def __del__(self):
         if self._file:
             self._file.close()
+
+    def _status_set_hook(self, key, val):
+        if not self._enable_set_hook:
+            return
+        if key in self._file['status']:
+            del self._file['status'][key]
+        self._file['status'][key] = val
 
     def _fromstring(self, s, dtype):
         import numpy as np
@@ -48,15 +78,20 @@ class Checkpoint(object):
 
     @property
     def status(self):
-        status = { }
-        for k,v in self._status.iteritems():
-            status[k] = v
-        return status
+        return self._status
+
+    @property
+    def problem_name(self):
+        return self._file['problem_name'].value
 
     @property
     def periodic_dimension(self):
         cfg = self._config
         return self._fromstring(self._config['periodic_dimension'], int)
+
+    @property
+    def dimensionality(self):
+        return (self.domain_resolution > 1).sum()
 
     @property
     def domain_resolution(self):
@@ -138,6 +173,7 @@ class Checkpoint(object):
         for k in self.cell_primitive:
             prim_selection[k] = self.cell_primitive[k][self._selection]
         return transform.transform(prim_selection)
+
 
 
 if __name__ == "__main__":
