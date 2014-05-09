@@ -42,8 +42,11 @@ class ThreeDimensionalizer(command.Command):
             print "writing {0}/{1}/{2}".format(
                 c3d.filename, 'face_magnetic_flux', k)
             indata = c2d.face_magnetic_flux[k][:][:,:,None]
+            if k in [1,2]:
+                indata /= c3d.domain_resolution[3]
             c3d.face_magnetic_flux[k][:] = indata
 
         for k in c2d.status:
             print "writing {0}/{1}/{2}".format(c3d.filename, 'status', k)
             c3d.status[k] = c2d.status[k]
+
