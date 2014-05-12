@@ -63,6 +63,7 @@ int srmhd_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
 			 m2aux *aux, m2prim *P)
 {
+  int return_code = 0;
   double Uin[8];
   double Pin[8];
   double B1 = B[1];
@@ -90,10 +91,11 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     error = srmhd_c2p_solve_noble1dw(c2p, Pin);
   }
   if (error) {
-    /*error = srmhd_c2p_solve_anton2dzw(c2p, Pin);*/
-    /*if (error == SRMHD_C2P_SUCCESS) {*/
+    error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
+    if (error == SRMHD_C2P_SUCCESS) {
+      return_code |= 1<<M2_BIT_NEARLY_FAILED_CONSERVED_INVERSION;
       /*MSG(WARNING, "got a success with anton2dzw after noble1dw failed");*/
-    /*}*/
+    }
   }
   if (error) {
     /*MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));*/
@@ -160,15 +162,12 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     P->p = pg;
   }
 
-
   if (srmhd_c2p_put_pressure_floor(c2p)) {
-    srmhd_c2p_del(c2p);
-    return 1<<M2_BIT_NEGATIVE_PRESSURE;
+    return_code |= 1<<M2_BIT_NEGATIVE_PRESSURE;
   }
-  else {
-    srmhd_c2p_del(c2p);
-    return 0;
-  }
+
+  srmhd_c2p_del(c2p);
+  return return_code;
 }
 
 

@@ -812,7 +812,7 @@ int m2sim_from_conserved_all(m2sim *m2)
     V->zone_health |= error;
     if (error == 1<<M2_BIT_FAILED_CONSERVED_INVERSION) {
       /*printf("at zone [%d %d %d]\n", V->global_index[1],*/
-         /*V->global_index[2], V->global_index[3]);*/
+        /* V->global_index[2], V->global_index[3]);*/
     }
     else {
       V->zone_health &= ~(1<<M2_BIT_FAILED_CONSERVED_INVERSION);
