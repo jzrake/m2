@@ -90,14 +90,14 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     error = srmhd_c2p_solve_noble1dw(c2p, Pin);
   }
   if (error) {
-    error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
-    if (error == SRMHD_C2P_SUCCESS) {
-      MSG(INFO, "got a success with anton2dzw after noble1dw failed");
-    }
+    /*error = srmhd_c2p_solve_anton2dzw(c2p, Pin);*/
+    /*if (error == SRMHD_C2P_SUCCESS) {*/
+      /*MSG(WARNING, "got a success with anton2dzw after noble1dw failed");*/
+    /*}*/
   }
   if (error) {
-    MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));
-    m2_print_state(NULL, NULL, U);
+    /*MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));*/
+    /*m2_print_state(NULL, NULL, U);*/
     srmhd_c2p_del(c2p);
     return 1<<M2_BIT_FAILED_CONSERVED_INVERSION;
   }
@@ -252,12 +252,12 @@ int srmhd_eigenvalues(m2aux *aux, double n[4], double *evals)
     return 0;
   }
   else {
-    m2_print_state(NULL, aux, NULL);
-    MSGF(INFO, "A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]\n",
-	 A0, A1, A2, A3, A4);
-    MSGF(INFO, "x = [%+12.10f %+12.10f %+12.10f %+12.10f]\n",
-	 roots[0], roots[1], roots[2], roots[3]);
-    MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);
+    /*m2_print_state(NULL, aux, NULL);*/
+    /*MSGF(INFO, "A = [%+12.10f %+12.10f %+12.10f %+12.10f %+12.10f]",*/
+        /*A0, A1, A2, A3, A4);*/
+    /*MSGF(INFO, "x = [%+12.10f %+12.10f %+12.10f %+12.10f]",*/
+        /*roots[0], roots[1], roots[2], roots[3]);*/
+    /*MSGF(INFO, "magnetosonic polynomial N4=0 has %d real roots", nr);*/
     return 1;
   }
 }

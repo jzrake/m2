@@ -811,14 +811,17 @@ int m2sim_from_conserved_all(m2sim *m2)
                                  &V->aux, &V->prim);
     V->zone_health |= error;
     if (error == 1<<M2_BIT_FAILED_CONSERVED_INVERSION) {
-      printf("at zone [%d %d %d]\n", V->global_index[1],
-          V->global_index[2], V->global_index[3]);
+      /*printf("at zone [%d %d %d]\n", V->global_index[1],*/
+         /*V->global_index[2], V->global_index[3]);*/
+    }
+    else {
+      V->zone_health &= ~(1<<M2_BIT_FAILED_CONSERVED_INVERSION);
     }
   }
 
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
-    num_bad += V->zone_health & (1<<M2_BIT_FAILED_CONSERVED_INVERSION);
+    num_bad += 0 != (V->zone_health & (1<<M2_BIT_FAILED_CONSERVED_INVERSION));
   }
 #if M2_HAVE_MPI
   if (m2->cart_comm) {
@@ -826,8 +829,7 @@ int m2sim_from_conserved_all(m2sim *m2)
     MPI_Allreduce(MPI_IN_PLACE, &num_bad, 1, MPI_INT, MPI_SUM, cart_comm);
   }
 #endif
-
-  return num_bad > 0;
+ return num_bad > 0;
 }
 
 
@@ -1033,7 +1035,7 @@ void m2sim_drive(m2sim *m2)
   for (n=0; n<L[0]; ++n) {
     m2vol *V = m2->volumes + n;
     for (q=0; q<8; ++q) {
-      m2->status.num_failures[q] += V->zone_health & (1<<q);
+      m2->status.num_failures[q] += 0 != (V->zone_health & (1<<q));
     }
   }
 #if M2_HAVE_MPI

@@ -151,7 +151,6 @@ function TestProblem:run(user_config_callback, restart_file)
             keep_trying = self:reconfigure_after_failure(
             m2,
             m2.status.drive_attempt)
-            print(m2.status.num_failures)
          else
             keep_trying = false
          end
@@ -639,14 +638,13 @@ end
 function MagnetarWind:reconfigure_after_failure(m2, attempt)
    local responses = {
      function()
-         print('reduce cfl -> 0.1', attempt)
-         print('reduce plm -> 1.0', attempt)
          m2:set_cfl_parameter(0.1)
          m2:set_plm_parameter(1.0)
+      end,
+      function()
          m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE)
       end,
       function()
-         print('reduce plm -> 0.0', attempt)
          m2:set_plm_parameter(0.0)
       end,
    }
