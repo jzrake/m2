@@ -19,10 +19,18 @@ function TestProblem:write_hdf5_problem_data(h5file)
    end
 end
 function TestProblem:read_hdf5_problem_data(h5file)
-   local h5mp = hdf5.Group(h5file, 'model_parameters', 'r+')
+   local h5mp = hdf5.Group(h5file, 'model_parameters', 'r')
    for k,v in pairs(self.model_parameters or { }) do
-      self.model_parameters[k] = h5mp[k]:value()
+      local str_val = h5mp[k]:value()
+      if type(v) == 'number' then
+         self.model_parameters[k] = tonumber(str_val)
+      elseif type(v) == 'boolean' then
+         self.model_parameters[k] = load("return "..str_val)()
+      elseif type(v) == 'string' then
+         self.model_parameters[k] = str_val
+      end
    end
+   h5mp:close()
 end
 function TestProblem:set_runtime_defaults(cfg) end
 function TestProblem:update_model_parameters(user_mp)
