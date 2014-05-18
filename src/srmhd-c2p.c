@@ -160,7 +160,7 @@ int srmhd_c2p_reconstruct_prim(srmhd_c2p *c2p, double Z, double W, double *Pout)
   P[By ] =  Cons[By];
   P[Bz ] =  Cons[Bz];
 
-  if (P[pre] < c2p->PressureFloor && c2p->PressureFloor > 0.0) {
+  if (P[pre] <= 0.0 && c2p->PressureFloor > 0.0) {
     /* printf("setting pressure floor, p=%4.3e -> %2.1e\n", */
     /*     P[pre], PressureFloor); */
     P[pre] = c2p->PressureFloor;

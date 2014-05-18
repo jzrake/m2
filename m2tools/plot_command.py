@@ -87,18 +87,14 @@ class ShocktubePlot1d(PlotDriver):
 
 
 class RectangularPlot2d(PlotDriver):
-    
+
     def __init__(self, chkpt, args):
         self._chkpt = chkpt
         self._args = args
 
     def plot(self):
-        import pprint
         import matplotlib.pyplot as plt
         import numpy as np
-
-        pprint.pprint(self._chkpt.status)
-        pprint.pprint(self._chkpt.config)
 
         args = self._args
 
@@ -106,7 +102,7 @@ class RectangularPlot2d(PlotDriver):
         data = self._chkpt.get_field(args.field)
 
         self.get_plot_axes()
-        plt.imshow(data, interpolation='nearest', origin='lower')
+        plt.imshow(data.T, interpolation='nearest', origin='lower')
         plt.colorbar()
         plt.axis('equal')
         plt.title(self._chkpt.filename+'/'+args.field)
@@ -115,18 +111,14 @@ class RectangularPlot2d(PlotDriver):
 
 
 class RectangularPlot3d(PlotDriver):
-    
+
     def __init__(self, chkpt, args):
         self._chkpt = chkpt
         self._args = args
 
     def plot(self):
-        import pprint
         import matplotlib.pyplot as plt
         import numpy as np
-
-        pprint.pprint(self._chkpt.status)
-        pprint.pprint(self._chkpt.config)
 
         args = self._args
 
@@ -150,12 +142,8 @@ class PolarPlot(PlotDriver):
         self._args = args
 
     def plot(self):
-        import pprint
         import matplotlib.pyplot as plt
         import numpy as np
-
-        pprint.pprint(self._chkpt.status)
-        pprint.pprint(self._chkpt.config)
 
         args = self._args
         self.get_plot_axes()
@@ -212,12 +200,22 @@ class PlotCommand(command.Command):
         parser.add_argument('--vmin', type=float, default=None)
         parser.add_argument('--vmax', type=float, default=None)
         parser.add_argument('--equatorial', action="store_true")
+        parser.add_argument('--log-scaling', action="store_true")
         parser.add_argument('-o', '--output')
+        parser.add_argument('-v', '--verbose')
 
     def run(self, args):
+        import pprint
+        import numpy as np
+
         for filename in args.filenames:
+            if args.verbose:
+                pprint.pprint(self._chkpt.status)
+                pprint.pprint(self._chkpt.config)
+
             chkpt = checkpoint.Checkpoint(filename)
             chkpt.add_derived_field('gamma', transforms.LorentzFactor())
+            chkpt.set_scaling(np.log10 if args.log_scaling else lambda x: x)
             print (filename)
             if chkpt.geometry == 'cartesian':
                 if chkpt.dimensionality == 1:
@@ -232,10 +230,13 @@ class PlotCommand(command.Command):
             elif chkpt.geometry == 'spherical':
                 plotter = PolarPlot(chkpt, args)
 
-            plotter.set_show_mode('hold')
-            #plotter.set_hardcopy(args.output)
+            if not args.output:
+                plotter.set_show_mode('hold')
+            else:
+                plotter.set_hardcopy(filename.replace(*args.output.split(',')))
             plotter.plot()
 
-        import matplotlib.pyplot as plt
-        plt.show()
+        if not args.output:
+            import matplotlib.pyplot as plt
+            plt.show()
 

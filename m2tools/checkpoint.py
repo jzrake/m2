@@ -1,5 +1,18 @@
 
 
+def is_checkpoint_file(filename):
+    import h5py
+    try:
+        h5file = h5py.File(filename, 'r')
+        is_checkpoint = 'version' in h5file
+        if is_checkpoint:
+            is_checkpoint = h5file['version'].value.startswith('m2')
+        h5file.close()
+        return is_checkpoint
+    except Exception as e:
+        return False
+
+
 class Slicer(object):
     """
     Helper class for creating a multi-dimensional slice
@@ -33,14 +46,18 @@ class Checkpoint(object):
         import h5py
         self._file = None # so that instance has attribute even if open fails
         self._file = h5py.File(filename, None if writable else 'r')
+        self._model_parameters = { }
         self._config = { }
         self._status = HookedDictionary(self._status_set_hook)
         self._enable_set_hook = False
+        for k,v in self._file['model_parameters'].iteritems():
+            self._model_parameters[k] = v.value
         for k,v in self._file['config'].iteritems():
             self._config[k] = v.value
         for k,v in self._file['status'].iteritems():
             self._status[k] = v.value
         self._enable_set_hook = True
+        self._scaling = lambda x: x
         self._selection = slice(None)
         self._derived_fields = { }
         for k in self.cell_primitive:
@@ -49,6 +66,10 @@ class Checkpoint(object):
     def __del__(self):
         if self._file:
             self._file.close()
+
+    def __setitem__(self, key, val):
+        if key in self._file: del self._file[key]
+        self._file[key] = val
 
     def _status_set_hook(self, key, val):
         if not self._enable_set_hook:
@@ -68,6 +89,13 @@ class Checkpoint(object):
     @property
     def filename(self):
         return self._file.filename
+
+    @property
+    def model_parameters(self):
+        model_parameters = { }
+        for k,v in self._model_parameters.iteritems():
+            model_parameters[k] = v
+        return model_parameters
 
     @property
     def config(self):
@@ -160,6 +188,9 @@ class Checkpoint(object):
     def add_derived_field(self, key, transform):
         self._derived_fields[key] = transform
 
+    def set_scaling(self, scaling):
+        self._scaling = scaling
+
     def set_selection(self, selection):
         """
         Set the selection used by the get_field method to retrieve data from the
@@ -172,7 +203,7 @@ class Checkpoint(object):
         prim_selection = { }
         for k in self.cell_primitive:
             prim_selection[k] = self.cell_primitive[k][self._selection]
-        return transform.transform(prim_selection)
+        return self._scaling(transform.transform(prim_selection))
 
 
 
