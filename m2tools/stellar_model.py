@@ -141,7 +141,7 @@ class HegerStellarModel(object):
         """ Todo: replace with physics units read from checkpoint """
         light_speed = 2.99792458e10 #cm/s
         u_length = 1e9 # cm
-        u_density = 5e3 # g/cm^3
+        u_density = 1 # g/cm^3
         u_time = u_length / light_speed
         u_pressure = u_density * light_speed**2
         u_velocity = u_length / u_time
@@ -150,7 +150,7 @@ class HegerStellarModel(object):
             'v_phi': u_velocity,
             'density': u_density,
             'pressure': u_pressure}
-        dc = np.log10(0.1) # currently cavity density is hard-coded
+        dc = np.log10(float(chkpt.model_parameters['d_cavity']))
         rc = np.log10(float(chkpt.model_parameters['r_cavity']))
         r0 = np.log10(chkpt.domain_extent_lower[1])
         r1 = np.log10(chkpt.domain_extent_upper[1])

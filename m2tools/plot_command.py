@@ -41,7 +41,7 @@ class PlotDriver(object):
 class ShocktubePlot1d(PlotDriver):
 
     def __init__(self, chkpt, args):
-        self._chkpt = chkpt
+        self.chkpt = chkpt
         self._args = args
 
     def plot(self):
@@ -68,14 +68,14 @@ class ShocktubePlot1d(PlotDriver):
         dsets = ['p','B1','B2','B3','d','v1','v2','v3']
         ymin, ymax = [], []
         for i, dset in enumerate(dsets):
-            y = self._chkpt.cell_primitive[dset][...]
+            y = self.chkpt.cell_primitive[dset][...]
             ymin.append(y.min())
             ymax.append(y.max())
 
         spread = max(ymax) - min(ymin)
 
         for i, dset in enumerate(dsets):
-            y = self._chkpt.cell_primitive[dset][...]
+            y = self.chkpt.cell_primitive[dset][...]
             x = np.linspace(0.0, spread, y.size)
             grid[i].plot(x, y, c='k', lw=2.0, marker='o', mfc='none')
             grid[i].text(0.1, 0.1, dset, transform=grid[i].transAxes, fontsize=16)
@@ -89,7 +89,7 @@ class ShocktubePlot1d(PlotDriver):
 class RectangularPlot2d(PlotDriver):
 
     def __init__(self, chkpt, args):
-        self._chkpt = chkpt
+        self.chkpt = chkpt
         self._args = args
 
     def plot(self):
@@ -98,14 +98,14 @@ class RectangularPlot2d(PlotDriver):
 
         args = self._args
 
-        self._chkpt.set_selection(slicer[:,:])
-        data = self._chkpt.get_field(args.field)
+        self.chkpt.set_selection(slicer[:,:])
+        data = self.chkpt.get_field(args.field)
 
         self.get_plot_axes()
         plt.imshow(data.T, interpolation='nearest', origin='lower')
         plt.colorbar()
         plt.axis('equal')
-        plt.title(self._chkpt.filename+'/'+args.field)
+        plt.title(self.chkpt.filename+'/'+args.field)
         self.show()
 
 
@@ -113,7 +113,7 @@ class RectangularPlot2d(PlotDriver):
 class RectangularPlot3d(PlotDriver):
 
     def __init__(self, chkpt, args):
-        self._chkpt = chkpt
+        self.chkpt = chkpt
         self._args = args
 
     def plot(self):
@@ -122,15 +122,15 @@ class RectangularPlot3d(PlotDriver):
 
         args = self._args
 
-        nz = self._chkpt.domain_resolution[3]
-        self._chkpt.set_selection(slicer[:,:,nz/2])
-        data = self._chkpt.get_field(args.field)
+        nz = self.chkpt.domain_resolution[3]
+        self.chkpt.set_selection(slicer[:,:,nz/2])
+        data = self.chkpt.get_field(args.field)
 
         self.get_plot_axes()
         plt.imshow(data, interpolation='nearest', origin='lower')
         plt.colorbar()
         plt.axis('equal')
-        plt.title(self._chkpt.filename+'/'+args.field)
+        plt.title(self.chkpt.filename+'/'+args.field)
         self.show()
 
 
@@ -138,7 +138,7 @@ class RectangularPlot3d(PlotDriver):
 class PolarPlot(PlotDriver):
 
     def __init__(self, chkpt, args):
-        self._chkpt = chkpt
+        self.chkpt = chkpt
         self._args = args
 
     def plot(self):
@@ -148,22 +148,47 @@ class PolarPlot(PlotDriver):
         args = self._args
         self.get_plot_axes()
 
-        if self._chkpt.domain_resolution[3] == 1:
+        if self.chkpt.domain_resolution[3] == 1 and not args.profile:
             print "r-theta in axial symmetry"
-            self._chkpt.set_selection(slicer[1:,1:])
-            data = self._chkpt.get_field(args.field)
-            R, T = self._chkpt.cell_edge_meshgrid
+            self.chkpt.set_selection(slicer[1:,1:])
+            data = self.chkpt.get_field(args.field)
+            R, T = self.chkpt.cell_edge_meshgrid
             X = +R * np.sin(T)
             Z = +R * np.cos(T)
             plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
             X = -R * np.sin(T)
             Z = +R * np.cos(T)
             plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
-        elif not args.equatorial:
+        elif self.chkpt.domain_resolution[3] == 1:
+            print "equatorial profile"
+            nt = self.chkpt.domain_resolution[2]
+            self.chkpt.set_selection(slicer[1:,nt/2])
+            data = self.chkpt.get_field(args.field)
+            R, T = self.chkpt.cell_edge_meshgrid
+            plt.loglog(R[1:], data)
+        elif args.profile:
+            print "equatorial profile"
+            nt = self.chkpt.domain_resolution[2]
+            self.chkpt.set_selection(slicer[1:,nt/2,0])
+            data = self.chkpt.get_field(args.field)
+            R, T, P = self.chkpt.cell_edge_meshgrid
+            plt.loglog(R, data)
+        elif args.equatorial:
+            print "r-phi slice"
+            nt = self.chkpt.domain_resolution[2]
+            self.chkpt.set_selection(slicer[1:,nt/2,:])
+            data = self.chkpt.get_field(self._args.field)
+            R, T, P = self.chkpt.cell_edge_meshgrid
+            X = R * np.sin(T) * np.cos(P)
+            Y = R * np.sin(T) * np.sin(P)
+            X = X[:,nt/2,:]
+            Y = Y[:,nt/2,:]
+            plt.pcolormesh(X, Y, data, vmin=args.vmin, vmax=args.vmax)
+        else:
             print "r-theta slice"
-            self._chkpt.set_selection(slicer[1:,1:,0])
-            data = self._chkpt.get_field(args.field)
-            R, T, P = self._chkpt.cell_edge_meshgrid
+            self.chkpt.set_selection(slicer[1:,1:,0])
+            data = self.chkpt.get_field(args.field)
+            R, T, P = self.chkpt.cell_edge_meshgrid
             R = R[...,0]
             T = T[...,0]
             X = +R * np.sin(T)
@@ -172,21 +197,11 @@ class PolarPlot(PlotDriver):
             X = -R * np.sin(T)
             Z = +R * np.cos(T)
             plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
-        else:
-            print "r-phi slice"
-            nt = self._chkpt.domain_resolution[2]
-            self._chkpt.set_selection(slicer[1:,nt/2,:])
-            data = self._chkpt.get_field(self._args.field)
-            R, T, P = self._chkpt.cell_edge_meshgrid
-            X = R * np.sin(T) * np.cos(P)
-            Y = R * np.sin(T) * np.sin(P)
-            X = X[:,nt/2,:]
-            Y = Y[:,nt/2,:]
-            plt.pcolormesh(X, Y, data, vmin=args.vmin, vmax=args.vmax)
 
-        plt.title(self._chkpt.filename+'/'+args.field)
-        plt.colorbar()
-        plt.axis('equal')
+        if not args.profile:
+            plt.axis('equal')
+            plt.colorbar()
+        plt.title(self.chkpt.filename+'/'+args.field)
         self.show()
 
 
@@ -200,6 +215,7 @@ class PlotCommand(command.Command):
         parser.add_argument('--vmin', type=float, default=None)
         parser.add_argument('--vmax', type=float, default=None)
         parser.add_argument('--equatorial', action="store_true")
+        parser.add_argument('--profile', action="store_true")
         parser.add_argument('--log-scaling', action="store_true")
         parser.add_argument('-o', '--output')
         parser.add_argument('-v', '--verbose')
@@ -210,13 +226,13 @@ class PlotCommand(command.Command):
 
         for filename in args.filenames:
             if args.verbose:
-                pprint.pprint(self._chkpt.status)
-                pprint.pprint(self._chkpt.config)
+                pprint.pprint(self.chkpt.status)
+                pprint.pprint(self.chkpt.config)
 
             chkpt = checkpoint.Checkpoint(filename)
             chkpt.add_derived_field('gamma', transforms.LorentzFactor())
             chkpt.set_scaling(np.log10 if args.log_scaling else lambda x: x)
-            print (filename)
+
             if chkpt.geometry == 'cartesian':
                 if chkpt.dimensionality == 1:
                     plotter = ShocktubePlot1d(chkpt, args)

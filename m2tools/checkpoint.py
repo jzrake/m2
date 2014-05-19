@@ -1,3 +1,4 @@
+import command
 
 
 def is_checkpoint_file(filename):
@@ -71,6 +72,18 @@ class Checkpoint(object):
         if key in self._file: del self._file[key]
         self._file[key] = val
 
+    def __repr__(self):
+        return ("<m2 checkpoint {0}>"
+                "\n\tproblem ... {1}"
+                "\n\tversion ... {2}"
+                "\n\ttime_stamp ... {3}"
+                "\n\tresolution ... {4}").format(
+                    self.filename,
+                    self.problem_name,
+                    self.version[4:],
+                    self.time_stamp,
+                    self.domain_resolution[1:])
+
     def _status_set_hook(self, key, val):
         if not self._enable_set_hook:
             return
@@ -85,6 +98,18 @@ class Checkpoint(object):
     def close(self):
         self._file.close()
         self._file = None
+
+    @property
+    def build_date(self):
+        return self._file['build_date'].value
+
+    @property
+    def time_stamp(self):
+        return self._file['time_stamp'].value
+
+    @property
+    def version(self):
+        return self._file['version'].value
 
     @property
     def filename(self):
@@ -207,13 +232,14 @@ class Checkpoint(object):
 
 
 
-if __name__ == "__main__":
-    chkpt = Checkpoint('chkpt.final.h5')
+class CheckpointSummary(command.Command):
+    _alias = "summarize"
 
-    print chkpt.domain_resolution
-    print chkpt.domain_extent_lower
-    print chkpt.domain_extent_upper
-    print chkpt.coordinate_scalings
-    print chkpt.cell_edge_coordinates[:2]
-    print chkpt.periodic_dimension
-    print chkpt.geometry
+    def configure_parser(self, parser):
+        parser.add_argument('filenames', nargs='+')
+
+    def run(self, args):
+        for filename in args.filenames:
+            chkpt = Checkpoint(filename)
+            print chkpt
+
