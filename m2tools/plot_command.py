@@ -231,6 +231,7 @@ class PlotCommand(command.Command):
 
             chkpt = checkpoint.Checkpoint(filename)
             chkpt.add_derived_field('gamma', transforms.LorentzFactor())
+            chkpt.add_derived_field('beta', transforms.PlasmaBeta())
             chkpt.set_scaling(np.log10 if args.log_scaling else lambda x: x)
 
             if chkpt.geometry == 'cartesian':
