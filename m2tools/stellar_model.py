@@ -138,9 +138,8 @@ class HegerStellarModel(object):
         chkpt = checkpoint.Checkpoint(self._args.output, writable=True)
         table = self._table
 
-        """ Todo: replace with physics units read from checkpoint """
         light_speed = 2.99792458e10 #cm/s
-        u_length = 1e9 # cm
+        u_length = float(chkpt.model_parameters['r_inner'])
         u_density = 1 # g/cm^3
         u_time = u_length / light_speed
         u_pressure = u_density * light_speed**2

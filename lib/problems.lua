@@ -546,10 +546,13 @@ function MagnetarWind:__init__()
 
    -- ==========================================================================
    mps.three_d = false; doc.three_d='run in three dimensions'
-   mps.r_outer=100; doc.r_outer='outer radius (inner is 1.0)'
-   mps.r_cavity=10; doc.r_cavity='cavity radius'
-   mps.d_star=100;  doc.d_star='star density (wind density is 1.0)'
-   mps.B_wind=8.00; doc.B_wind='wind toroidal field value'
+   mps.r_inner=1e9; doc.r_inner='inner radius (in cm)'
+   mps.r_outer=100; doc.r_outer='outer radius (in units of inner radius)'
+   mps.r_cavity=10; doc.r_cavity='cavity radius (in units of inner radius)'
+   mps.d_cavity=.1; doc.d_cavity='cavity density (code units)'
+   mps.d_star=100;  doc.d_star='star density (ignored for real stellar model)'
+   mps.d_wind=1.0;  doc.d_wind='wind density (code units)'
+   mps.B_wind=8.00; doc.B_wind='wind toroidal field value (code units)'
    mps.g_wind=8.00; doc.g_wind='wind Lorentz factor'
    mps.g_pert=0.00; doc.g_pert='fractional azimuthal variation in g_wind'
    mps.d_pert=0.00; doc.d_pert='fractional azimuthal variation in density'
@@ -562,12 +565,12 @@ function MagnetarWind:__init__()
       local r = x[1]
       local t = x[2]
       local p = x[3]
-      if r < rc  then
-         d0 = 0.1
+      if r < rc then
+         d0 = mps.d_cavity
       else
          d0 = mps.d_star * (1 + h*math.sin(t)*math.cos(6*p)*math.exp(-r/rc))
       end
-      return {d0, 0.01, 0.0, 0.0, 0.0}
+      return {d0, 0.01 * mps.d_wind, 0.0, 0.0, 0.0}
    end
 end
 function MagnetarWind:set_runtime_defaults(runtime_cfg)
@@ -606,11 +609,11 @@ function MagnetarWind:build_m2(runtime_cfg)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       local p = 0.5 * (V0.x0[3] + V0.x1[3])
       if V0.global_index[1] == -1 then
-         local d = 1.0
+         local d = mps.d_wind
          local B = mps.B_wind
          local g = mps.g_wind
          local h = mps.g_pert
-         g = g * (1.0 + h * math.sin(t) * math.sin(6*p)^2) 
+         g = g * (1.0 + h * math.sin(t) * math.sin(6*p)^2)
          V0.prim.v1 =(1.0 - g^-2)^0.5
          V0.prim.v2 = 0.0
          V0.prim.v3 = 0.0
@@ -665,12 +668,88 @@ function MagnetarWind:reconfigure_after_failure(m2, attempt)
 end
 
 
+
+local InternalShock = class.class('InternalShock', TestProblem)
+InternalShock.explanation = [[
+--------------------------------------------------------------------------------
+-- Collision of relativistic pancakes
+--------------------------------------------------------------------------------]]
+function InternalShock:__init__()
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
+   -- ==========================================================================
+   mps.r0 = 0.10
+   mps.b = 0.08
+   mps.v0 = 0.8
+   mps.three_d = false; doc.three_d='run in three dimensions'
+   -- ==========================================================================
+
+   self.initial_data_cell = function(x)
+      local r1 = ((x[1] + 0.25)^2 + (x[2] + mps.b)^2)^0.5
+      local r2 = ((x[1] - 0.25)^2 + (x[2] - mps.b)^2)^0.5
+      local d0, vx
+      if r1 < mps.r0 then
+         d0 = 100.0
+         vx = mps.v0
+      elseif r2 < mps.r0 then
+         d0 = 100.0
+         vx = -mps.v0
+      else
+         d0 = 1.0
+         vx = 0.0
+      end
+      return {d0, 0.5, vx, 0.0, 0.0}
+   end
+
+   self.initial_data_face = function(x, n)
+      return {0.01 * n[1]}
+   end
+end
+function InternalShock:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 2.0
+end
+function InternalShock:build_m2(runtime_cfg)
+
+   local build_args = {
+      lower={-1.0,-0.5, 0.0},
+      upper={ 1.0, 0.5, 1.0},
+      resolution={128,64,1},
+      periods={true,true,true},
+      scaling={'linear', 'linear', 'linear'},
+      relativistic=true,
+      magnetized=true,
+      geometry='cartesian'
+   }
+   local N = runtime_cfg.resolution or 128
+   build_args.resolution[1] = N * 2
+   build_args.resolution[2] = N
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(4./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.4)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE_AND_FOUR_VELOCITY)
+   m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
+   m2:set_quartic_solver(runtime_cfg.quartic or m2lib.M2_QUARTIC_FULL_COMPLEX)
+   m2:set_suppress_extrapolation_at_unhealthy_zones(1)
+   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
+   m2:set_problem(self)
+   return m2
+end
+
+
 return {
-   DensityWave  = DensityWave,
-   RyuJones     = RyuJones,
-   BrioWu       = BrioWu,
-   ContactWave  = ContactWave,
-   BlastMHD     = BlastMHD,
-   Jet          = Jet,
-   MagnetarWind = MagnetarWind
+   DensityWave   = DensityWave,
+   RyuJones      = RyuJones,
+   BrioWu        = BrioWu,
+   ContactWave   = ContactWave,
+   BlastMHD      = BlastMHD,
+   Jet           = Jet,
+   MagnetarWind  = MagnetarWind,
+   InternalShock = InternalShock
 }
