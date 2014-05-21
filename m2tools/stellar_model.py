@@ -2,7 +2,75 @@ import command
 import checkpoint
 
 
-class HegerStellarModel(object):
+light_speed = 2.99792458e10 # cm/s
+
+
+class StellarModel(object):
+
+    def plot_profile(self):
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        def cs(model):
+            d = model.get_profile('d', model._radius)
+            p = model.get_profile('p', model._radius)
+            return (p / (d * light_speed**2))**0.5
+
+        transforms = { 'cs': cs }
+
+        for field in self._args.fields.split(','):
+            plt.figure()
+            if field in transforms:
+                y = transforms[field](self)
+            else:
+                y = self.get_profile(field, self._radius)
+            plt.loglog(self._radius, y, '-o', mfc='none')
+            plt.xlabel('radius [cm]')
+            plt.ylabel(field + ' [cgs]')
+        plt.show()
+
+
+    def write_profile_to_checkpoint(self):
+        import numpy as np
+        from scipy.interpolate import interp1d
+
+        chkpt = checkpoint.Checkpoint(self._args.output, writable=True)
+
+        u_length = float(chkpt.model_parameters['r_inner'])
+        u_density = 1 # g/cm^3
+        u_time = u_length / light_speed
+        u_velocity = u_length / u_time
+        u_pressure = u_density * u_velocity**2 
+        units = {
+            'r': u_length,
+            'd': u_density,
+            'p': u_pressure,
+            'v3': u_velocity}
+        dc = float(chkpt.model_parameters['d_cavity'])
+        rc = float(chkpt.model_parameters['r_cavity'])
+        r0 = chkpt.domain_extent_lower[1]
+        r1 = chkpt.domain_extent_upper[1]
+        N = chkpt.domain_resolution[1]
+        r_samp =  0.5 * (np.logspace(np.log10(r0), np.log10(r1), N+1)[1:] +
+                         np.logspace(np.log10(r0), np.log10(r1), N+1)[:-1])
+
+        for field in ('v3', 'p', 'd'):
+            y = self.get_profile(field, r_samp*u_length) / units[field]
+
+            if field == 'd':
+                y[r_samp < rc] = dc
+            elif field == 'p':
+                y[r_samp < rc] = y[r_samp >= rc][0]
+
+            for i,yi in enumerate(y):
+                chkpt.cell_primitive[field][i+1,...] = yi
+
+        chkpt['stellar_model_file'] = self._args.filename
+        chkpt.close()
+
+
+
+class HegerStellarModel(StellarModel):
     """
     column	data	unit
     grid	cell number	---
@@ -49,6 +117,7 @@ class HegerStellarModel(object):
         import numpy as np
 
         table = {
+            'M': dict(i=1, v=[]), # enclosed mass
             'radius': dict(i=2, v=[]),
             'vr': dict(i=3, v=[]),
             'density': dict(i=4, v=[]),
@@ -88,117 +157,109 @@ class HegerStellarModel(object):
                                           for r in table_rows]))
         table['j_specific'] = dict(v=np.array([j_specific(r)
                                                for r in table_rows]))
-
         self._table = table
 
 
-    def plot_profile(self):
-        import matplotlib.pyplot as plt
-
-        for field in self._args.fields.split(','):
-            plt.figure()
-            plt.loglog(self._table['radius']['v'], self._table[field]['v'],
-                       '-o', mfc='none')
-            plt.xlabel('radius [cm]')
-            plt.ylabel(field + ' [cgs]')
-        plt.show()
+    @property
+    def _radius(self):
+        return self._table['radius']['v']
 
 
-    def write_profile_to_hdf5(self):
-        import numpy as np
-        import h5py
-        from scipy.interpolate import interp1d
-
-        h5file = h5py.File(self._args.output, 'w')
-        table = self._table
-
-        r0 = np.log10(self._args.inner)
-        r1 = np.log10(self._args.outer)
-        N = self._args.points
-        r_samp =  0.5 * (np.linspace(r0, r1, N+1)[1:] +
-                         np.linspace(r0, r1, N+1)[:-1])
-        r = np.log10(table['radius']['v'])
-
-        for field in self._args.fields.split(','):
-            v = table[field]['v']
-            y = np.log10(v)
-            interpolant = interp1d(r, y, kind='linear')
-
-            y_samp = interpolant(r_samp)
-            h5file[field] = 10**y_samp
-
-        h5file['radius'] = 10**r_samp
-        h5file['stellar_model_file'] = self._args.filename
-
-
-    def write_profile_to_checkpoint(self):
+    def get_profile(self, field, r):
         import numpy as np
         from scipy.interpolate import interp1d
+        field = {'d': 'density', 'p': 'pressure', 'v3': 'v_phi'}[field]
+        v = self._table[field]['v']
+        y = np.log10(v)
+        r = np.log10(r)
+        interpolant = interp1d(r, y, kind='linear')
 
-        chkpt = checkpoint.Checkpoint(self._args.output, writable=True)
-        table = self._table
+        return 10**interpolant(r)
 
-        light_speed = 2.99792458e10 #cm/s
-        u_length = float(chkpt.model_parameters['r_inner'])
-        u_density = 1 # g/cm^3
-        u_time = u_length / light_speed
-        u_pressure = u_density * light_speed**2
-        u_velocity = u_length / u_time
-        units = {
-            'radius': u_length,
-            'v_phi': u_velocity,
-            'density': u_density,
-            'pressure': u_pressure}
-        dc = np.log10(float(chkpt.model_parameters['d_cavity']))
-        rc = np.log10(float(chkpt.model_parameters['r_cavity']))
-        r0 = np.log10(chkpt.domain_extent_lower[1])
-        r1 = np.log10(chkpt.domain_extent_upper[1])
-        N = chkpt.domain_resolution[1]
-        r_samp =  0.5 * (np.linspace(r0, r1, N+1)[1:] +
-                         np.linspace(r0, r1, N+1)[:-1])
-        r = np.log10(table['radius']['v'] / units['radius'])
 
-        for field_c, field_t in [('v3', 'v_phi'),
-                                 ('d', 'density'),
-                                 ('p', 'pressure')]:
-            v = table[field_t]['v']
-            u = units[field_t]
-            y = np.log10(v / u)
-            interpolant = interp1d(r, y, kind='linear')
 
-            y_samp = interpolant(r_samp)
+class MesaDuffellStellarModel(StellarModel):
+    def __init__(self, args):
+        self._args = args
+        self._tabulate_model()
 
-            if field_t == 'density':
-                y_samp[r_samp < rc] = dc
-            elif field_t == 'pressure':
-                y_samp[r_samp < rc] = y_samp[r_samp >= rc][0]
+    def _tabulate_model(self):
+        import numpy as np
+        from scipy.interpolate import interp1d
+        from scipy.integrate import cumtrapz
 
-            for i,y in enumerate(y_samp):
-                chkpt.cell_primitive[field_c][i+1,...] = 10**y
-        chkpt['stellar_model_file'] = self._args.filename
-        chkpt.close()
+        R_outer = 1e10 # cm
+        M_star = 15 * 1.9891e33 # g (15 solar mass)
+
+        R = 1.0 # in units of 1e10 cm
+        M = 1.0 # in units of ~0.45 * 15 solar masses (total mass is ~0.54M)
+
+        u_velocity = light_speed
+        u_mass = M_star / 0.45
+        u_length = R_outer
+        u_density = u_mass / u_length**3
+        u_pressure = u_density * light_speed**2 
+
+        rho0 = 1e-6
+        a1 = 23.4*(0.4/R)
+        b1 = 0.058*(R/0.4)
+        M1 = 11.27/11.2*M
+        a2 = 472.*(0.4/R)
+        b2 = 0.002*(R/0.4)
+        M2 = 3.24/11.2*M
+
+        def f(r,a,b,M):
+            return (M / np.pi / a) / ((r-b)**2 + a**-2)
+
+        def density(r):
+            return ((f(r,a1,b1,M1) + f(r,a2,b2,M2))/(4*np.pi*r**2) *
+                    (1 - r/R)**3.85 + rho0) * u_density
+
+        def pressure(r):
+            return 0.00025 * density(r) * light_speed**2
+
+        r = np.logspace(-3, 0.0, 128)
+        p = [pressure(ri) for ri in r]
+        d = [density(ri) for ri in r]
+        dMdr = [density(ri) * 4*np.pi*(ri*u_length)**2 for ri in r]
+        m = cumtrapz(dMdr, x=r*u_length)
+        m = np.concatenate([[m[0]], m])
+        logfuncs = { }
+        logfuncs['p'] = interp1d(np.log10(r*u_length), np.log10(p), kind='linear')
+        logfuncs['d'] = interp1d(np.log10(r*u_length), np.log10(d), kind='linear')
+        logfuncs['m'] = interp1d(np.log10(r*u_length), np.log10(m), kind='linear')
+
+        self._logfuncs = logfuncs
+        self._radius = r * u_length
+
+
+    def get_profile(self, field, r):
+        import numpy as np
+        if field == 'v3': return np.zeros_like(r)
+        else: return 10**self._logfuncs[field](np.log10(r))
 
 
 
 class ReadStellarModelCommand(command.Command):
-    _alias = "read-star"
+    _alias = "make-star"
 
     def configure_parser(self, parser):
         parser.add_argument("filename")
-        parser.add_argument("--fields", default="density")
+        parser.add_argument("--fields", default="d")
         parser.add_argument("--inner", default=1e9, type=float)
         parser.add_argument("--outer", default=1e11, type=float)
         parser.add_argument("--points", default=128, type=int)
         parser.add_argument("-o", "--output", default=None)
 
     def run(self, args):
-        model = HegerStellarModel(args)
+        if args.filename == 'mesa-duffell':
+            model = MesaDuffellStellarModel(args)
+        else:
+            model = HegerStellarModel(args)
         if args.output is None:
             model.plot_profile()
         elif checkpoint.is_checkpoint_file(args.output):
-            print "writing profile to checkpoint"
             model.write_profile_to_checkpoint()
         else:
-            print "writing profile to hdf5 table"
-            model.write_profile_to_hdf5()
+            raise RuntimeError("output file must be an m2 checkpoint")
 

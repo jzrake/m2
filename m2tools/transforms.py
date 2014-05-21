@@ -12,5 +12,5 @@ class PlasmaBeta(object):
         B1 = prim_selection['B1']
         B2 = prim_selection['B2']
         B3 = prim_selection['B3']
-        return pg / (B1**2 + B2**2 + B3**2)
+        return pg / (B1**2 + B2**2 + B3**2 + 1e-12)
 
