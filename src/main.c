@@ -909,16 +909,37 @@ int register_m2sim(lua_State *L)
 
 
 
+/* -----------------------------------------------------------------------------
+ *
+ * m2 utilities
+ *
+ * -------------------------------------------------------------------------- */
 static int L_m2_self_test(lua_State *L)
 {
   m2_self_test();
   return 0;
 }
+static int L_m2_force_free_vector_potential(lua_State *L)
+{
+  double **x = (double **) luaL_checkudata(L, 1, "dvec4");
+  double **n = (double **) luaL_checkudata(L, 2, "dvec4");
+  int M = luaL_checkint(L, 3);
+  double A = m2_force_free_vector_potential(*x, *n, M);
+  lua_pushnumber(L, A);
+  return 1;
+}
+static int L_m2_force_free_magnetic_field(lua_State *L)
+{
+  double **x = (double **) luaL_checkudata(L, 1, "dvec4");
+  double **n = (double **) luaL_checkudata(L, 2, "dvec4");
+  int M = luaL_checkint(L, 3);
+  double A = m2_force_free_magnetic_field(*x, *n, M);
+  lua_pushnumber(L, A);
+  return 1;
+}
 
-/* problem-specific C-level callbacks */
-void jet_boundary_conditions_cell(m2sim *m2);
-void jet_add_physical_source_terms(m2vol *V);
-int luaopen_m2jet(lua_State *L);
+
+
 
 int luaopen_m2lib(lua_State *L)
 {
@@ -933,14 +954,16 @@ int luaopen_m2lib(lua_State *L)
   register_dvec4(L);
   register_dvec8(L);
 
-  lua_pushstring(L, M2_GIT_SHA);    lua_setfield(L, -2, "M2_GIT_SHA");
-  lua_pushstring(L, __DATE__" "__TIME__); lua_setfield(L, -2, "M2_BUILD_DATE");
-  lua_pushcfunction(L, L_m2_self_test); lua_setfield(L, -2, "self_test");
-
-  lua_pushlightuserdata(L, jet_boundary_conditions_cell);
-  lua_setfield(L, -2, "jet_boundary_conditions_cell");
-  lua_pushlightuserdata(L, jet_add_physical_source_terms);
-  lua_setfield(L, -2, "jet_add_physical_source_terms");
+  lua_pushstring(L, M2_GIT_SHA);
+  lua_setfield(L, -2, "M2_GIT_SHA");
+  lua_pushstring(L, __DATE__" "__TIME__);
+  lua_setfield(L, -2, "M2_BUILD_DATE");
+  lua_pushcfunction(L, L_m2_self_test);
+  lua_setfield(L, -2, "self_test");
+  lua_pushcfunction(L, L_m2_force_free_vector_potential);
+  lua_setfield(L, -2, "force_free_vector_potential");
+  lua_pushcfunction(L, L_m2_force_free_magnetic_field);
+  lua_setfield(L, -2, "force_free_magnetic_field");
 
   lua_pushnumber(L, M2_PI);
   lua_setfield(L, -2, "M2_PI");
@@ -999,6 +1022,9 @@ int luaopen_m2lib(lua_State *L)
   return 1;
 }
 
+
+/* problem-specific Lua modules */
+int luaopen_m2jet(lua_State *L);
 
 #if M2_HAVE_MPI
 #include <mpi.h>

@@ -237,6 +237,8 @@ int m2_solve_quartic_equation1(double d4, double d3,
 int m2_solve_quartic_equation2(double d4, double d3,
 			       double d2, double d1, double d0,
 			       double roots[4]);
+double m2_force_free_vector_potential(double x[4], double n[4], int model);
+double m2_force_free_magnetic_field(double x[4], double n[4], int model);
 
 
 /* vol */

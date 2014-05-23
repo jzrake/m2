@@ -743,6 +743,76 @@ function InternalShock:build_m2(runtime_cfg)
 end
 
 
+
+local DecayingMHD = class.class('DecayingMHD', TestProblem)
+DecayingMHD.explanation = [[
+--------------------------------------------------------------------------------
+-- Decay of coiled magnetic field
+--------------------------------------------------------------------------------]]
+function DecayingMHD:__init__()
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
+   -- ==========================================================================
+   mps.three_d = true; doc.three_d = 'run in three dimensions'
+   -- ==========================================================================
+
+   self.initial_data_cell = function(x)
+      return {1.0, 1.0, 0.0, 0.0, 0.0}
+   end
+   --self.initial_data_face = function(x, n)
+      --return {m2lib.force_free_magnetic_field(x, n, 0)}
+   --end
+   self.initial_data_edge = function(x, n)
+      local kx = 8 * (x[1] + x[2] + x[3])
+      local dA = {
+         math.random(),
+         math.random(),
+         math.random(),
+      }
+      return {
+         m2lib.force_free_vector_potential(x, n, 0) +
+         0.1 * (dA[1]*n[1] + dA[2]*n[2] + dA[3]*n[3])
+      }
+   end
+end
+function DecayingMHD:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 0.4
+end
+function DecayingMHD:build_m2(runtime_cfg)
+   local N = runtime_cfg.resolution or 32
+   local L = 1.0 * math.pi
+   local build_args = {
+      upper={ L,  L,  L},
+      lower={-L, -L, -L},
+      resolution={N, N, N},
+      periods={true,true,true},
+      scaling={'linear', 'linear', 'linear'},
+      relativistic=false,
+      magnetized=true,
+      geometry='cartesian'
+   }
+   if runtime_cfg.relativistic then build_args.relativistic = true end
+   if runtime_cfg.unmagnetized then build_args.magnetized = false end
+   if not self.model_parameters.three_d then
+      build_args.resolution[3] = 1
+   end
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   return m2
+end
+
+
 return {
    DensityWave   = DensityWave,
    RyuJones      = RyuJones,
@@ -751,5 +821,6 @@ return {
    BlastMHD      = BlastMHD,
    Jet           = Jet,
    MagnetarWind  = MagnetarWind,
-   InternalShock = InternalShock
+   InternalShock = InternalShock,
+   DecayingMHD   = DecayingMHD,
 }
