@@ -103,10 +103,18 @@ def five_point_deriv(f, axis=0, h=1.0):
 class CalculateForces(command.Command):
     _alias = "calc-forces"
     def configure_parser(self, parser):
-        parser.add_argument("filename")
+        parser.add_argument("filenames", nargs='+')
+        parser.add_argument("--fields", default='T+F')
 
     def run(self, args):
-        calc = HydromagneticForceCalculator(args.filename)
+        import matplotlib.pyplot as plt
+        for filename in args.filenames:
+            self.run_file(filename, args)
+        plt.show()
+
+    def run_file(self, filename, args):
+        import matplotlib.pyplot as plt
+        calc = HydromagneticForceCalculator(filename)
         fields = {
             'B' : calc.magnetic_field(),
             'J' : calc.curlB(),
@@ -115,14 +123,12 @@ class CalculateForces(command.Command):
             'T+F': calc.magnetic_tension() +
             calc.magnetic_pressure_gradient_force()}
 
-        import matplotlib.pyplot as plt
-        for f in ['T+F']:
+        for f in args.fields.split(','):
             plt.figure()
             plt.imshow(fields[f][0,0])
             plt.title(f)
             plt.colorbar()
-        plt.show()
-
+            plt.title(filename)
 
 
 if __name__ == "__main__":

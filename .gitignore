@@ -2,15 +2,17 @@
 /src/m2
 /src/m2-cfg.h
 
+*.swp
 *.dep
 *.o
 *.a
 
-*.dat
 *.m2
+*.h5
+*.dat
 *.ppm
 *.png
-*.h5
+*.vtk
 /src/lua/lua
 /src/lua/luac
 

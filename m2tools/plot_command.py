@@ -165,14 +165,20 @@ class PolarPlot(PlotDriver):
             self.chkpt.set_selection(slicer[1:,nt/2])
             data = self.chkpt.get_field(args.field)
             R, T = self.chkpt.cell_edge_meshgrid
-            plt.loglog(R[1:], data)
+            if args.log_scaling:
+                plt.loglog(R[1:], 10**data)
+            else:
+                plt.plot(R[1:], data)
         elif args.profile:
             print "equatorial profile"
             nt = self.chkpt.domain_resolution[2]
             self.chkpt.set_selection(slicer[1:,nt/2,0])
             data = self.chkpt.get_field(args.field)
             R, T, P = self.chkpt.cell_edge_meshgrid
-            plt.loglog(R, data)
+            if args.log_scaling:
+                plt.loglog(R[1:], 10**data)
+            else:
+                plt.plot(R[1:], data)
         elif args.equatorial:
             print "r-phi slice"
             nt = self.chkpt.domain_resolution[2]
