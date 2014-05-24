@@ -45,8 +45,11 @@ class StellarModel(object):
             'r': u_length,
             'd': u_density,
             'p': u_pressure,
+            'v1': u_velocity,
             'v3': u_velocity}
+        v1 = float(chkpt.model_parameters['v_star'])
         dc = float(chkpt.model_parameters['d_cavity'])
+        pc = float(chkpt.model_parameters['p_cavity'])
         rc = float(chkpt.model_parameters['r_cavity'])
         r0 = chkpt.domain_extent_lower[1]
         r1 = chkpt.domain_extent_upper[1]
@@ -54,13 +57,18 @@ class StellarModel(object):
         r_samp =  0.5 * (np.logspace(np.log10(r0), np.log10(r1), N+1)[1:] +
                          np.logspace(np.log10(r0), np.log10(r1), N+1)[:-1])
 
-        for field in ('v3', 'p', 'd'):
+        for field in ('v1', 'v3', 'p', 'd'):
             y = self.get_profile(field, r_samp*u_length) / units[field]
 
             if field == 'd':
                 y[r_samp < rc] = dc
             elif field == 'p':
-                y[r_samp < rc] = y[r_samp >= rc][0]
+                if pc < 0.0:
+                    y[r_samp < rc] = y[r_samp >= rc][0]
+                else:
+                    y[r_samp < rc] = pc
+            elif field == 'v1':
+                y[(r_samp > rc) * (r_samp < 2 * rc)] = v1
 
             for i,yi in enumerate(y):
                 chkpt.cell_primitive[field][i+1,...] = yi
@@ -235,7 +243,7 @@ class MesaDuffellStellarModel(StellarModel):
 
     def get_profile(self, field, r):
         import numpy as np
-        if field == 'v3': return np.zeros_like(r)
+        if field in ['v1', 'v3']: return np.zeros_like(r)
         else: return 10**self._logfuncs[field](np.log10(r))
 
 

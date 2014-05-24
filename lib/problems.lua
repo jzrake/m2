@@ -550,6 +550,8 @@ function MagnetarWind:__init__()
    mps.r_outer=100; doc.r_outer='outer radius (in units of inner radius)'
    mps.r_cavity=10; doc.r_cavity='cavity radius (in units of inner radius)'
    mps.d_cavity=.1; doc.d_cavity='cavity density (code units)'
+   mps.p_cavity=-1; doc.p_cavity='cavity pressure, < 0 means match cavity edge'
+   mps.v_star=0.0;  doc.v_star='radial velocity of stellar envolope (in c)'
    mps.d_star=100;  doc.d_star='star density (ignored for real stellar model)'
    mps.d_wind=1.0;  doc.d_wind='wind density (code units)'
    mps.B_wind=8.00; doc.B_wind='wind toroidal field value (code units)'
@@ -773,7 +775,7 @@ function DecayingMHD:__init__()
          math.random(),
       }
       return {
-         m2lib.force_free_vector_potential(x, n, 0) +
+         m2lib.force_free_vector_potential(x, n, 3) +
          0.1 * (dA[1]*n[1] + dA[2]*n[2] + dA[3]*n[3])
       }
    end
