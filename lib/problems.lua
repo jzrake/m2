@@ -93,11 +93,14 @@ function TestProblem:run(user_config_callback, restart_file)
    local m2 = self:build_m2(runtime_cfg)
    local dims = m2._cart_comm:get 'dims'
 
+   -- Give the random number generator a different seed on each rank
+   math.randomseed(m2._cart_comm:rank())
+
    m2:print_splash()
    m2:print_config()
    log:log_message('run', serpent.block(runtime_cfg), 1)
    log:log_message('run', ("domain decomposition: [%d %d %d]")
-   :format(dims[1], dims[2], dims[3]), 1)
+		   :format(dims[1], dims[2], dims[3]), 1)
 
    if restart_file then
       m2:read_checkpoint_hdf5(restart_file)
@@ -758,24 +761,24 @@ function DecayingMHD:__init__()
    self.model_parameters_doc = doc
 
    -- ==========================================================================
-   mps.three_d = true; doc.three_d = 'run in three dimensions'
+   mps.three_d = true; doc.three_d  = 'run in three dimensions'
+   mps.model = 0; doc.model = 'force-free model coefficients [0-3]'
+   mps.tile = 1; doc.tile = 'periodicity number'
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
    end
-   --self.initial_data_face = function(x, n)
-      --return {m2lib.force_free_magnetic_field(x, n, 0)}
-   --end
    self.initial_data_edge = function(x, n)
-      local kx = 8 * (x[1] + x[2] + x[3])
+      local m = mps.tile
+      local y = m2lib.dvec4(x[0]*m, x[1]*m, x[2]*m, x[3]*m)
       local dA = {
          math.random(),
          math.random(),
          math.random(),
       }
       return {
-         m2lib.force_free_vector_potential(x, n, 3) +
+         m2lib.force_free_vector_potential(y, n, mps.model) +
          0.1 * (dA[1]*n[1] + dA[2]*n[2] + dA[3]*n[3])
       }
    end
