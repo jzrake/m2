@@ -226,7 +226,7 @@ class MesaDuffellStellarModel(StellarModel):
         def pressure(r):
             return 0.00025 * density(r) * light_speed**2
 
-        r = np.logspace(-3, 0.0, 128)
+        r = np.logspace(-4, 0.0, 128)
         p = [pressure(ri) for ri in r]
         d = [density(ri) for ri in r]
         dMdr = [density(ri) * 4*np.pi*(ri*u_length)**2 for ri in r]

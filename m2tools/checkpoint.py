@@ -1,4 +1,5 @@
 import command
+import autolog
 
 
 def is_checkpoint_file(filename):
@@ -73,16 +74,7 @@ class Checkpoint(object):
         self._file[key] = val
 
     def __repr__(self):
-        return ("<m2 checkpoint {0}>"
-                "\n\tproblem ... {1}"
-                "\n\tversion ... {2}"
-                "\n\ttime_stamp ... {3}"
-                "\n\tresolution ... {4}").format(
-                    self.filename,
-                    self.problem_name,
-                    self.version[4:],
-                    self.time_stamp,
-                    self.domain_resolution[1:])
+        return "<m2 checkpoint {0}>".format(self.filename)
 
     def _status_set_hook(self, key, val):
         if not self._enable_set_hook:
@@ -94,6 +86,20 @@ class Checkpoint(object):
     def _fromstring(self, s, dtype):
         import numpy as np
         return np.fromstring(s[1:-1], dtype=dtype, sep=' ')
+
+    def describe(self):
+        import pprint
+        print ("<m2 checkpoint {0}>"
+               "\n\tproblem ... {1}"
+               "\n\tversion ... {2}"
+               "\n\ttime_stamp ... {3}"
+               "\n\tresolution ... {4}").format(
+                   self.filename,
+                   self.problem_name,
+                   self.version[4:],
+                   self.time_stamp,
+                   self.domain_resolution[1:])
+        pprint.pprint(self.model_parameters)
 
     def close(self):
         self._file.close()
@@ -192,6 +198,14 @@ class Checkpoint(object):
                          ns[i] + 1) for i in [1,2,3]])
 
     @property
+    def cell_center_coordinates(self):
+        x1, x2, x3 = self.cell_edge_coordinates
+        X1 = 0.5 * (x1[1:] + x1[:-1])
+        X2 = 0.5 * (x2[1:] + x2[:-1])
+        X3 = 0.5 * (x3[1:] + x3[:-1])
+        return X1, X2, X3
+
+    @property
     def cell_edge_meshgrid(self):
         import numpy as np
         x1, x2, x3 = self.cell_edge_coordinates
@@ -223,12 +237,79 @@ class Checkpoint(object):
         """
         self._selection = selection
 
+    @autolog.logmethod
     def get_field(self, key):
         transform = self._derived_fields[key]
         prim_selection = { }
         for k in self.cell_primitive:
             prim_selection[k] = self.cell_primitive[k][self._selection]
         return self._scaling(transform.transform(prim_selection))
+
+    @autolog.logmethod
+    def get_vector_field(self, key):
+        """ Return the vector field in cartesian coordinates """
+        import numpy as np
+        f1 = self.get_field(key + '1')
+        f2 = self.get_field(key + '2')
+        f3 = self.get_field(key + '3')
+        x, y, z = np.ix_(*self.cell_center_coordinates)
+        if self.geometry == 'cartesian':
+            fx = f1
+            fy = f2
+            fz = f3
+        elif self.geometry == 'spherical':
+            """
+            http://en.wikipedia.org/wiki/
+            List_of_common_coordinate_transformations#To_Spherical_coordinates
+            """
+            r2 = x**2 + y**2 + z**2
+            rh = [x/r2**0.5, y/r2**0.5, z/r2**0.5]
+            th = [x*z/r2*(x**2 + y**2)**-0.5,
+                  y*z/r2*(x**2 + y**2)**-0.5,
+                  -1./r2*(x**2 + y**2)**+0.5] 
+            ph = [-y/(x**2 + y**2)+0*r2, x/(x**2 + y**2)+0*r2, 0*r2]
+            fx = f1*rh[0] + f2*th[0] + f3*ph[0]
+            fy = f1*rh[1] + f2*th[1] + f3*ph[1]
+            fz = f1*rh[2] + f2*th[2] + f3*ph[2]
+        return fx, fy, fz
+
+    @autolog.logmethod
+    def get_cell_center_coordinates(self):
+        """ Return the cartesian coordinates of cell centers """
+        import numpy as np
+        import itertools
+        X1, X2, X3 = self.cell_center_coordinates
+        points = [ ]
+        if self.geometry == 'cartesian':
+            for x1, x2, x3 in itertools.product(X1, X2, X3):
+                points.append((x1, x2, x3))
+        elif self.geometry == 'spherical':
+            for x1, x2, x3 in itertools.product(X1, X2, X3):
+                points.append((
+                    x1 * np.sin(x2) * np.cos(x3),
+                    x1 * np.sin(x2) * np.sin(x3),
+                    x1 * np.cos(x2)))
+
+        return points
+
+    @autolog.logmethod
+    def get_cell_edge_coordinates(self):
+        """ Return the cartesian coordinates of cell corners """
+        import numpy as np
+        import itertools
+        X1, X2, X3 = self.cell_edge_coordinates
+        points = [ ]
+        if self.geometry == 'cartesian':
+            for x1, x2, x3 in itertools.product(X1, X2, X3):
+                points.append((x1, x2, x3))
+        elif self.geometry == 'spherical':
+            for x1, x2, x3 in itertools.product(X1, X2, X3):
+                points.append((
+                    x1 * np.sin(x2) * np.cos(x3),
+                    x1 * np.sin(x2) * np.sin(x3),
+                    x1 * np.cos(x2)))
+
+        return points
 
 
 
@@ -241,5 +322,5 @@ class CheckpointSummary(command.Command):
     def run(self, args):
         for filename in args.filenames:
             chkpt = Checkpoint(filename)
-            print chkpt
+            chkpt.describe()
 
