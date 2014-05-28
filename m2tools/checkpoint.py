@@ -145,7 +145,6 @@ class Checkpoint(object):
 
     @property
     def periodic_dimension(self):
-        cfg = self._config
         return self._fromstring(self._config['periodic_dimension'], int)
 
     @property
@@ -154,17 +153,14 @@ class Checkpoint(object):
 
     @property
     def domain_resolution(self):
-        cfg = self._config
         return self._fromstring(self._config['domain_resolution'], int)
 
     @property
     def domain_extent_upper(self):
-        cfg = self._config
         return self._fromstring(self._config['domain_extent_upper'], float)
 
     @property
     def domain_extent_lower(self):
-        cfg = self._config
         return self._fromstring(self._config['domain_extent_lower'], float)
 
     @property
@@ -192,6 +188,8 @@ class Checkpoint(object):
         ss = self.coordinate_scalings
         fs = { 'linear': [np.linspace, lambda x: x],
                'logarithmic': [np.logspace, np.log10]}
+        if ns[3] == 1:
+            x1[3] = x0[3] + 0.1
         return tuple([
             fs[ss[i]][0](fs[ss[i]][1](x0[i]),
                          fs[ss[i]][1](x1[i]),
