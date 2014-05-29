@@ -246,11 +246,10 @@ class Checkpoint(object):
     @autolog.logmethod
     def get_vector_field(self, key):
         """ Return the vector field in cartesian coordinates """
-        import numpy as np
         f1 = self.get_field(key + '1')
         f2 = self.get_field(key + '2')
         f3 = self.get_field(key + '3')
-        x, y, z = np.ix_(*self.cell_center_coordinates)
+        x, y, z = self.get_cell_center_coordinates()
         if self.geometry == 'cartesian':
             fx = f1
             fy = f2
@@ -275,39 +274,27 @@ class Checkpoint(object):
     def get_cell_center_coordinates(self):
         """ Return the cartesian coordinates of cell centers """
         import numpy as np
-        import itertools
-        X1, X2, X3 = self.cell_center_coordinates
-        points = [ ]
+        x1, x2, x3 = np.ix_(*self.cell_center_coordinates)
         if self.geometry == 'cartesian':
-            for x1, x2, x3 in itertools.product(X1, X2, X3):
-                points.append((x1, x2, x3))
+            x, y, z = x1, x2, x3
         elif self.geometry == 'spherical':
-            for x1, x2, x3 in itertools.product(X1, X2, X3):
-                points.append((
-                    x1 * np.sin(x2) * np.cos(x3),
-                    x1 * np.sin(x2) * np.sin(x3),
-                    x1 * np.cos(x2)))
-
-        return points
+            x = x1 * np.sin(x2) * np.cos(x3)
+            y = x1 * np.sin(x2) * np.sin(x3)
+            z = x1 * np.cos(x2)
+        return x, y, z
 
     @autolog.logmethod
     def get_cell_edge_coordinates(self):
         """ Return the cartesian coordinates of cell corners """
         import numpy as np
-        import itertools
-        X1, X2, X3 = self.cell_edge_coordinates
-        points = [ ]
+        x1, x2, x3 = np.ix_(*self.cell_edge_coordinates)
         if self.geometry == 'cartesian':
-            for x1, x2, x3 in itertools.product(X1, X2, X3):
-                points.append((x1, x2, x3))
+            x, y, z = x1, x2, x3
         elif self.geometry == 'spherical':
-            for x1, x2, x3 in itertools.product(X1, X2, X3):
-                points.append((
-                    x1 * np.sin(x2) * np.cos(x3),
-                    x1 * np.sin(x2) * np.sin(x3),
-                    x1 * np.cos(x2)))
-
-        return points
+            x = x1 * np.sin(x2) * np.cos(x3)
+            y = x1 * np.sin(x2) * np.sin(x3)
+            z = x1 * np.cos(x2)
+        return x, y, z
 
 
 
