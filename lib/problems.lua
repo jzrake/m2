@@ -1,6 +1,5 @@
 local serpent = require 'serpent'
 local class   = require 'class'
-local logger  = require 'logger'
 local m2lib   = require 'm2lib'
 local m2app   = require 'm2app'
 local hdf5    = require 'hdf5'
@@ -473,6 +472,77 @@ end
 
 
 
+local Implosion2d = class.class('Implosion2d', TestProblem)
+Implosion2d.explanation = [[
+--------------------------------------------------------------------------------
+-- Implosion2d test
+--------------------------------------------------------------------------------]]
+function Implosion2d:__init__()
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
+   self.initial_data_cell = function(x)
+      local r = x[1] + x[2]
+      if r > -0.4 then
+         return {1.0, 10.0, 0.0, 0.0, 0.0}
+      else
+         return {0.1, 0.10, 0.0, 0.0, 0.0}
+      end
+   end
+end
+function Implosion2d:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 0.4
+end
+function Implosion2d:build_m2(runtime_cfg)
+   local function bc_reflecting(m2)
+      local n1 = m2.domain_resolution[1]
+      local n2 = m2.domain_resolution[2]
+      for n,V in m2:volumes() do
+         local ax, V1 -- axis and partner (interior) cell
+         if V.global_index[1] == 0 then V1 = V:neighbor(1, 3); ax = 1; end
+         if V.global_index[1] == 1 then V1 = V:neighbor(1, 1); ax = 1; end
+         if V.global_index[1] == n1-2 then V1 = V:neighbor(1, -1); ax = 1; end
+         if V.global_index[1] == n1-1 then V1 = V:neighbor(1, -3); ax = 1; end
+         if V.global_index[2] == 0 then V1 = V:neighbor(2, 3); ax = 2; end
+         if V.global_index[2] == 1 then V1 = V:neighbor(2, 1); ax = 2; end
+         if V.global_index[2] == n2-2 then V1 = V:neighbor(2, -1); ax = 2; end
+         if V.global_index[2] == n2-1 then V1 = V:neighbor(2, -3); ax = 2; end
+         if V1 ~= nil then
+            V.prim = V1.prim
+            if ax == 1 then V.prim.v1 = -V.prim.v1 end
+            if ax == 2 then V.prim.v2 = -V.prim.v2 end
+            V:from_primitive()
+         end
+      end
+   end
+   local build_args = {
+      lower={-0.5,-0.5,-0.5},
+      upper={ 0.5, 0.5, 0.5},
+      resolution={64,64,1},
+      periods={false,false,false},
+      scaling={'linear', 'linear', 'linear'},
+      relativistic=false,
+      magnetized=false,
+      geometry='cartesian'
+   }
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(0.4)
+   m2:set_plm_parameter(2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   m2:set_boundary_conditions_cell(bc_reflecting)
+   return m2
+end
+
+
+
 local Jet = class.class('Jet', TestProblem)
 Jet.explanation = [[
 --------------------------------------------------------------------------------
@@ -603,7 +673,7 @@ function MagnetarWind:build_m2(runtime_cfg)
    build_args.upper[1] = r1
    build_args.resolution[1] = N * math.floor(math.log10(r1/r0))
    build_args.resolution[2] = N
-   build_args.resolution[3] = N * 2
+   build_args.resolution[3] = N
 
    if not mps.three_d then
       build_args.resolution[3] = 1
@@ -824,6 +894,7 @@ return {
    BrioWu        = BrioWu,
    ContactWave   = ContactWave,
    BlastMHD      = BlastMHD,
+   Implosion     = Implosion,
    Jet           = Jet,
    MagnetarWind  = MagnetarWind,
    InternalShock = InternalShock,
