@@ -28,6 +28,9 @@ class PlotDriver(object):
     def set_hardcopy(self, hardcopy):
         self._hardcopy = hardcopy
 
+    def set_plot_axes(self, ax):
+        self._plot_axes = ax
+
     def get_plot_axes(self, **fig_kwds):
         import matplotlib.pyplot as plt
         ax0 = self._plot_axes
@@ -146,41 +149,37 @@ class PolarPlot(PlotDriver):
         import numpy as np
 
         args = self._args
-        self.get_plot_axes()
+        ax = self.get_plot_axes()
 
         if self.chkpt.domain_resolution[3] == 1 and not args.profile:
-            print "r-theta in axial symmetry"
             self.chkpt.set_selection(slicer[1:,1:])
             data = self.chkpt.get_field(args.field)
             R, T = self.chkpt.cell_edge_meshgrid
             X = +R * np.sin(T)
             Z = +R * np.cos(T)
-            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+            cax = ax.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
             X = -R * np.sin(T)
             Z = +R * np.cos(T)
-            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+            cax = ax.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
         elif self.chkpt.domain_resolution[3] == 1:
-            print "equatorial profile"
             nt = self.chkpt.domain_resolution[2]
             self.chkpt.set_selection(slicer[1:,nt/2])
             data = self.chkpt.get_field(args.field)
             R, T = self.chkpt.cell_edge_meshgrid
             if args.log_scaling:
-                plt.loglog(R[1:], 10**data)
+                ax.loglog(R[1:], 10**data)
             else:
-                plt.plot(R[1:], data)
+                ax.plot(R[1:], data)
         elif args.profile:
-            print "equatorial profile"
             nt = self.chkpt.domain_resolution[2]
             self.chkpt.set_selection(slicer[1:,nt/2,0])
             data = self.chkpt.get_field(args.field)
             R, T, P = self.chkpt.cell_edge_meshgrid
             if args.log_scaling:
-                plt.loglog(R[1:], 10**data)
+                ax.loglog(R[1:], 10**data)
             else:
-                plt.plot(R[1:], data)
+                ax.plot(R[1:], data)
         elif args.equatorial:
-            print "r-phi slice"
             nt = self.chkpt.domain_resolution[2]
             self.chkpt.set_selection(slicer[1:,nt/2,:])
             data = self.chkpt.get_field(self._args.field)
@@ -189,9 +188,8 @@ class PolarPlot(PlotDriver):
             Y = R * np.sin(T) * np.sin(P)
             X = X[:,nt/2,:]
             Y = Y[:,nt/2,:]
-            plt.pcolormesh(X, Y, data, vmin=args.vmin, vmax=args.vmax)
+            cax = ax.pcolormesh(X, Y, data, vmin=args.vmin, vmax=args.vmax)
         else:
-            print "r-theta slice"
             self.chkpt.set_selection(slicer[1:,1:,0])
             data = self.chkpt.get_field(args.field)
             R, T, P = self.chkpt.cell_edge_meshgrid
@@ -199,15 +197,16 @@ class PolarPlot(PlotDriver):
             T = T[...,0]
             X = +R * np.sin(T)
             Z = +R * np.cos(T)
-            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+            cax = ax.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
             X = -R * np.sin(T)
             Z = +R * np.cos(T)
-            plt.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
+            cax = ax.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
 
         if not args.profile:
-            plt.axis('equal')
-            plt.colorbar()
-        plt.title(self.chkpt.filename+'/'+args.field)
+            ax.set_aspect('equal')
+            if not args.no_colorbar:
+                ax.figure.colorbar(cax)
+        ax.set_title(args.title or self.chkpt.filename+'/'+args.field)
         self.show()
 
 
@@ -223,6 +222,8 @@ class PlotCommand(command.Command):
         parser.add_argument('--equatorial', action="store_true")
         parser.add_argument('--profile', action="store_true")
         parser.add_argument('--log-scaling', action="store_true")
+        parser.add_argument('--no-colorbar', action="store_true")
+        parser.add_argument('--title', type=str)
         parser.add_argument('-o', '--output')
         parser.add_argument('-v', '--verbose')
 
