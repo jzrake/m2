@@ -1,5 +1,6 @@
 local serpent = require 'serpent'
 local class   = require 'class'
+local logger  = require 'logger'
 local m2lib   = require 'm2lib'
 local m2app   = require 'm2app'
 local hdf5    = require 'hdf5'
@@ -894,7 +895,7 @@ return {
    BrioWu        = BrioWu,
    ContactWave   = ContactWave,
    BlastMHD      = BlastMHD,
-   Implosion     = Implosion,
+   Implosion2d   = Implosion2d,
    Jet           = Jet,
    MagnetarWind  = MagnetarWind,
    InternalShock = InternalShock,
