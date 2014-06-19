@@ -206,7 +206,8 @@ class PolarPlot(PlotDriver):
             ax.set_aspect('equal')
             if not args.no_colorbar:
                 ax.figure.colorbar(cax)
-        ax.set_title(args.title or self.chkpt.filename+'/'+args.field)
+            ax.set_title(args.title if args.title is not None
+                         else self.chkpt.filename+'/'+args.field, fontsize=18)
         self.show()
 
 
