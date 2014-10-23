@@ -620,6 +620,7 @@ function MagnetarWind:__init__()
 
    -- ==========================================================================
    mps.three_d = false; doc.three_d='run in three dimensions'
+   mps.merger = false;  doc.merger='use a density profile for BNS merger'
    mps.r_inner=1e9; doc.r_inner='inner radius (in cm)'
    mps.r_outer=100; doc.r_outer='outer radius (in units of inner radius)'
    mps.r_cavity=10; doc.r_cavity='cavity radius (in units of inner radius)'
@@ -634,7 +635,30 @@ function MagnetarWind:__init__()
    mps.d_pert=0.00; doc.d_pert='fractional azimuthal variation in density'
    -- ==========================================================================
 
-   self.initial_data_cell = function(x)
+   local function merger_ic(x)
+      -- code units
+      -- [L] = r0 = 850 km
+      -- [T] = [L] / c ~ 0.003 seconds
+      -- [M] = Mej ~ 0.03 solar mass
+      local d0
+      local vr = 0.00
+      local r0 = 1.00
+      local r1 = 0.14 * r0
+      local rs = r0 / 85.0 -- star radius and inner boundary: 10 km
+      local rc = rs * mps.r_cavity
+      local r  = rs * x[1]
+      if r < rc then
+         d0 = mps.d_wind
+      elseif r < r0 then
+	 d0 = mps.d_star / (1 + (r/r1)^3.5) * (1 - r/r0)^0.75
+	 vr = 0.5 * r/r0
+      else
+	 d0 = 1e-2
+      end
+      return {d0, 0.01 * mps.d_wind, vr, 0.0, 0.0}
+   end
+
+   local function default_ic(x)
       local d0
       local rc = mps.r_cavity
       local h = mps.d_pert
@@ -647,6 +671,14 @@ function MagnetarWind:__init__()
          d0 = mps.d_star * (1 + h*math.sin(t)*math.cos(6*p)*math.exp(-r/rc))
       end
       return {d0, 0.01 * mps.d_wind, 0.0, 0.0, 0.0}
+   end
+
+   self.initial_data_cell = function(x)
+      if mps.merger then
+	 return merger_ic(x)
+      else
+	 return default_ic(x)
+      end
    end
 end
 function MagnetarWind:set_runtime_defaults(runtime_cfg)
@@ -680,8 +712,11 @@ function MagnetarWind:build_m2(runtime_cfg)
       build_args.resolution[3] = 1
    end
 
+   local m2 = m2app.m2Application(build_args)
+
    local function wind_inner_boundary_flux(V0)
       local nhat = m2lib.dvec4(0,1,0,0)
+      local T = m2.status.time_simulation
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       local p = 0.5 * (V0.x0[3] + V0.x1[3])
       if V0.global_index[1] == -1 then
@@ -690,6 +725,8 @@ function MagnetarWind:build_m2(runtime_cfg)
          local g = mps.g_wind
          local h = mps.g_pert
          g = g * (1.0 + h * math.sin(t) * math.sin(6*p)^2)
+	 g = g * (1.0 - math.exp(-T)) + math.exp(-T) -- ramp up
+	 B = B * (1.0 - math.exp(-T)) -- ramp up
          V0.prim.v1 =(1.0 - g^-2)^0.5
          V0.prim.v2 = 0.0
          V0.prim.v3 = 0.0
@@ -705,7 +742,6 @@ function MagnetarWind:build_m2(runtime_cfg)
       end
    end
 
-   local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
@@ -850,7 +886,7 @@ function DecayingMHD:__init__()
       }
       return {
          m2lib.force_free_vector_potential(y, n, mps.model) +
-         0.1 * (dA[1]*n[1] + dA[2]*n[2] + dA[3]*n[3])
+	    0.1 * (dA[1]*n[1] + dA[2]*n[2] + dA[3]*n[3])
       }
    end
 end
