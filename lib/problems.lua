@@ -879,15 +879,23 @@ function DecayingMHD:__init__()
    self.initial_data_edge = function(x, n)
       local m = mps.tile
       local y = m2lib.dvec4(x[0]*m, x[1]*m, x[2]*m, x[3]*m)
-      local dA = {
-         math.random(),
-         math.random(),
-         math.random(),
-      }
       return {
-         m2lib.force_free_vector_potential(y, n, mps.model) +
-	    0.1 * (dA[1]*n[1] + dA[2]*n[2] + dA[3]*n[3])
+         --m2lib.force_free_vector_potential(y, n, mps.model)
+         m2lib.magnetic_rope_vector_potential(y, n)
       }
+   end
+   self.initial_data_face__ = function(x, n)
+      -- This is a "magnetic rope" force-free solution
+      local r2 = x[1]*x[1] + x[2]*x[2]
+      local R2 = 0.2
+      local B0 = 1.0
+      local c = 1.0
+      local a = R2^-0.5 * (r2/R2) * (c * math.exp(r2/R2) - 1 - r2/R2)^-0.5
+      local Bz = B0 * math.exp(-0.5 * r2/R2)
+      local Bz_prime = -(r2^0.5/R2) * Bz
+      local Bp = -Bz_prime / a
+      local p_hat = {x[2]/r2^0.5, -x[1]/r2^0.5, 0}
+      return {Bp*p_hat[1] *n[1] + Bp*p_hat[2] * n[2] + Bz*n[3]}
    end
 end
 function DecayingMHD:set_runtime_defaults(runtime_cfg)

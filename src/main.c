@@ -937,6 +937,14 @@ static int L_m2_force_free_magnetic_field(lua_State *L)
   lua_pushnumber(L, A);
   return 1;
 }
+static int L_m2_magnetic_rope_vector_potential(lua_State *L)
+{
+  double **x = (double **) luaL_checkudata(L, 1, "dvec4");
+  double **n = (double **) luaL_checkudata(L, 2, "dvec4");
+  double A = m2_magnetic_rope_vector_potential(*x, *n);
+  lua_pushnumber(L, A);
+  return 1;
+}
 
 
 
@@ -964,6 +972,8 @@ int luaopen_m2lib(lua_State *L)
   lua_setfield(L, -2, "force_free_vector_potential");
   lua_pushcfunction(L, L_m2_force_free_magnetic_field);
   lua_setfield(L, -2, "force_free_magnetic_field");
+  lua_pushcfunction(L, L_m2_magnetic_rope_vector_potential);
+  lua_setfield(L, -2, "magnetic_rope_vector_potential");
 
   lua_pushnumber(L, M2_PI);
   lua_setfield(L, -2, "M2_PI");

@@ -127,6 +127,8 @@ class RectangularPlot3d(PlotDriver):
 
         nz = self.chkpt.domain_resolution[3]
         self.chkpt.set_selection(slicer[:,:,nz/2])
+        #self.chkpt.set_selection(slicer[:,nz/2,:])
+        print args.field
         data = self.chkpt.get_field(args.field)
 
         self.get_plot_axes()

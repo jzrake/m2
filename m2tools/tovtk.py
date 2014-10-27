@@ -26,7 +26,7 @@ class VtkStructuredGridExporter(object):
             slicer = checkpoint.Slicer()
             chkpt.set_selection(slicer[1:,1:,0:])
 
-        outfile = open(filename.replace('.h5', '.vtk'), 'w')
+        outfile = open(args.outfile or filename.replace('.h5', '.vtk'), 'w')
         outfile.write("# vtk DataFile Version 3.1\n")
         outfile.write("m2: astrophysical MHD code\n")
         outfile.write("ASCII\n" if args.ascii else "BINARY\n")
@@ -80,6 +80,7 @@ class VtkDataExporterCommand(command.Command):
     def configure_parser(self, parser):
         parser.add_argument("filenames", nargs='+')
         parser.add_argument("--ascii", action='store_true')
+        parser.add_argument("-o", "--outfile", default=None)
 
     def run(self, args):
         exporter = VtkStructuredGridExporter()

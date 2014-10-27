@@ -89,7 +89,21 @@ class HydromagneticForceCalculator(object):
         curl[2] = d(B[2], 1) - d(B[1], 2)
         return curl
 
-
+    @logmethod
+    def power_spectrum(self, nbins=64):
+        import numpy as np
+        Bx = self.magnetic_field()
+        Ks = self.get_ks(Bx.shape)
+        Bk = np.fft.fftn(Bx, axes=[1,2,3])
+        B2 = (Bk[0]*Bk[0].conj() + Bk[1]*Bk[1].conj() + Bk[2]*Bk[2].conj()).real
+        K = (Ks[0]**2 + Ks[1]**2 + Ks[2]**2)**0.5
+        bins = np.logspace(0, np.log10(K.max()), nbins)
+        dk, bins = np.histogram(K, bins=bins)
+        dP, bins = np.histogram(K, bins=bins, weights=B2, normed=True)
+        dk[dk==0] = 1
+        x = 0.5*(bins[1:] + bins[:-1])
+        y = dP / dk
+        return x, y
 
 def five_point_deriv(f, axis=0, h=1.0):
     import numpy as np
@@ -130,6 +144,26 @@ class CalculateForces(command.Command):
             plt.colorbar()
             plt.title(filename)
 
+
+class CalculatePowerSpectrum(command.Command):
+    _alias = "power-spectrum"
+    def configure_parser(self, parser):
+        parser.add_argument("filenames", nargs='+')
+
+    def run(self, args):
+        import matplotlib.pyplot as plt
+        for filename in args.filenames:
+            self.run_file(filename, args)
+        plt.legend()
+        plt.show()
+
+    def run_file(self, filename, args):
+        import matplotlib.pyplot as plt
+        calc = HydromagneticForceCalculator(filename)
+        x, y = calc.power_spectrum()
+        plt.loglog(x, y, label=filename)
+        plt.loglog(x, 1e-12*x**2)
+        plt.loglog(x, 1e-12*x**1.3333)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

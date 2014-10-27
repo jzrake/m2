@@ -514,18 +514,39 @@ static void _calculate_emf3(m2sim *m2)
 	vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
 	vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
 
-	if (vols[1][0]->global_index[1] == -1) {
-	  double E20 = vols[2][0] ? vols[2][0]->flux1[B33] : 0.0;
-	  double E21 = vols[2][1] ? vols[2][1]->flux1[B33] : 0.0;
-	  vols[1][0]->emf1 = 0.0;
-	  vols[1][0]->emf2 = 0.5 * vols[1][0]->line2 * (E20 + E21);
-	  vols[1][0]->emf3 = 0.0;
-	}
-	if (vols[1][0]->global_index[2] == -1) {
-	  vols[1][0]->emf1 = 0.0;
-	  vols[1][0]->emf2 = 0.0;
-	  vols[1][0]->emf3 = 0.0;
-	}
+	/* double xhat[4] = {0, 1, 0, 0}; */
+	/* double yhat[4] = {0, 0, 1, 0}; */
+	/* double zhat[4] = {0, 0, 0, 1}; */
+	/* double rx[4] = {m2->status.time_simulation, */
+	/* 		(vols[1][0]->x1[1] + vols[1][0]->x0[1]) * 0.5, */
+	/* 		(vols[1][0]->x1[2]), */
+	/* 		(vols[1][0]->x1[3])}; */
+	/* double ry[4] = {m2->status.time_simulation, */
+	/* 		(vols[1][0]->x1[1]), */
+	/* 		(vols[1][0]->x1[2] + vols[1][0]->x0[2]) * 0.5, */
+	/* 		(vols[1][0]->x1[3])}; */
+	/* double rz[4] = {m2->status.time_simulation, */
+	/* 		(vols[1][0]->x1[1]), */
+	/* 		(vols[1][0]->x1[2]), */
+	/* 		(vols[1][0]->x1[3] + vols[1][0]->x0[3]) * 0.5}; */
+
+	/* vols[1][0]->emf1 += source_terms_electric_field(rx, xhat) * l1; */
+	/* vols[1][0]->emf2 += source_terms_electric_field(ry, yhat) * l2; */
+	/* vols[1][0]->emf3 += source_terms_electric_field(rz, zhat) * l3; */
+
+	/* Hard-coded spherical coordinate fix */
+	/* if (vols[1][0]->global_index[1] == -1) { */
+	/*   double E20 = vols[2][0] ? vols[2][0]->flux1[B33] : 0.0; */
+	/*   double E21 = vols[2][1] ? vols[2][1]->flux1[B33] : 0.0; */
+	/*   vols[1][0]->emf1 = 0.0; */
+	/*   vols[1][0]->emf2 = 0.5 * vols[1][0]->line2 * (E20 + E21); */
+	/*   vols[1][0]->emf3 = 0.0; */
+	/* } */
+	/* if (vols[1][0]->global_index[2] == -1) { */
+	/*   vols[1][0]->emf1 = 0.0; */
+	/*   vols[1][0]->emf2 = 0.0; */
+	/*   vols[1][0]->emf3 = 0.0; */
+	/* } */
 
       }
     }
