@@ -16,6 +16,9 @@
 static void check_symmetry(m2sim *m2, char *msg);
 /* ===================================================== */
 
+/* MOVE TO m2.h !!!!! */
+double m2_stochastic_vector_potential(double x[4], double n[4]);
+double m2_loop_vector_potential(double x[4], double n[4]);
 
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
                            int suppress_extrapolation)
@@ -514,25 +517,28 @@ static void _calculate_emf3(m2sim *m2)
 	vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
 	vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
 
-	/* double xhat[4] = {0, 1, 0, 0}; */
-	/* double yhat[4] = {0, 0, 1, 0}; */
-	/* double zhat[4] = {0, 0, 0, 1}; */
-	/* double rx[4] = {m2->status.time_simulation, */
-	/* 		(vols[1][0]->x1[1] + vols[1][0]->x0[1]) * 0.5, */
-	/* 		(vols[1][0]->x1[2]), */
-	/* 		(vols[1][0]->x1[3])}; */
-	/* double ry[4] = {m2->status.time_simulation, */
-	/* 		(vols[1][0]->x1[1]), */
-	/* 		(vols[1][0]->x1[2] + vols[1][0]->x0[2]) * 0.5, */
-	/* 		(vols[1][0]->x1[3])}; */
-	/* double rz[4] = {m2->status.time_simulation, */
-	/* 		(vols[1][0]->x1[1]), */
-	/* 		(vols[1][0]->x1[2]), */
-	/* 		(vols[1][0]->x1[3] + vols[1][0]->x0[3]) * 0.5}; */
+	double xhat[4] = {0, 1, 0, 0};
+	double yhat[4] = {0, 0, 1, 0};
+	double zhat[4] = {0, 0, 0, 1};
+	double rx[4] = {m2->status.time_simulation,
+			(vols[1][0]->x1[1] + vols[1][0]->x0[1]) * 0.5,
+			(vols[1][0]->x1[2]),
+			(vols[1][0]->x1[3])};
+	double ry[4] = {m2->status.time_simulation,
+			(vols[1][0]->x1[1]),
+			(vols[1][0]->x1[2] + vols[1][0]->x0[2]) * 0.5,
+			(vols[1][0]->x1[3])};
+	double rz[4] = {m2->status.time_simulation,
+			(vols[1][0]->x1[1]),
+			(vols[1][0]->x1[2]),
+			(vols[1][0]->x1[3] + vols[1][0]->x0[3]) * 0.5};
 
-	/* vols[1][0]->emf1 += source_terms_electric_field(rx, xhat) * l1; */
-	/* vols[1][0]->emf2 += source_terms_electric_field(ry, yhat) * l2; */
-	/* vols[1][0]->emf3 += source_terms_electric_field(rz, zhat) * l3; */
+#define source_terms_electric_field m2_stochastic_vector_potential
+	//#define source_terms_electric_field m2_loop_vector_potential
+	vols[1][0]->emf1 += source_terms_electric_field(rx, xhat) * l1;
+	vols[1][0]->emf2 += source_terms_electric_field(ry, yhat) * l2;
+	vols[1][0]->emf3 += source_terms_electric_field(rz, zhat) * l3;
+#undef source_terms_electric_field
 
 	/* Hard-coded spherical coordinate fix */
 	/* if (vols[1][0]->global_index[1] == -1) { */

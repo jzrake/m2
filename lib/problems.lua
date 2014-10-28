@@ -876,7 +876,7 @@ function DecayingMHD:__init__()
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
    end
-   self.initial_data_edge = function(x, n)
+   self.initial_data_edge__ = function(x, n)
       local m = mps.tile
       local y = m2lib.dvec4(x[0]*m, x[1]*m, x[2]*m, x[3]*m)
       return {

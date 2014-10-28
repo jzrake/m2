@@ -125,9 +125,11 @@ class RectangularPlot3d(PlotDriver):
 
         args = self._args
 
-        nz = self.chkpt.domain_resolution[3]
-        self.chkpt.set_selection(slicer[:,:,nz/2])
-        #self.chkpt.set_selection(slicer[:,nz/2,:])
+        nx, ny, nz = self.chkpt.domain_resolution[1:]
+        S = {1:slicer[nx/2,:,:],
+             2:slicer[:,ny/2,:],
+             3:slicer[:,:,nz/2]}[args.axis]
+        self.chkpt.set_selection(S)
         print args.field
         data = self.chkpt.get_field(args.field)
 
@@ -223,6 +225,7 @@ class PlotCommand(command.Command):
         parser.add_argument('--vmin', type=float, default=None)
         parser.add_argument('--vmax', type=float, default=None)
         parser.add_argument('--equatorial', action="store_true")
+        parser.add_argument('--axis', type=int, default=3, help="for 2d, cutplane axis: [1,2,3]")
         parser.add_argument('--profile', action="store_true")
         parser.add_argument('--log-scaling', action="store_true")
         parser.add_argument('--no-colorbar', action="store_true")
