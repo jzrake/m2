@@ -876,7 +876,7 @@ function DecayingMHD:__init__()
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
    end
-   self.initial_data_edge__ = function(x, n)
+   self.initial_data_edge = function(x, n)
       local m = mps.tile
       local y = m2lib.dvec4(x[0]*m, x[1]*m, x[2]*m, x[3]*m)
       return {
@@ -933,6 +933,60 @@ function DecayingMHD:build_m2(runtime_cfg)
 end
 
 
+local Dynamo = class.class('Dynamo', TestProblem)
+Dynamo.explanation = [[
+--------------------------------------------------------------------------------
+-- Decay of coiled magnetic field
+--------------------------------------------------------------------------------]]
+function Dynamo:__init__()
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
+   -- ==========================================================================
+   mps.three_d = true; doc.three_d  = 'run in three dimensions'
+   -- ==========================================================================
+
+   self.initial_data_cell = function(x)
+      return {1.0, 1.0, 0.0, 0.0, 0.0}
+   end
+end
+function Dynamo:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 0.4
+end
+function Dynamo:build_m2(runtime_cfg)
+   local N = runtime_cfg.resolution or 32
+   local L = 0.5
+   local build_args = {
+      upper={ L,  L,  L},
+      lower={-L, -L, -L},
+      resolution={N, N, N},
+      periods={true,true,true},
+      scaling={'linear', 'linear', 'linear'},
+      relativistic=false,
+      magnetized=true,
+      geometry='cartesian'
+   }
+   if runtime_cfg.relativistic then build_args.relativistic = true end
+   if runtime_cfg.unmagnetized then build_args.magnetized = false end
+   if not self.model_parameters.three_d then
+      build_args.resolution[3] = 1
+   end
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   return m2
+end
+
+
 return {
    DensityWave   = DensityWave,
    RyuJones      = RyuJones,
@@ -944,4 +998,5 @@ return {
    MagnetarWind  = MagnetarWind,
    InternalShock = InternalShock,
    DecayingMHD   = DecayingMHD,
+   Dynamo        = Dynamo,
 }

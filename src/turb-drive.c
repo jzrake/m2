@@ -13,8 +13,9 @@ static double VectorPotentialWavenumbers[NWAVES][4];
 
 void init_amplitudes()
 {
+  int m;
   double kfreq = 16;
-  for (int m=0; m<NWAVES; ++m) {
+  for (m=0; m<NWAVES; ++m) {
 
     double *A = VectorPotentialAmplitudes[m];
     double *k = VectorPotentialWavenumbers[m];
@@ -24,9 +25,9 @@ void init_amplitudes()
     k[3] = random_real(-1, 1);
     k[0] = sqrt(DOT(k, k));
 
-    k[1] = (int) (kfreq * k[1] / k[0]);
-    k[2] = (int) (kfreq * k[2] / k[0]);
-    k[3] = (int) (kfreq * k[3] / k[0]);
+    k[1] = (int) (kfreq * k[1] / k[0]) * 2 * M_PI;
+    k[2] = (int) (kfreq * k[2] / k[0]) * 2 * M_PI;
+    k[3] = (int) (kfreq * k[3] / k[0]) * 2 * M_PI;
     k[0] = sqrt(DOT(k, k));
 
     A[1] = random_real(-1, 1);
@@ -60,9 +61,10 @@ double m2_stochastic_vector_potential(double x[4], double n[4])
 
   num_calls +=1 ;
 
+  int m;
   double Atot = 0.0;
 
-  for (int m=0; m<NWAVES; ++m) {
+  for (m=0; m<NWAVES; ++m) {
     double *A = VectorPotentialAmplitudes[m];
     double *k = VectorPotentialWavenumbers[m];
     double d = DOT(k, x) + A[0];

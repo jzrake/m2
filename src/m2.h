@@ -77,6 +77,10 @@ enum m2flag {
   /* Zone status */
   M2_ZONE_HEALTH_GOOD,
   M2_ZONE_HEALTH_BAD,
+
+  /* Driving types */
+  M2_DRIVING_NONE,
+  M2_DRIVING_SMALL_SCALE_CURRENT,
 } ;
 
 enum { M2_BIT_BAD_EIGENVALUES,
@@ -97,6 +101,8 @@ typedef struct m2vol m2vol;
 typedef struct m2aux m2aux;
 typedef struct m2prim m2prim;
 typedef struct m2sim_status m2sim_status;
+typedef struct m2driving m2driving;
+
 typedef void (*m2vol_operator)(m2vol *vol);
 typedef void (*m2sim_operator)(m2sim *m2);
 typedef void (*m2crd_function)(m2sim *m2, double X[4], double N[4], double *Y);
@@ -117,6 +123,15 @@ struct m2aux
   double gas_pressure;
   double magnetic_pressure;
   m2sim *m2;
+} ;
+
+struct m2driving
+{
+  double correlation_time;
+  double amplitude;
+  double scale;
+  int num_waves;
+  int driving_type;
 } ;
 
 struct m2vol
@@ -239,6 +254,9 @@ int m2_solve_quartic_equation2(double d4, double d3,
 			       double roots[4]);
 double m2_force_free_vector_potential(double x[4], double n[4], int model);
 double m2_force_free_magnetic_field(double x[4], double n[4], int model);
+double m2_magnetic_rope_vector_potential(double x[4], double n[4]);
+
+double m2_stochastic_vector_potential(double x[4], double n[4]);
 double m2_magnetic_rope_vector_potential(double x[4], double n[4]);
 
 
