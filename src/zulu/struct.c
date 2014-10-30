@@ -119,6 +119,7 @@ int _struct_api_type(lua_State *L)
       switch (M->data_type) {
       case LSTRUCT_CHAR  : lua_pushstring(L, "char"  ); break;
       case LSTRUCT_INT   : lua_pushstring(L, "int"   ); break;
+      case LSTRUCT_ULONG : lua_pushstring(L, "ulong" ); break;
       case LSTRUCT_DOUBLE: lua_pushstring(L, "double"); break;
       case LSTRUCT_STRING: lua_pushstring(L, "string"); break;
       case LSTRUCT_OBJECT: lua_pushstring(L, "object"); break;
@@ -360,7 +361,7 @@ int _struct_constructor(lua_State *L)
 int _struct_mt_index(lua_State *L)
 {
   void **obj = (void**) lua_touserdata(L, 1);
-  const char *key = lua_tostring(L, 2);
+  const char *key = luaL_checkstring(L, 2);
   int top = lua_gettop(L);
 
   lua_getmetatable(L, 1);                   int imetat = ++top;
@@ -382,6 +383,9 @@ int _struct_mt_index(lua_State *L)
       break;
     case LSTRUCT_INT:
       lua_pushnumber(L, *((int *)(*obj + memb->offset)));
+      break;
+    case LSTRUCT_ULONG:
+      lua_pushnumber(L, *((unsigned long *)(*obj + memb->offset)));
       break;
     case LSTRUCT_DOUBLE:
       lua_pushnumber(L, *((double *)(*obj + memb->offset)));
@@ -445,6 +449,9 @@ int _struct_mt_newindex(lua_State *L)
       break;
     case LSTRUCT_INT:
       *((int *)(*obj + memb->offset)) = luaL_checkint(L, 3);
+      break;
+    case LSTRUCT_ULONG:
+      *((unsigned long *)(*obj + memb->offset)) = luaL_checklong(L, 3);
       break;
     case LSTRUCT_DOUBLE:
       *((double *)(*obj + memb->offset)) = luaL_checknumber(L, 3);

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "m2-cfg.h"
+#include "jsw_rand.h"
 
 
 /* ------------------------------------------------------------------
@@ -132,6 +133,7 @@ struct m2driving
   double scale;
   int num_waves;
   int driving_type;
+  jsw_rand_t random;
 } ;
 
 struct m2vol

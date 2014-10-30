@@ -183,6 +183,61 @@ int register_dvec8(lua_State *L)
 
 
 
+/* -----------------------------------------------------------------------------
+ *
+ * m2rand
+ *
+ * -------------------------------------------------------------------------- */
+static int L_rand__init(lua_State *L)
+{
+  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "rand");
+  unsigned long seed = luaL_optlong(L, 2, 0);
+  jsw_seed(R, seed);
+  return 0;
+}
+static int L_rand_rand(lua_State *L)
+{
+  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "rand");
+  unsigned long res = jsw_rand(R);
+  lua_pushnumber(L, res);
+  return 1;
+}
+int register_rand(lua_State *L)
+{
+  int n;
+  static char member_names[JSW_STATE_SIZE][8];
+  lua_struct_member_t members[JSW_STATE_SIZE+2];
+
+  for (n=0; n<JSW_STATE_SIZE; ++n) {
+    snprintf(member_names[n], 8, "%d", n);
+  }
+
+  for (n=0; n<JSW_STATE_SIZE; ++n) {
+    lua_struct_member_t M = {member_names[n], offsetof(jsw_rand_t, x[n]),
+			     LSTRUCT_ULONG};
+    members[n] = M;
+  }
+
+  members[624].member_name = "next";
+  members[624].offset = offsetof(jsw_rand_t, next);
+  members[624].data_type = LSTRUCT_INT;
+  members[625].member_name = NULL;
+
+  lua_struct_method_t methods[] = {
+    {"rand", L_rand_rand},
+    {NULL, NULL},
+  } ;
+  lua_struct_t type = lua_struct_newtype(L);
+  type.type_name = "rand";
+  type.alloc_size = sizeof(jsw_rand_t);
+  type.members = members;
+  type.methods = methods;
+  type.__init = L_rand__init;
+  lua_struct_register(L, type);
+  return 0;
+}
+
+
 
 /* -----------------------------------------------------------------------------
  *
@@ -961,6 +1016,7 @@ int luaopen_m2lib(lua_State *L)
   register_ivec8(L);
   register_dvec4(L);
   register_dvec8(L);
+  register_rand(L);
 
   lua_pushstring(L, M2_GIT_SHA);
   lua_setfield(L, -2, "M2_GIT_SHA");

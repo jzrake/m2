@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <math.h>
 #include "jsw_rand.h"
 
@@ -5,11 +6,10 @@
 #define NWAVES 10
 #define DOT(a,b) (a[1]*b[1] + a[2]*b[2] + a[3]*b[3])
 
-#define random_real jsw_random_double
+#define random_real(a, b) jsw_random_double(NULL, a, b)
 
 static double VectorPotentialAmplitudes[NWAVES][4];
 static double VectorPotentialWavenumbers[NWAVES][4];
-
 
 void init_amplitudes()
 {
@@ -55,7 +55,7 @@ double m2_stochastic_vector_potential(double x[4], double n[4])
   static int num_calls = 0;
 
   if (num_calls == 0) {
-    jsw_seed(1);
+    jsw_seed(NULL, 1);
     init_amplitudes();
   }
 
