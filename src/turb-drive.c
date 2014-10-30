@@ -14,7 +14,7 @@ static double VectorPotentialWavenumbers[NWAVES][4];
 void init_amplitudes()
 {
   int m;
-  double kfreq = 16;
+  double kfreq = 64;
   for (m=0; m<NWAVES; ++m) {
 
     double *A = VectorPotentialAmplitudes[m];

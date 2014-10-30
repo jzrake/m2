@@ -936,7 +936,7 @@ end
 local Dynamo = class.class('Dynamo', TestProblem)
 Dynamo.explanation = [[
 --------------------------------------------------------------------------------
--- Decay of coiled magnetic field
+-- Turbulence driven at small scales
 --------------------------------------------------------------------------------]]
 function Dynamo:__init__()
    local mps = { }
