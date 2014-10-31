@@ -79,9 +79,10 @@ enum m2flag {
   M2_ZONE_HEALTH_GOOD,
   M2_ZONE_HEALTH_BAD,
 
-  /* Driving types */
-  M2_DRIVING_NONE,
-  M2_DRIVING_SMALL_SCALE_CURRENT,
+  /* Stirring types */
+  M2_STIRRING_NONE,
+  M2_STIRRING_KINETIC,
+  M2_STIRRING_CURRENT,
 } ;
 
 enum { M2_BIT_BAD_EIGENVALUES,
@@ -102,7 +103,7 @@ typedef struct m2vol m2vol;
 typedef struct m2aux m2aux;
 typedef struct m2prim m2prim;
 typedef struct m2sim_status m2sim_status;
-typedef struct m2driving m2driving;
+typedef struct m2stirring m2stirring;
 
 typedef void (*m2vol_operator)(m2vol *vol);
 typedef void (*m2sim_operator)(m2sim *m2);
@@ -124,16 +125,6 @@ struct m2aux
   double gas_pressure;
   double magnetic_pressure;
   m2sim *m2;
-} ;
-
-struct m2driving
-{
-  double correlation_time;
-  double amplitude;
-  double scale;
-  int num_waves;
-  int driving_type;
-  jsw_rand_t random;
 } ;
 
 struct m2vol
@@ -173,6 +164,18 @@ struct m2vol
   m2aux aux;
 } ;
 #define M2_VOL_SERIALIZE(b) ("A(S(i#$(ffffffff)fff))",b,4)
+
+struct m2stirring
+{
+  double *wavenumbers; /* num_waves x 4 */
+  double *fourrieramp; /* num_waves x 4 */
+  double correlation_time;
+  double amplitude;
+  double wavelength;
+  int num_waves;
+  int stirring_type;
+  jsw_rand_t random;
+} ;
 
 struct m2sim_status
 {
@@ -218,6 +221,7 @@ struct m2sim
   double cadence_checkpoint_hdf5;
   double cadence_checkpoint_tpl;
   double cadence_analysis;
+  m2stirring stirring;
   m2sim_status status;
   m2sim_operator analysis;
   m2sim_operator boundary_conditions_gradient;
@@ -325,7 +329,11 @@ double m2aux_measure(m2aux *aux, int member);
 double m2aux_mach(m2aux *aux, double n[4], int mode);
 
 
-
+/* stirring */
+void m2stirring_init(m2stirring *S);
+void m2stirring_del(m2stirring *S);
+void m2stirring_next_realization(m2stirring *S);
+double m2stirring_get_field(m2stirring *S, double x[4], double n[4]);
 
 
 

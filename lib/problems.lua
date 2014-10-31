@@ -124,6 +124,8 @@ function TestProblem:run(user_config_callback, restart_file)
       local las = m2.status.time_last_checkpoint_hdf5
       local num = m2.status.checkpoint_number_hdf5
 
+      m2.stirring:next_realization()
+
       if cad > 0.0 and now - las > cad then
          -- Print and then update the status
          num = num + 1
@@ -945,11 +947,17 @@ function Dynamo:__init__()
    self.model_parameters_doc = doc
 
    -- ==========================================================================
-   mps.three_d = true; doc.three_d  = 'run in three dimensions'
+   mps.amp   = 1.0;  doc.amp    = 'amplitude of driving field'
+   mps.waves = 10;   doc.waves  = 'number of waves to drive'
+   mps.scale = 0.1;  doc.scale  = 'wavelength to drive at (1 = domain scale)'
+   mps.B0    = 0.0;  doc.B0     = 'uniform seed field strength'
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
+   end
+   self.initial_data_face = function(x, n)
+      return {mps.B0 * n[3]}
    end
 end
 function Dynamo:set_runtime_defaults(runtime_cfg)
@@ -970,10 +978,14 @@ function Dynamo:build_m2(runtime_cfg)
    }
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
-   if not self.model_parameters.three_d then
-      build_args.resolution[3] = 1
-   end
+
    local m2 = m2app.m2Application(build_args)
+
+   m2.stirring.stirring_type = m2lib.M2_STIRRING_CURRENT
+   m2.stirring.amplitude  = self.model_parameters.amp
+   m2.stirring.num_waves  = self.model_parameters.waves
+   m2.stirring.wavelength = self.model_parameters.scale
+
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)

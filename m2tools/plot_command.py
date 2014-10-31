@@ -130,7 +130,6 @@ class RectangularPlot3d(PlotDriver):
              2:slicer[:,ny/2,:],
              3:slicer[:,:,nz/2]}[args.axis]
         self.chkpt.set_selection(S)
-        print args.field
         data = self.chkpt.get_field(args.field)
 
         self.get_plot_axes()

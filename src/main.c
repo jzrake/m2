@@ -190,14 +190,21 @@ int register_dvec8(lua_State *L)
  * -------------------------------------------------------------------------- */
 static int L_rand__init(lua_State *L)
 {
-  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "rand");
+  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "m2rand");
   unsigned long seed = luaL_optlong(L, 2, 0);
+  jsw_seed(R, seed);
+  return 0;
+}
+static int L_rand_seed(lua_State *L)
+{
+  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "m2rand");
+  unsigned long seed = luaL_checklong(L, 2);
   jsw_seed(R, seed);
   return 0;
 }
 static int L_rand_rand(lua_State *L)
 {
-  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "rand");
+  jsw_rand_t *R = (jsw_rand_t*) lua_struct_checkstruct(L, 1, "m2rand");
   unsigned long res = jsw_rand(R);
   lua_pushnumber(L, res);
   return 1;
@@ -205,7 +212,7 @@ static int L_rand_rand(lua_State *L)
 int register_rand(lua_State *L)
 {
   int n;
-  static char member_names[JSW_STATE_SIZE][8];
+  char member_names[JSW_STATE_SIZE][8];
   lua_struct_member_t members[JSW_STATE_SIZE+2];
 
   for (n=0; n<JSW_STATE_SIZE; ++n) {
@@ -224,11 +231,12 @@ int register_rand(lua_State *L)
   members[625].member_name = NULL;
 
   lua_struct_method_t methods[] = {
+    {"seed", L_rand_seed},
     {"rand", L_rand_rand},
     {NULL, NULL},
   } ;
   lua_struct_t type = lua_struct_newtype(L);
-  type.type_name = "rand";
+  type.type_name = "m2rand";
   type.alloc_size = sizeof(jsw_rand_t);
   type.members = members;
   type.methods = methods;
@@ -438,6 +446,47 @@ int register_m2vol(lua_State *L)
   return 0;
 }
 
+
+
+/* -----------------------------------------------------------------------------
+ *
+ * m2stirring
+ *
+ * -------------------------------------------------------------------------- */
+static int L_m2stirring_next_realization(lua_State *L)
+{
+  m2stirring *S = (m2stirring *) lua_struct_checkstruct(L, 1, "m2stirring");
+  m2stirring_next_realization(S);
+  return 0;
+}
+int register_m2stirring(lua_State *L)
+{
+#define MI(m)   {#m, offsetof(m2stirring, m), LSTRUCT_INT}
+#define MD(m)   {#m, offsetof(m2stirring, m), LSTRUCT_DOUBLE}
+#define MS(m,n) {#m, offsetof(m2stirring, m), LSTRUCT_STRUCT, n}
+  lua_struct_member_t members[] = {
+    MI(stirring_type),
+    MI(num_waves),
+    MD(wavelength),
+    MD(amplitude),
+    MS(random, "m2rand"),
+    {NULL, 0, 0},
+  };
+  lua_struct_method_t methods[] = {
+    {"next_realization", L_m2stirring_next_realization},
+    {NULL, NULL},
+  };
+#undef MI
+#undef MD
+#undef MS
+  lua_struct_t type = lua_struct_newtype(L);
+  type.type_name = "m2stirring";
+  type.alloc_size = sizeof(m2stirring);
+  type.members = members;
+  type.methods = methods;
+  lua_struct_register(L, type);
+  return 0;
+}
 
 
 
@@ -886,6 +935,7 @@ int register_m2sim(lua_State *L)
     MS(number_guard_zones0, "ivec4"),
     MS(number_guard_zones1, "ivec4"),
     MS(periodic_dimension, "ivec4"),
+    MS(stirring, "m2stirring"),
     MS(status, "m2sim_status"),
     MI(coordinate_scaling1),
     MI(coordinate_scaling2),
@@ -1011,6 +1061,7 @@ int luaopen_m2lib(lua_State *L)
   register_m2vol(L);
   register_m2aux(L);
   register_m2prim(L);
+  register_m2stirring(L);
   register_m2status(L);
   register_ivec4(L);
   register_ivec8(L);
@@ -1083,8 +1134,9 @@ int luaopen_m2lib(lua_State *L)
   CONSTANT(M2_ZONE_TYPE_FULL);
   CONSTANT(M2_ZONE_TYPE_GUARD);
   CONSTANT(M2_ZONE_TYPE_SHELL);
-  CONSTANT(M2_DRIVING_NONE);
-  CONSTANT(M2_DRIVING_SMALL_SCALE_CURRENT);
+  CONSTANT(M2_STIRRING_NONE);
+  CONSTANT(M2_STIRRING_KINETIC);
+  CONSTANT(M2_STIRRING_CURRENT);
 #undef CONSTANT
 
   return 1;

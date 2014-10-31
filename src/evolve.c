@@ -530,11 +530,11 @@ static void _calculate_emf3(m2sim *m2)
 			(vols[1][0]->x1[2]),
 			(vols[1][0]->x1[3] + vols[1][0]->x0[3]) * 0.5};
 
-#define source_terms_electric_field m2_stochastic_vector_potential
-	vols[1][0]->emf1 += source_terms_electric_field(rx, xhat) * l1;
-	vols[1][0]->emf2 += source_terms_electric_field(ry, yhat) * l2;
-	vols[1][0]->emf3 += source_terms_electric_field(rz, zhat) * l3;
-#undef source_terms_electric_field
+	if (m2->stirring.stirring_type == M2_STIRRING_CURRENT) {
+	  vols[1][0]->emf1 += m2stirring_get_field(&m2->stirring, rx, xhat) * l1;
+	  vols[1][0]->emf2 += m2stirring_get_field(&m2->stirring, ry, yhat) * l2;
+	  vols[1][0]->emf3 += m2stirring_get_field(&m2->stirring, rz, zhat) * l3;
+	}
 
 	/* Hard-coded spherical coordinate fix */
 	/* if (vols[1][0]->global_index[1] == -1) { */
@@ -717,6 +717,9 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
     m2aux_add_geometrical_source_terms(&V->aux, V->x0, V->x1, V->consA);
     if (m2->add_physical_source_terms) {
       m2->add_physical_source_terms(V);
+    }
+    if (m2->stirring.stirring_type == M2_STIRRING_KINETIC) {
+
     }
   }
   return 0;

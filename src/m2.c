@@ -91,6 +91,8 @@ void m2sim_new(m2sim *m2)
   m2->status.drive_attempt = 0;
   m2->suppress_extrapolation_at_unhealthy_zones = 1;
   m2->pressure_floor = -1.0; /* disabled */
+
+  jsw_seed(&m2->stirring.random, 12345);
 }
 void m2sim_del(m2sim *m2)
 {
@@ -99,6 +101,7 @@ void m2sim_del(m2sim *m2)
   }
   free(m2->volumes);
   m2->volumes = NULL;
+  m2stirring_del(&m2->stirring);
 }
 void m2sim_initialize(m2sim *m2)
 /*

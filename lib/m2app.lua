@@ -123,6 +123,7 @@ function m2Application:__init__(args)
    self._m2.relativistic = args.relativistic and 1 or 0
    self._m2.magnetized = args.magnetized and 1 or 0
    self._m2:initialize()
+   self.stirring = self._m2.stirring
    self.status = self._m2.status
 end
 
