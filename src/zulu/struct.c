@@ -13,6 +13,19 @@ static int _struct_api_type(lua_State *L);
 static int _struct_api_debug(lua_State *L);
 
 
+static int getmetatable_if_struct(lua_State *L, int n)
+{
+  if (lua_getmetatable(L, n) == 0) {
+    return 0;
+  }
+  else {
+    lua_getfield(L, -1, "__members__");   int g1 = !lua_isnil(L, -1); lua_pop(L, 1);
+    lua_getfield(L, -1, "__methods__");   int g2 = !lua_isnil(L, -1); lua_pop(L, 1);
+    lua_getfield(L, -1, "__instances__"); int g3 = !lua_isnil(L, -1); lua_pop(L, 1);
+    return g1*g2*g3;
+  }
+}
+
 int luaopen_struct(lua_State *L)
 {
   lua_newtable(L);
@@ -32,6 +45,10 @@ int luaopen_struct(lua_State *L)
 
 int _struct_api_items(lua_State *L)
 {
+  if (getmetatable_if_struct(L, 1) == 0) {
+    lua_pushnil(L);
+    return 1;
+  }
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__members__");
   lua_remove(L, -2);
@@ -55,7 +72,10 @@ int _struct_api_members(lua_State *L)
     luaL_getmetatable(L, lua_tostring(L, 1));
   }
   else {
-    lua_getmetatable(L, 1);
+    if (getmetatable_if_struct(L, 1) == 0) {
+      lua_pushnil(L);
+      return 1;
+    }
   }
   lua_getfield(L, -1, "__members__");
   lua_remove(L, -2);
@@ -83,7 +103,10 @@ int _struct_api_methods(lua_State *L)
     luaL_getmetatable(L, lua_tostring(L, 1));
   }
   else {
-    lua_getmetatable(L, 1);
+    if (getmetatable_if_struct(L, 1) == 0) {
+      lua_pushnil(L);
+      return 1;
+    }
   }
   lua_getfield(L, -1, "__methods__");
   lua_remove(L, -2);
@@ -129,7 +152,13 @@ int _struct_api_type(lua_State *L)
     }    
   }
   else {
-    lua_getmetatable(L, 1); /* TOP: mt */
+    if (getmetatable_if_struct(L, 1) == 0) {
+      lua_pushnil(L);
+      return 1;
+    }
+    else {
+      /* TOP: mt */
+    }
     lua_getfield(L, -1, "__type__"); /* TOP: mt.__type__ */
     lua_struct_t *T = (lua_struct_t*) lua_touserdata(L, -1);
     lua_pushstring(L, T->type_name); /* TOP: type_name */
@@ -142,7 +171,10 @@ int _struct_api_type(lua_State *L)
 int _struct_api_debug(lua_State *L)
 {
   void **obj = lua_touserdata(L, 1);
-  lua_getmetatable(L, 1);
+  if (getmetatable_if_struct(L, 1) == 0) {
+    lua_pushnil(L);
+    return 1;
+  }
   lua_getfield(L, -1, "__instances__");
   lua_remove(L, -2);
   lua_pushlightuserdata(L, obj);
