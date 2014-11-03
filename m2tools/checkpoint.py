@@ -215,6 +215,16 @@ class Checkpoint(object):
         return np.ix_(*args)
 
     @property
+    def cell_center_meshgrid(self):
+        import numpy as np
+        x1, x2, x3 = self.cell_center_coordinates
+        args = [ ]
+        if len(x1) > 2: args.append(x1)
+        if len(x2) > 2: args.append(x2)
+        if len(x3) > 2: args.append(x3)
+        return np.ix_(*args)
+
+    @property
     def cell_primitive(self):
         return dict([k,v] for k,v in self._file['cell_primitive'].iteritems())
 

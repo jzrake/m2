@@ -16,7 +16,9 @@ double m2stirring_get_field(m2stirring *S, double x[4], double n[4])
     double *k = &S->wavenumbers[4*m];
     double *A = &S->fourrieramp[4*m];
     double d = DOT(k, x) + A[0];
-    Atot += DOT(A, n) * sin(d);
+    double A0 = S->amplitude * S->wavelength / sqrt(S->num_waves);
+    Atot += A0 * DOT(A, n) * sin(d);
+    /* B0 := S->amplitude ~ sqrt(N) * k0 * A0 */
   }
 
   return Atot;
@@ -56,12 +58,11 @@ void m2stirring_next_realization(m2stirring *S)
     A[1] -= Adotkhat * A[1] / A[0];
     A[2] -= Adotkhat * A[2] / A[0];
     A[3] -= Adotkhat * A[3] / A[0];
-    A[0] = S->amplitude * S->wavelength / sqrt(S->num_waves * DOT(A, A));
-    /* B0 := S->amplitude ~ sqrt(N) * k0 * A[0] */
+    A[0] = sqrt(DOT(A, A));
 
-    A[1] *= A[0];
-    A[2] *= A[0];
-    A[3] *= A[0];
+    A[1] /= A[0];
+    A[2] /= A[0];
+    A[3] /= A[0];
     A[0] = jsw_random_double(&S->random, -M_PI, M_PI);
     /* zero-component now holds the phase */
   }
