@@ -55,9 +55,9 @@ void m2stirring_next_realization(m2stirring *S)
 
     double Adotkhat = DOT(A, k) / k[0];
 
-    A[1] -= Adotkhat * A[1] / A[0];
-    A[2] -= Adotkhat * A[2] / A[0];
-    A[3] -= Adotkhat * A[3] / A[0];
+    A[1] -= Adotkhat * k[1] / k[0];
+    A[2] -= Adotkhat * k[2] / k[0];
+    A[3] -= Adotkhat * k[3] / k[0];
     A[0] = sqrt(DOT(A, A));
 
     A[1] /= A[0];
