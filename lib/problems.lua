@@ -162,8 +162,8 @@ function TestProblem:run(user_config_callback, restart_file)
          if m2.status.error_code ~= 0 then
             m2.status.drive_attempt = m2.status.drive_attempt + 1
             keep_trying = self:reconfigure_after_failure(
-            m2,
-            m2.status.drive_attempt)
+	       m2,
+	       m2.status.drive_attempt)
          else
             keep_trying = false
          end
@@ -1017,6 +1017,8 @@ function Spheromak:__init__()
    local c = math.cos
    local s = math.sin
 
+   local smooth = 0.5 -- smoothing width of the initial field at the cavity wall
+
    --local shell = 4.49341
    local shell = 7.72525
    --local shell = 9.09501
@@ -1058,15 +1060,15 @@ function Spheromak:__init__()
 		 Ar * rhat[2] + At * that[2] + Ap * phat[2],
 		 Ar * rhat[3] + At * that[3] + Ap * phat[3]}
       if r > shell then
-	 A[1] = 0.0
-	 A[2] = 0.0
-	 A[3] = 0.0
+	 A[1] = A[1] * (1 - math.tanh((r-shell)/smooth))
+	 A[2] = A[2] * (1 - math.tanh((r-shell)/smooth))
+	 A[3] = A[3] * (1 - math.tanh((r-shell)/smooth))
       end
       return { 200*(A[1]*n[1] + A[2]*n[2] + A[3]*n[3]) }
    end
 end
 function Spheromak:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 0.4
+   runtime_cfg.tmax = 16.0
 end
 function Spheromak:build_m2(runtime_cfg)
    local N = runtime_cfg.resolution or 32
@@ -1088,14 +1090,19 @@ function Spheromak:build_m2(runtime_cfg)
 
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
-   m2:set_gamma_law_index(5./3)
+   m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_suppress_extrapolation_at_unhealthy_zones(1)
+   m2:set_pressure_floor(1e-4)
    m2:set_problem(self)
    return m2
+end
+function Spheromak:reconfigure_after_failure(m2, attempt)
+   return false
 end
 
 

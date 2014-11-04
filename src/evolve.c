@@ -20,6 +20,10 @@ static void check_symmetry(m2sim *m2, char *msg);
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
                            int suppress_extrapolation)
 {
+  if (suppress_extrapolation) {
+    printf("called riemann solver with suppress_extrapolation\n");
+  }
+
   int q;
   m2riemann_problem R = { .m2 = VL->m2 };
   double *UL = R.Ul;
@@ -835,6 +839,13 @@ int m2sim_from_conserved_all(m2sim *m2)
     B[3] = V->prim.B3;
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
                                  &V->aux, &V->prim);
+
+    if (error && V->zone_type == M2_ZONE_TYPE_GUARD) {
+      /* don't worry about it, it's a guard zone */
+      /* printf("ignoring a guard\n"); */
+      error = 0;
+    }
+
     V->zone_health |= error;
     if (error == 1<<M2_BIT_FAILED_CONSERVED_INVERSION) {
       printf("at zone [%d %d %d]\n", V->global_index[1],

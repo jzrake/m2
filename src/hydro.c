@@ -2,26 +2,26 @@
 #include "hydro.h"
 
 
-#define SYSTEM_CHOICE(m2,E)           \
-  do {                  \
-    if (0) { }                \
+#define SYSTEM_CHOICE(m2,E)					\
+  do {								\
+    if (0) { }							\
     else if (m2->relativistic == 1 && m2->magnetized == 1) {    \
-      return srmhd_##E;             \
-    }                 \
+      return srmhd_##E;						\
+    }								\
     else if (m2->relativistic == 1 && m2->magnetized == 0) {    \
-      return srhyd_##E;             \
-    }                 \
+      return srhyd_##E;						\
+    }								\
     else if (m2->relativistic == 0 && m2->magnetized == 1) {    \
-      return nrmhd_##E;             \
-    }                 \
+      return nrmhd_##E;						\
+    }								\
     else if (m2->relativistic == 0 && m2->magnetized == 0) {    \
-      return nrhyd_##E;             \
-    }                 \
-    else {                \
-      MSG(FATAL, "unknown physics");          \
-      return -1;              \
-    }                 \
-  } while (0)               \
+      return nrhyd_##E;						\
+    }								\
+    else {							\
+      MSG(FATAL, "unknown physics");				\
+      return -1;						\
+    }								\
+  } while (0)							\
 
 
 int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
