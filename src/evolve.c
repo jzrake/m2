@@ -553,7 +553,6 @@ static void _calculate_emf3(m2sim *m2)
 	/*   vols[1][0]->emf2 = 0.0; */
 	/*   vols[1][0]->emf3 = 0.0; */
 	/* } */
-
       }
     }
   }
@@ -617,6 +616,22 @@ static void _exchange_flux2(m2sim *m2, double dt)
         V0->Bflux3A += dt * V1->emf2;
         V0->Bflux3A += dt * V0->emf1;
         V0->Bflux3A -= dt * V2->emf1;
+
+
+	if (m2->geometry == M2_SPHERICAL) {
+	  if (V0->global_index[1] == -1) {
+	    /* radial "shell" zones don't carry any polar or azimuthal field */
+	    V0->Bflux2A = 0.0;
+	    V0->Bflux3A = 0.0;
+	  }
+
+	  if (V0->global_index[2] == -1) {
+	    /* north pole "shell" zones don't carry any field at all */
+	    V0->Bflux1A = 0.0;
+	    V0->Bflux2A = 0.0;
+	    V0->Bflux3A = 0.0;
+	  }
+	}
       }
     }
   }
@@ -811,6 +826,13 @@ int m2sim_magnetic_flux_to_cell_center(m2sim *m2)
         VC->prim.B1 = V1 ? 0.5 * (VC->Bflux1A/A1R + V1->Bflux1A/A1L) : 0.0;
         VC->prim.B2 = V2 ? 0.5 * (VC->Bflux2A/A2R + V2->Bflux2A/A2L) : 0.0;
         VC->prim.B3 = V3 ? 0.5 * (VC->Bflux3A/A3R + V3->Bflux3A/A3L) : 0.0;
+
+
+	if (m2->geometry == M2_SPHERICAL) {
+	  if (VC->global_index[1] == 0) {
+	    VC->prim.B1 = VC->Bflux1A/A1R;
+	  }
+	}
       }
     }
   }
@@ -840,7 +862,9 @@ int m2sim_from_conserved_all(m2sim *m2)
     error = m2sim_from_conserved(m2, V->consA, B, NULL, V->volume,
                                  &V->aux, &V->prim);
 
-    if (error && V->zone_type == M2_ZONE_TYPE_GUARD) {
+    if ((error) && 
+	(V->zone_type == M2_ZONE_TYPE_GUARD ||
+	 V->zone_type == M2_ZONE_TYPE_SHELL)) {
       /* don't worry about it, it's a guard zone */
       /* printf("ignoring a guard\n"); */
       error = 0;
@@ -848,8 +872,8 @@ int m2sim_from_conserved_all(m2sim *m2)
 
     V->zone_health |= error;
     if (error == 1<<M2_BIT_FAILED_CONSERVED_INVERSION) {
-      printf("at zone [%d %d %d]\n", V->global_index[1],
-	     V->global_index[2], V->global_index[3]);
+      /* printf("at zone [%d %d %d]\n", V->global_index[1], */
+      /* 	     V->global_index[2], V->global_index[3]); */
     }
     else {
       V->zone_health &= ~(1<<M2_BIT_FAILED_CONSERVED_INVERSION);

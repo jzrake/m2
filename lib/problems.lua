@@ -136,8 +136,8 @@ function TestProblem:run(user_config_callback, restart_file)
          -- Write data, config, status, problem data, and serialized runtime_cfg
          -- into the checkpoint file
          m2:write_checkpoint_hdf5(
-         ('%s/chkpt.%04d.h5'):format(runtime_cfg.output_path, num),
-         {runtime_cfg=runtime_cfg})
+	    ('%s/chkpt.%04d.h5'):format(runtime_cfg.output_path, num),
+	    {runtime_cfg=runtime_cfg})
       end
 
       if m2.status.iteration_number > 0 and
@@ -560,8 +560,8 @@ function Jet:__init__()
 
    self.initial_data_cell = function(x)
       return {mps.ambient_density,
-      mps.mabient_pressure,
-      0.0, 0.0, 0.0}
+	      mps.ambient_pressure,
+	      0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
       local nu = mps.nu_parameter
@@ -1012,8 +1012,10 @@ function Spheromak:__init__()
    self.model_parameters_doc = doc
 
    -- ==========================================================================
-
+   mps.spherical = true; doc.spherical = "run with spherical coordinates"
+   mps.amp = 100;        doc.amp = "amplitude of initial field"
    -- ==========================================================================
+
    local c = math.cos
    local s = math.sin
 
@@ -1023,6 +1025,7 @@ function Spheromak:__init__()
    local shell = 7.72525
    --local shell = 9.09501
    --local shell = 5.76346
+
    local function ell_one_m_zero(r, t, p)
       -- zeros at 4.49341, 7.72552
       local Ar = 1.0 * r^-3 * c(t) * (r*c(r) - s(r))
@@ -1030,7 +1033,6 @@ function Spheromak:__init__()
       local Ap = 0.5 * r^-2 * s(t) * (r*c(r) - s(r))
       return Ar, At, Ap
    end
-
    local function ell_two_m_zero(r, t, p)
       -- zeros at 5.76346, 9.09501
       local Ar = 0.25 * r^-4 * (1 + 3*c(2*t)) * (3*r*c(r) + (r^2-3)*s(r))
@@ -1038,33 +1040,46 @@ function Spheromak:__init__()
       local Ap = 0.50 * r^-3 * s(t) * c(t) * (3*r*c(r) + (r^2-3)*s(r))
       return Ar, At, Ap
    end
-
-   self.initial_data_cell = function(x)
-      local r = (x[1]^2 + x[2]^2 + x[3]^2)^0.5
-      if r > shell then
-	 return {100000.0, 0.1, 0.0, 0.0, 0.0}
-      else
-	 return {1.0, 0.1, 0.0, 0.0, 0.0}
-      end
-   end
-   self.initial_data_edge = function(x, n)
-      local R = (x[1]^2 + x[2]^2)^0.5 + 1e-12 -- a little softening is necessary
-      local r = (R   ^2 + x[3]^2)^0.5 + 1e-12
-      local t = math.acos(x[3] / r)
-      local p = math.atan(x[2] / x[1])
-      local Ar, At, Ap = ell_one_m_zero(r, t, p)
-      local rhat = { x[1]/r, x[2]/r, x[3]/r}
-      local that = { x[3]/r * x[1]/R, x[3]/r * x[2]/R, -R/r}
-      local phat = {-x[2]/R, x[1]/R, 0}
-      local A = {Ar * rhat[1] + At * that[1] + Ap * phat[1],
-		 Ar * rhat[2] + At * that[2] + Ap * phat[2],
-		 Ar * rhat[3] + At * that[3] + Ap * phat[3]}
+   local function apply_smooth(A, r)
       if r > shell then
 	 A[1] = A[1] * (1 - math.tanh((r-shell)/smooth))
 	 A[2] = A[2] * (1 - math.tanh((r-shell)/smooth))
 	 A[3] = A[3] * (1 - math.tanh((r-shell)/smooth))
       end
-      return { 200*(A[1]*n[1] + A[2]*n[2] + A[3]*n[3]) }
+   end
+
+   local function cartesian_to_spherical(x)
+      local R = (x[1]^2 + x[2]^2)^0.5 + 1e-16 -- prevent divide-by-zero
+      local r = (R   ^2 + x[3]^2)^0.5 + 1e-16
+      local t = math.acos(x[3] / r)
+      local p = math.atan(x[2] / x[1])
+      local rhat = { x[1]/r, x[2]/r, x[3]/r}
+      local that = { x[3]/r * x[1]/R, x[3]/r * x[2]/R, -R/r}
+      local phat = {-x[2]/R, x[1]/R, 0}
+      return r, t, p, rhat, that, phat
+   end
+
+   self.initial_data_cell = function(x)
+      local r = mps.spherical and x[1] or (x[1]^2 + x[2]^2 + x[3]^2)^0.5
+      local d = r < shell and 1e0 or 1e5
+      return {d, 0.1, 0.0, 0.0, 0.0}
+   end
+   self.initial_data_face = function(x, n)
+      local A = { }
+      if mps.spherical then
+	 local r, t, p = x[1]+1e-12, x[2], x[3]
+	 local Ar, At, Ap = ell_one_m_zero(r, t, p)
+	 A[1], A[2], A[3] = Ar, At, Ap
+	 --apply_smooth(A, r)
+      else
+	 local r, t, p, rhat, that, phat = cartesian_to_spherical(x)
+	 local Ar, At, Ap = ell_one_m_zero(r, t, p)
+	 A[1] = Ar * rhat[1] + At * that[1] + Ap * phat[1]
+	 A[2] = Ar * rhat[2] + At * that[2] + Ap * phat[2]
+	 A[3] = Ar * rhat[3] + At * that[3] + Ap * phat[3]
+	 apply_smooth(A, r)
+      end
+      return { mps.amp*(A[1]*n[1] + A[2]*n[2] + A[3]*n[3]) }
    end
 end
 function Spheromak:set_runtime_defaults(runtime_cfg)
@@ -1073,7 +1088,7 @@ end
 function Spheromak:build_m2(runtime_cfg)
    local N = runtime_cfg.resolution or 32
    local L = 10.0
-   local build_args = {
+   local ba_cartesian = {
       upper={ L,  L,  L},
       lower={-L, -L, -L},
       resolution={N, N, N},
@@ -1083,6 +1098,19 @@ function Spheromak:build_m2(runtime_cfg)
       magnetized=true,
       geometry='cartesian'
    }
+   local ba_spherical = {
+      upper={7.72525, math.pi, 2*math.pi},
+      lower={0, 0, 0},
+      resolution={4*N, N, 1},
+      periods={false,false,true},
+      scaling={'linear', 'linear', 'linear'},
+      relativistic=false,
+      magnetized=true,
+      geometry='spherical'
+   }
+   local mps = self.model_parameters
+   local build_args = mps.spherical and ba_spherical or ba_cartesian
+
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
 
@@ -1097,7 +1125,7 @@ function Spheromak:build_m2(runtime_cfg)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
-   m2:set_pressure_floor(1e-4)
+   m2:set_pressure_floor(0.1)
    m2:set_problem(self)
    return m2
 end

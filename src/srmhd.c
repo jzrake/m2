@@ -94,12 +94,12 @@ int srmhd_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
     error = srmhd_c2p_solve_anton2dzw(c2p, Pin);
     if (error == SRMHD_C2P_SUCCESS) {
       return_code |= 1<<M2_BIT_NEARLY_FAILED_CONSERVED_INVERSION;
-      /* MSG(WARNING, "got a success with anton2dzw after noble1dw failed"); */
+      /*MSG(WARNING, "got a success with anton2dzw after noble1dw failed");*/
     }
   }
   if (error) {
-    /* MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error)); */
-    /* m2_print_state(NULL, NULL, U); */
+    /*MSGF(WARNING, "%s", srmhd_c2p_get_error(c2p, error));*/
+    /*m2_print_state(NULL, NULL, U);*/
     srmhd_c2p_del(c2p);
     return 1<<M2_BIT_FAILED_CONSERVED_INVERSION;
   }
