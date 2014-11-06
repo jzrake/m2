@@ -357,6 +357,38 @@ int register_m2aux(lua_State *L)
 
 /* -----------------------------------------------------------------------------
  *
+ * m2reductions
+ *
+ * -------------------------------------------------------------------------- */
+int register_m2reductions(lua_State *L)
+{
+#define MD(m) {#m, offsetof(m2reductions, m), LSTRUCT_DOUBLE}
+  lua_struct_member_t members[] = {
+    MD(total_volume),
+    MD(total_kinetic_energy),
+    MD(total_internal_energy),
+    MD(total_magnetic_energy),
+    {NULL, 0, 0},
+  };
+  lua_struct_method_t methods[] = {
+    {NULL, NULL},
+  } ;
+#undef MD
+#undef MS
+  lua_struct_t type = lua_struct_newtype(L);
+  type.type_name = "m2reductions";
+  type.alloc_size = sizeof(m2reductions);
+  type.members = members;
+  type.methods = methods;
+  lua_struct_register(L, type);
+  return 0;
+}
+
+
+
+
+/* -----------------------------------------------------------------------------
+ *
  * m2vol
  *
  * -------------------------------------------------------------------------- */
@@ -863,7 +895,25 @@ static int L_m2sim_visualize(lua_State *L)
 {
   return _drive_or_visualize(L, 'v');
 }
-
+static int L_m2sim_get_reductions(lua_State *L)
+{
+  m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
+  m2reductions *R = (m2reductions *) lua_struct_new(L, "m2reductions");
+  int n, N = m2->local_grid_size[0];
+  R->total_volume          = 0.0;
+  R->total_kinetic_energy  = 0.0;
+  R->total_internal_energy = 0.0;
+  R->total_magnetic_energy = 0.0;
+  for (n=0; n<N; ++n) {
+    m2vol *V = &m2->volumes[n];
+    if (V->zone_type != M2_ZONE_TYPE_FULL) continue;
+    R->total_kinetic_energy  += m2aux_get(&V->aux, M2_KINETIC_ENERGY_DENSITY);
+    R->total_internal_energy += m2aux_get(&V->aux, M2_INTERNAL_ENERGY_DENSITY);
+    R->total_magnetic_energy += m2aux_get(&V->aux, M2_MAGNETIC_ENERGY_DENSITY);
+    R->total_volume += V->volume;
+  }
+  return 1;
+}
 
 
 
@@ -997,6 +1047,7 @@ int register_m2sim(lua_State *L)
     METHOD(minimum_courant_time),
     METHOD(drive),
     METHOD(visualize),
+    METHOD(get_reductions),
     {NULL, NULL},
   };
 #undef METHOD
@@ -1063,6 +1114,7 @@ int luaopen_m2lib(lua_State *L)
   register_m2prim(L);
   register_m2stirring(L);
   register_m2status(L);
+  register_m2reductions(L);
   register_ivec4(L);
   register_ivec8(L);
   register_dvec4(L);

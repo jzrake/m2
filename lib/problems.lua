@@ -1,5 +1,6 @@
 local serpent = require 'serpent'
 local class   = require 'class'
+local struct  = require 'struct'
 local logger  = require 'logger'
 local m2lib   = require 'm2lib'
 local m2app   = require 'm2app'
@@ -73,7 +74,8 @@ function TestProblem:run(user_config_callback, restart_file)
    local runtime_cfg = {
       tmax = 0.4,
       output_path = 'data',
-      msg_cadence = 1
+      msg_cadence = 1,
+      red_cadence = 100
    }
    self:set_runtime_defaults(runtime_cfg)
    if restart_file then
@@ -124,8 +126,6 @@ function TestProblem:run(user_config_callback, restart_file)
       local las = m2.status.time_last_checkpoint_hdf5
       local num = m2.status.checkpoint_number_hdf5
 
-      m2.stirring:next_realization()
-
       if cad > 0.0 and now - las > cad then
          -- Print and then update the status
          num = num + 1
@@ -144,6 +144,17 @@ function TestProblem:run(user_config_callback, restart_file)
          m2.status.iteration_number % runtime_cfg.msg_cadence == 0 then
          log:log_message('run', m2.status:get_message())
       end
+
+      if m2.status.iteration_number > 0 and
+         m2.status.iteration_number % runtime_cfg.red_cadence == 0 then
+	 local reduction = m2:get_reductions()
+	 local iter = m2.status.iteration_number
+	 m2.reductions_log[iter] = struct.items(reduction)
+	 m2.reductions_log[iter]['time'] = now
+	 m2.reductions_log[iter]['iteration'] = iter
+      end
+
+      m2.stirring:next_realization()
 
       local keep_trying = true
       local cached_config = m2:get_config{
@@ -1021,8 +1032,8 @@ function Spheromak:__init__()
 
    local smooth = 0.5 -- smoothing width of the initial field at the cavity wall
 
-   --local shell = 4.49341
-   local shell = 7.72525
+   --local shell = 4.493409457909064
+   local shell = 7.725251836937707
    --local shell = 9.09501
    --local shell = 5.76346
 

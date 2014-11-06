@@ -173,6 +173,7 @@ double nrmhd_measure(m2aux *aux, int flag)
   case M2_MACH_NUMBER: return sqrt(vv) / sqrt(gamma_law_index * pg / dg);
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
   case M2_KINETIC_ENERGY_DENSITY: return eg - ug;
+  case M2_MAGNETIC_ENERGY_DENSITY: return pb;
   default:
     MSG(FATAL, "unknown measure flag");
     return 0.0;

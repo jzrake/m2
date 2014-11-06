@@ -125,6 +125,7 @@ function m2Application:__init__(args)
    self._m2:initialize()
    self.stirring = self._m2.stirring
    self.status = self._m2.status
+   self.reductions_log = { }
 end
 
 function m2Application:set_problem(problem)
@@ -269,6 +270,17 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
       local h5file = hdf5.File(fname, 'r+')
       local h5status = hdf5.Group(h5file, 'status')
       local h5config = hdf5.Group(h5file, 'config')
+      local h5reduct = hdf5.Group(h5file, 'reductions_log')
+
+      local _, first_entry = next(self.reductions_log)
+
+      for column_name, _ in pairs(first_entry) do
+	 local buffer = { }
+	 for n, entry in pairs(self.reductions_log) do
+	    table.insert(buffer, entry[column_name])
+	 end
+	 h5reduct[column_name] = array.vector(buffer)
+      end
 
       for i,member in ipairs(struct.members(self._m2)) do
          h5config[member] = tostring(self._m2[member])
@@ -342,6 +354,24 @@ function m2Application:read_checkpoint_hdf5(fname)
 	 end
       end
    end
+
+
+   -----------------------------------------------------------------------------
+   -- Read status and problem meta-data from HDF5
+   -----------------------------------------------------------------------------
+   local h5reduct = h5file['reductions_log']
+   if h5reduct then
+      for _, column in pairs(h5reduct:keys()) do
+	 local buffer = h5reduct[column]:value():vector()
+	 for n=0, #buffer-1 do
+	    if self.reductions_log[n] == nil then
+	       self.reductions_log[n] = { }
+	    end
+	    self.reductions_log[n][column] = buffer[n]
+	 end
+      end
+   end
+
    if self._problem then
       self._problem:read_hdf5_problem_data(h5file)
    end

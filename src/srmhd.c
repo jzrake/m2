@@ -286,6 +286,7 @@ double srmhd_measure(m2aux *aux, int flag)
   case M2_MACH_NUMBER: return (v0/sqrt(1.0 - v0*v0)) / (cs/sqrt(1.0 - cs*cs));
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
   case M2_KINETIC_ENERGY_DENSITY: return ek;
+  case M2_MAGNETIC_ENERGY_DENSITY: return pb;
   default:
     MSG(FATAL, "unknown measure flag");
     return 0.0;

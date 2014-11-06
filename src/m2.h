@@ -43,6 +43,7 @@ enum m2flag {
   M2_COMOVING_MASS_DENSITY,
   M2_KINETIC_ENERGY_DENSITY,
   M2_INTERNAL_ENERGY_DENSITY,
+  M2_MAGNETIC_ENERGY_DENSITY,
   M2_GAS_PRESSURE,
   M2_MAGNETIC_PRESSURE,
   M2_PLASMA_BETA,
@@ -103,6 +104,7 @@ typedef struct m2vol m2vol;
 typedef struct m2aux m2aux;
 typedef struct m2prim m2prim;
 typedef struct m2sim_status m2sim_status;
+typedef struct m2reductions m2reductions;
 typedef struct m2stirring m2stirring;
 
 typedef void (*m2vol_operator)(m2vol *vol);
@@ -191,6 +193,14 @@ struct m2sim_status
   int drive_attempt;
   int num_failures[8];
   char message[1024];
+} ;
+
+struct m2reductions
+{
+  double total_volume;
+  double total_kinetic_energy;
+  double total_internal_energy;
+  double total_magnetic_energy;
 } ;
 
 struct m2sim

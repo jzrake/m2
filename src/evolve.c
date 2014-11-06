@@ -439,9 +439,17 @@ static void _calculate_emf2(m2sim *m2)
         }
         bnd = 0;
       }
+
       vols[0]->emf1 = -vols[0]->flux2[B33] * vols[0]->line1;
       vols[0]->emf2 = +vols[0]->flux1[B33] * vols[0]->line2;
       vols[0]->emf3 = bnd?0.0:_calculate_emf_single(emfs, 3) * vols[0]->line3;
+
+      /* enforce conducting-wall outer boundary if in spherical coordinates */
+      if (m2->geometry == M2_SPHERICAL &&
+	  vols[0]->global_index[1] == m2->domain_resolution[1]-1) {
+	vols[0]->emf2 = 0.0;
+	vols[0]->emf3 = 0.0;
+      }
     }
   }
 }
@@ -616,7 +624,6 @@ static void _exchange_flux2(m2sim *m2, double dt)
         V0->Bflux3A += dt * V1->emf2;
         V0->Bflux3A += dt * V0->emf1;
         V0->Bflux3A -= dt * V2->emf1;
-
 
 	if (m2->geometry == M2_SPHERICAL) {
 	  if (V0->global_index[1] == -1) {
@@ -826,7 +833,6 @@ int m2sim_magnetic_flux_to_cell_center(m2sim *m2)
         VC->prim.B1 = V1 ? 0.5 * (VC->Bflux1A/A1R + V1->Bflux1A/A1L) : 0.0;
         VC->prim.B2 = V2 ? 0.5 * (VC->Bflux2A/A2R + V2->Bflux2A/A2L) : 0.0;
         VC->prim.B3 = V3 ? 0.5 * (VC->Bflux3A/A3R + V3->Bflux3A/A3L) : 0.0;
-
 
 	if (m2->geometry == M2_SPHERICAL) {
 	  if (VC->global_index[1] == 0) {
