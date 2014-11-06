@@ -126,9 +126,5 @@ int nrhyd_eigenvalues(m2aux *aux, double n[4], double *evals)
 
 double nrhyd_measure(m2aux *aux, int flag)
 {
-  switch (flag) {
-  default:
-    MSG(FATAL, "unknown measure flag");
-    return 0.0;
-  }
+  return 0.0;
 }

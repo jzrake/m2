@@ -75,7 +75,7 @@ function TestProblem:run(user_config_callback, restart_file)
       tmax = 0.4,
       output_path = 'data',
       msg_cadence = 1,
-      red_cadence = 100
+      reductions_cadence = 100
    }
    self:set_runtime_defaults(runtime_cfg)
    if restart_file then
@@ -146,7 +146,7 @@ function TestProblem:run(user_config_callback, restart_file)
       end
 
       if m2.status.iteration_number > 0 and
-         m2.status.iteration_number % runtime_cfg.red_cadence == 0 then
+         m2.status.iteration_number % runtime_cfg.reductions_cadence == 0 then
 	 local reduction = m2:get_reductions()
 	 local iter = m2.status.iteration_number
 	 m2.reductions_log[iter] = struct.items(reduction)
@@ -958,6 +958,7 @@ function Dynamo:__init__()
    self.model_parameters_doc = doc
 
    -- ==========================================================================
+   mps.kinetic = false; doc.kinetic = 'drive kinetically'
    mps.amp   = 1.0;  doc.amp    = 'amplitude of driving field'
    mps.waves = 10;   doc.waves  = 'number of waves to drive'
    mps.scale = 0.1;  doc.scale  = 'wavelength to drive at (1 = domain scale)'
@@ -990,9 +991,11 @@ function Dynamo:build_m2(runtime_cfg)
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
 
+   local mps = self.model_parameters
    local m2 = m2app.m2Application(build_args)
 
-   m2.stirring.stirring_type = m2lib.M2_STIRRING_CURRENT
+
+   m2.stirring.stirring_type = m2lib['M2_STIRRING_'..(mps.kinetic and 'KINETIC' or 'CURRENT')]
    m2.stirring.amplitude  = self.model_parameters.amp
    m2.stirring.num_waves  = self.model_parameters.waves
    m2.stirring.wavelength = self.model_parameters.scale
@@ -1122,6 +1125,17 @@ function Spheromak:build_m2(runtime_cfg)
    local mps = self.model_parameters
    local build_args = mps.spherical and ba_spherical or ba_cartesian
 
+
+   local function radial_boundary(V0)
+      local nhat = m2lib.dvec4(0,1,0,0)
+      if V0.global_index[1] ~= -1 then
+	 V0.prim.v1 = 0.0
+	 V0.prim.B1 = 0.0
+         V0:from_primitive()
+         V0.flux1 = V0.aux:fluxes(nhat)
+      end
+   end
+
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
 
@@ -1138,6 +1152,7 @@ function Spheromak:build_m2(runtime_cfg)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
    m2:set_pressure_floor(0.1)
    m2:set_problem(self)
+   m2:set_boundary_conditions_flux1(mps.spherical and outer_radial_boundary or nil)
    return m2
 end
 function Spheromak:reconfigure_after_failure(m2, attempt)

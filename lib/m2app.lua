@@ -274,7 +274,7 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
 
       local _, first_entry = next(self.reductions_log)
 
-      for column_name, _ in pairs(first_entry) do
+      for column_name, _ in pairs(first_entry or { }) do
 	 local buffer = { }
 	 for n, entry in pairs(self.reductions_log) do
 	    table.insert(buffer, entry[column_name])

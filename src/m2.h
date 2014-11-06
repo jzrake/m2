@@ -41,6 +41,8 @@ enum m2flag {
   M2_MAGNETIC_FOUR_VECTOR2,
   M2_MAGNETIC_FOUR_VECTOR3,
   M2_COMOVING_MASS_DENSITY,
+  M2_OBSERVER_MASS_DENSITY,
+  M2_TOTAL_ENERGY_DENSITY,
   M2_KINETIC_ENERGY_DENSITY,
   M2_INTERNAL_ENERGY_DENSITY,
   M2_MAGNETIC_ENERGY_DENSITY,
@@ -198,6 +200,8 @@ struct m2sim_status
 struct m2reductions
 {
   double total_volume;
+  double total_energy;
+  double total_mass;
   double total_kinetic_energy;
   double total_internal_energy;
   double total_magnetic_energy;

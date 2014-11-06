@@ -175,7 +175,6 @@ double nrmhd_measure(m2aux *aux, int flag)
   case M2_KINETIC_ENERGY_DENSITY: return eg - ug;
   case M2_MAGNETIC_ENERGY_DENSITY: return pb;
   default:
-    MSG(FATAL, "unknown measure flag");
     return 0.0;
   }
 }

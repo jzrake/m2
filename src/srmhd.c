@@ -278,17 +278,18 @@ double srmhd_measure(m2aux *aux, int flag)
   double Hg = dg + ug + pg; /* gas enthalpy density */
   double eg = Hg*u0*u0 - pg - u0*dg; /* gas energy density */
   double ek = dg*u0*(u0 - 1.0);
-  double cs = sqrt(gamma_law_index * pg / dg);
+  double cs = sqrt(gamma_law_index * pg / Hg);
 
   switch (flag) {
   case M2_SIGMA: return pb / eg;
-  case M2_SOUND_SPEED: return sqrt(gamma_law_index * pg / dg);
+  case M2_SOUND_SPEED: return cs;
   case M2_MACH_NUMBER: return (v0/sqrt(1.0 - v0*v0)) / (cs/sqrt(1.0 - cs*cs));
+  case M2_OBSERVER_MASS_DENSITY: return dg * u0;
+  case M2_TOTAL_ENERGY_DENSITY: return aux->momentum_density[0] - (pg + pb) - dg * u0;
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
   case M2_KINETIC_ENERGY_DENSITY: return ek;
   case M2_MAGNETIC_ENERGY_DENSITY: return pb;
   default:
-    MSG(FATAL, "unknown measure flag");
     return 0.0;
   }
 }

@@ -10,6 +10,10 @@
 #include "struct.h"
 #include "buffer.h"
 
+#if M2_HAVE_MPI
+#include <mpi.h>
+#endif
+
 #define DEBUG_GC 0
 
 
@@ -365,6 +369,8 @@ int register_m2reductions(lua_State *L)
 #define MD(m) {#m, offsetof(m2reductions, m), LSTRUCT_DOUBLE}
   lua_struct_member_t members[] = {
     MD(total_volume),
+    MD(total_mass),
+    MD(total_energy),
     MD(total_kinetic_energy),
     MD(total_internal_energy),
     MD(total_magnetic_energy),
@@ -901,17 +907,28 @@ static int L_m2sim_get_reductions(lua_State *L)
   m2reductions *R = (m2reductions *) lua_struct_new(L, "m2reductions");
   int n, N = m2->local_grid_size[0];
   R->total_volume          = 0.0;
+  R->total_mass            = 0.0;
+  R->total_energy          = 0.0;
   R->total_kinetic_energy  = 0.0;
   R->total_internal_energy = 0.0;
   R->total_magnetic_energy = 0.0;
   for (n=0; n<N; ++n) {
     m2vol *V = &m2->volumes[n];
+    double v = V->volume;
     if (V->zone_type != M2_ZONE_TYPE_FULL) continue;
-    R->total_kinetic_energy  += m2aux_get(&V->aux, M2_KINETIC_ENERGY_DENSITY);
-    R->total_internal_energy += m2aux_get(&V->aux, M2_INTERNAL_ENERGY_DENSITY);
-    R->total_magnetic_energy += m2aux_get(&V->aux, M2_MAGNETIC_ENERGY_DENSITY);
-    R->total_volume += V->volume;
+    R->total_volume          += v;
+    R->total_mass            += v*m2aux_get(&V->aux, M2_OBSERVER_MASS_DENSITY);
+    R->total_energy          += v*m2aux_get(&V->aux, M2_TOTAL_ENERGY_DENSITY);
+    R->total_kinetic_energy  += v*m2aux_get(&V->aux, M2_KINETIC_ENERGY_DENSITY);
+    R->total_internal_energy += v*m2aux_get(&V->aux, M2_INTERNAL_ENERGY_DENSITY);
+    R->total_magnetic_energy += v*m2aux_get(&V->aux, M2_MAGNETIC_ENERGY_DENSITY);
   }
+
+#if M2_HAVE_MPI
+    MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
+    MPI_Allreduce(MPI_IN_PLACE, (double*)R, 6, MPI_DOUBLE, MPI_SUM, cart_comm);
+#endif
+
   return 1;
 }
 
@@ -1163,6 +1180,8 @@ int luaopen_m2lib(lua_State *L)
   CONSTANT(M2_MAGNETIC_FOUR_VECTOR2);
   CONSTANT(M2_MAGNETIC_FOUR_VECTOR3);
   CONSTANT(M2_COMOVING_MASS_DENSITY);
+  CONSTANT(M2_OBSERVER_MASS_DENSITY);
+  CONSTANT(M2_TOTAL_ENERGY_DENSITY);
   CONSTANT(M2_KINETIC_ENERGY_DENSITY);
   CONSTANT(M2_INTERNAL_ENERGY_DENSITY);
   CONSTANT(M2_GAS_PRESSURE);
@@ -1198,9 +1217,6 @@ int luaopen_m2lib(lua_State *L)
 /* problem-specific Lua modules */
 int luaopen_m2jet(lua_State *L);
 
-#if M2_HAVE_MPI
-#include <mpi.h>
-#endif
 
 int main(int argc, char **argv)
 {

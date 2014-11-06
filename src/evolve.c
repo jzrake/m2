@@ -745,7 +745,21 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
       m2->add_physical_source_terms(V);
     }
     if (m2->stirring.stirring_type == M2_STIRRING_KINETIC) {
+      /* cartesian coordinates only */
+      double r[4] = { 0.0,
+		      0.5 * (V->x0[1] + V->x1[1]),
+		      0.5 * (V->x0[2] + V->x1[2]),
+		      0.5 * (V->x0[3] + V->x1[3]) };
+      double xhat[4] = { 0, 1, 0, 0 };
+      double yhat[4] = { 0, 0, 1, 0 };
+      double zhat[4] = { 0, 0, 0, 1 };
 
+      double sx = m2stirring_get_field(&m2->stirring, r, xhat);
+      double sy = m2stirring_get_field(&m2->stirring, r, yhat);
+      double sz = m2stirring_get_field(&m2->stirring, r, zhat);
+      V->consA[S11] += V->volume * dt * sx;
+      V->consA[S22] += V->volume * dt * sy;
+      V->consA[S33] += V->volume * dt * sz;
     }
   }
   return 0;
