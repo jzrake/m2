@@ -276,12 +276,12 @@ double srmhd_measure(m2aux *aux, int flag)
   double v0 = sqrt(vv);
   double ug = pg / (gamma_law_index - 1.0);
   double Hg = dg + ug + pg; /* gas enthalpy density */
-  double eg = Hg*u0*u0 - pg - u0*dg; /* gas energy density */
+  /* double eg = Hg*u0*u0 - pg - u0*dg; */ /* gas energy density */
   double ek = dg*u0*(u0 - 1.0);
   double cs = sqrt(gamma_law_index * pg / Hg);
 
   switch (flag) {
-  case M2_SIGMA: return pb / eg;
+  case M2_SIGMA: return pb / Hg;
   case M2_SOUND_SPEED: return cs;
   case M2_MACH_NUMBER: return (v0/sqrt(1.0 - v0*v0)) / (cs/sqrt(1.0 - cs*cs));
   case M2_OBSERVER_MASS_DENSITY: return dg * u0;

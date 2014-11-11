@@ -566,12 +566,13 @@ void DatasetController::refresh()
 
   field_lines.clear();
 
-  return;
+  //return;
+
   for (int line_num=0; line_num<50; ++line_num) {
     std::vector<GLfloat> line;
     double x[4] = {0.0,
-		   M2->domain_extent_lower[1] + 1.0,
-		   M2_PI * (line_num+0.5) / 100,
+		   M2->domain_extent_lower[1],// + 2.0 + line_num/25.0,
+		   M2_PI * (line_num+0.5) / 50,
 		   0.0};
     double xc[4];
     while (x[0] < 40.0) {

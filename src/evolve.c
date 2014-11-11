@@ -20,10 +20,6 @@ static void check_symmetry(m2sim *m2, char *msg);
 static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
                            int suppress_extrapolation)
 {
-  if (suppress_extrapolation) {
-    printf("called riemann solver with suppress_extrapolation\n");
-  }
-
   int q;
   m2riemann_problem R = { .m2 = VL->m2 };
   double *UL = R.Ul;
@@ -877,6 +873,12 @@ int m2sim_magnetic_flux_to_cell_center(m2sim *m2)
 	if (m2->geometry == M2_SPHERICAL) {
 	  if (VC->global_index[1] == 0) {
 	    VC->prim.B1 = VC->Bflux1A/A1R;
+	  }
+	  if (VC->global_index[2] == 0) { /* north pole */
+	    VC->prim.B2 = VC->Bflux2A/A2R;
+	  }
+	  if (VC->global_index[2] == G[2]-1) { /* south pole */
+	    VC->prim.B2 = V2->Bflux2A/A2L;
 	  }
 	}
       }

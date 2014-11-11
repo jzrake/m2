@@ -633,7 +633,8 @@ function MagnetarWind:__init__()
 
    -- ==========================================================================
    mps.three_d = false; doc.three_d='run in three dimensions'
-   mps.merger = false;  doc.merger='use a density profile for BNS merger'
+   mps.merger = false; doc.merger='use a density profile for BNS merger'
+   mps.engine = false; doc.engine='use a rotating magnetosphere instead of wind'
    mps.r_inner=1e9; doc.r_inner='inner radius (in cm)'
    mps.r_outer=100; doc.r_outer='outer radius (in units of inner radius)'
    mps.r_cavity=10; doc.r_cavity='cavity radius (in units of inner radius)'
@@ -691,6 +692,19 @@ function MagnetarWind:__init__()
 	 return merger_ic(x)
       else
 	 return default_ic(x)
+      end
+   end
+
+   self.initial_data_edge = function(x, n)
+      if mps.engine then
+	 -- initialize the magnetosphere as a dipole
+	 local r = x[1]
+	 local z = r * math.cos(x[2])
+	 local R = r * math.sin(x[2])
+	 local Ap = math.sin(x[2]) / r^2
+	 return { 50.0 * Ap * n[3] }
+      else
+	 return { 0.0 }
       end
    end
 end
@@ -769,6 +783,13 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
    m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
    m2:set_problem(self)
+
+   if mps.engine then
+      local m2jet = require 'm2jet'
+      m2:set_boundary_conditions_flux1(outflow_bc_flux(1))
+      m2:set_add_physical_source_terms(m2jet.jet_magnetosphere_source_terms)
+   end
+
    return m2
 end
 function MagnetarWind:reconfigure_after_failure(m2, attempt)
@@ -1084,7 +1105,6 @@ function Spheromak:__init__()
 	 local r, t, p = x[1]+1e-12, x[2], x[3]
 	 local Ar, At, Ap = ell_one_m_zero(r, t, p)
 	 A[1], A[2], A[3] = Ar, At, Ap
-	 --apply_smooth(A, r)
       else
 	 local r, t, p, rhat, that, phat = cartesian_to_spherical(x)
 	 local Ar, At, Ap = ell_one_m_zero(r, t, p)

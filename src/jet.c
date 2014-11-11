@@ -125,6 +125,35 @@ void jet_add_physical_source_terms(m2vol *V)
 }
 
 
+void jet_magnetosphere_source_terms(m2vol *V)
+{
+  int q;
+  double r = 0.5 * (V->x0[1] + V->x1[1]);
+  double t = 0.5 * (V->x0[2] + V->x1[2]);
+  double R = r * sin(t);
+  double vc = 1.0; /* velocity at light cylinder */
+  double rc = 3.0;
+  double dr = 0.5;
+  double omega = vc/rc * 0.5 * (1 - tanh((r - rc) / dr));
+  double tau = 0.01 / omega;
+  double E = exp(-V->x1[0]/tau);
+  m2prim P = V->prim;
+  double U0[5];
+
+  if (r > 2*rc) return;
+
+  P.p  = 1e-2; /* hard-coded for now, must match problem */
+  P.d  = r < rc ? 1e+4 : 1e-2;
+  P.v1 = 0.0;
+  P.v2 = 0.0;
+  P.v3 = omega * R;
+
+  m2sim_from_primitive(V->m2, &P, NULL, NULL, V->volume, U0, NULL);
+  for (q=0; q<5; ++q) {
+    V->consA[q] = E * V->consA[q] + (1 - E) * U0[q];
+  }
+}
+
 
 /* ========================================================================== */
 /* Jet problem Lua interface                                                  */
@@ -163,6 +192,8 @@ int luaopen_m2jet(lua_State *L)
   lua_setfield(L, -2, "jet_boundary_conditions_cell");
   lua_pushlightuserdata(L, jet_add_physical_source_terms);
   lua_setfield(L, -2, "jet_add_physical_source_terms");
+  lua_pushlightuserdata(L, jet_magnetosphere_source_terms);
+  lua_setfield(L, -2, "jet_magnetosphere_source_terms");
 
   return 1;
 }
