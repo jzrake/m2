@@ -142,8 +142,8 @@ void jet_magnetosphere_source_terms(m2vol *V)
 
   if (r > 2*rc) return;
 
-  P.p  = 1e-2; /* hard-coded for now, must match problem */
-  P.d  = r < rc ? 1e+4 : 1e-2;
+  //P.p  = 1e-2; /* hard-coded for now, must match problem */
+  //P.d  = r < rc ? 1e+4 : 1e-2;
   P.v1 = 0.0;
   P.v2 = 0.0;
   P.v3 = omega * R;

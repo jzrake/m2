@@ -757,6 +757,17 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
 #endif
   for (n=0; n<L[0]; ++n) {
     V = m2->volumes + n;
+
+
+    /* For MagnetarWind (engine option) problem only! */
+    /* if (V->global_index[1] < 10) { */
+    /*   V->Bflux3A = 0.0; */
+    /*   V->prim.B3 = 0.0; */
+    /*   m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume, */
+    /*   			   V->consA, &V->aux); */
+    /* } */
+
+
     if (V->zone_type == M2_ZONE_TYPE_SHELL) {
       continue;
     }
