@@ -444,6 +444,32 @@ static void _calculate_emf2(m2sim *m2)
       vols[0]->emf2 = +vols[0]->flux1[B33] * vols[0]->line2;
       vols[0]->emf3 = bnd?0.0:_calculate_emf_single(emfs, 3) * vols[0]->line3;
 
+      if (m2->stirring.stirring_type == M2_STIRRING_CURRENT) {
+	double l1 = vols[0]->line1;
+	double l2 = vols[0]->line2;
+	double l3 = vols[0]->line3;
+
+	double xhat[4] = {0, 1, 0, 0};
+	double yhat[4] = {0, 0, 1, 0};
+	double zhat[4] = {0, 0, 0, 1};
+	double rx[4] = {m2->status.time_simulation,
+			(vols[0]->x1[1] + vols[0]->x0[1]) * 0.5,
+			(vols[0]->x1[2]),
+			(vols[0]->x1[3])};
+	double ry[4] = {m2->status.time_simulation,
+			(vols[0]->x1[1]),
+			(vols[0]->x1[2] + vols[0]->x0[2]) * 0.5,
+			(vols[0]->x1[3])};
+	double rz[4] = {m2->status.time_simulation,
+			(vols[0]->x1[1]),
+			(vols[0]->x1[2]),
+			(vols[0]->x1[3] + vols[0]->x0[3]) * 0.5};
+
+	vols[0]->emf1 += m2stirring_get_field(&m2->stirring, rx, xhat) * l1;
+	vols[0]->emf2 += m2stirring_get_field(&m2->stirring, ry, yhat) * l2;
+	vols[0]->emf3 += m2stirring_get_field(&m2->stirring, rz, zhat) * l3;
+      }
+
       /* enforce conducting-wall outer boundary if in spherical coordinates */
       if (m2->geometry == M2_SPHERICAL &&
 	  vols[0]->global_index[1] == m2->domain_resolution[1]-1) {
@@ -526,23 +552,23 @@ static void _calculate_emf3(m2sim *m2)
 	vols[1][0]->emf2 = bnd[2]?0.0:_calculate_emf_single(emfs[2], 2)*l2;
 	vols[1][0]->emf3 = bnd[3]?0.0:_calculate_emf_single(emfs[3], 3)*l3;
 
-	double xhat[4] = {0, 1, 0, 0};
-	double yhat[4] = {0, 0, 1, 0};
-	double zhat[4] = {0, 0, 0, 1};
-	double rx[4] = {m2->status.time_simulation,
-			(vols[1][0]->x1[1] + vols[1][0]->x0[1]) * 0.5,
-			(vols[1][0]->x1[2]),
-			(vols[1][0]->x1[3])};
-	double ry[4] = {m2->status.time_simulation,
-			(vols[1][0]->x1[1]),
-			(vols[1][0]->x1[2] + vols[1][0]->x0[2]) * 0.5,
-			(vols[1][0]->x1[3])};
-	double rz[4] = {m2->status.time_simulation,
-			(vols[1][0]->x1[1]),
-			(vols[1][0]->x1[2]),
-			(vols[1][0]->x1[3] + vols[1][0]->x0[3]) * 0.5};
-
 	if (m2->stirring.stirring_type == M2_STIRRING_CURRENT) {
+	  double xhat[4] = {0, 1, 0, 0};
+	  double yhat[4] = {0, 0, 1, 0};
+	  double zhat[4] = {0, 0, 0, 1};
+	  double rx[4] = {m2->status.time_simulation,
+			  (vols[1][0]->x1[1] + vols[1][0]->x0[1]) * 0.5,
+			  (vols[1][0]->x1[2]),
+			  (vols[1][0]->x1[3])};
+	  double ry[4] = {m2->status.time_simulation,
+			  (vols[1][0]->x1[1]),
+			  (vols[1][0]->x1[2] + vols[1][0]->x0[2]) * 0.5,
+			  (vols[1][0]->x1[3])};
+	  double rz[4] = {m2->status.time_simulation,
+			  (vols[1][0]->x1[1]),
+			  (vols[1][0]->x1[2]),
+			  (vols[1][0]->x1[3] + vols[1][0]->x0[3]) * 0.5};
+
 	  vols[1][0]->emf1 += m2stirring_get_field(&m2->stirring, rx, xhat) * l1;
 	  vols[1][0]->emf2 += m2stirring_get_field(&m2->stirring, ry, yhat) * l2;
 	  vols[1][0]->emf3 += m2stirring_get_field(&m2->stirring, rz, zhat) * l3;
@@ -746,7 +772,7 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
     }
     if (m2->stirring.stirring_type == M2_STIRRING_KINETIC) {
       /* cartesian coordinates only */
-      double r[4] = { 0.0,
+      double r[4] = { m2->status.time_simulation,
 		      0.5 * (V->x0[1] + V->x1[1]),
 		      0.5 * (V->x0[2] + V->x1[2]),
 		      0.5 * (V->x0[3] + V->x1[3]) };
