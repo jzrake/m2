@@ -16,6 +16,14 @@ class HydromagneticForceCalculator(object):
                       self.checkpoint.cell_primitive['B3'][:]])
         return B
 
+    @logmethod
+    def velocity_field(self):
+        import numpy as np
+        v = np.array([self.checkpoint.cell_primitive['v1'][:],
+                      self.checkpoint.cell_primitive['v2'][:],
+                      self.checkpoint.cell_primitive['v3'][:]])
+        return v
+
     def get_ks(self, shape):
         """
         Get the wavenumber array, assuming all dimensions are length 1, while
@@ -90,15 +98,20 @@ class HydromagneticForceCalculator(object):
         return curl
 
     @logmethod
-    def power_spectrum(self, nbins=32):
+    def power_spectrum(self, which="magnetic", bins=256):
         import numpy as np
-        Bx = self.magnetic_field()
-        Ks = self.get_ks(Bx.shape)
-        Bk = np.fft.fftn(Bx, axes=[1,2,3])
+        if which == "magnetic":
+            fx = self.magnetic_field()
+        elif which == "velocity":
+            fx = self.velocity_field()
+        else:
+            raise ValueError()
+
+        Ks = self.get_ks(fx.shape)
+        Bk = np.fft.fftn(fx, axes=[1,2,3])
         B2 = (Bk[0]*Bk[0].conj() + Bk[1]*Bk[1].conj() + Bk[2]*Bk[2].conj()).real
         K = (Ks[0]**2 + Ks[1]**2 + Ks[2]**2)**0.5
-        #bins = np.logspace(np.log10(K[K!=0].min()), np.log10(K.max()), nbins)
-        bins = np.linspace(K[K!=0].min(), K.max(), nbins)
+        bins = np.linspace(K[K!=0].min(), K.max(), bins)
         dk, bins = np.histogram(K, bins=bins)
         dP, bins = np.histogram(K, bins=bins, weights=B2, normed=True)
         dk[dk==0] = 1
@@ -149,11 +162,16 @@ class CalculateForces(command.Command):
 class CalculatePowerSpectrum(command.Command):
     _alias = "power-spectrum"
     def configure_parser(self, parser):
-        parser.add_argument("filenames", nargs='+')
+        parser.add_argument("filenames", nargs='+', help="chkpt.h5:[velocity|magnetic]")
+        parser.add_argument("--bins", type=int, default=256)
 
     def run(self, args):
         import matplotlib.pyplot as plt
         for filename in args.filenames:
+            if ':' in filename:
+                filename, args.which = filename.split(':')
+            else:
+                args.which = 'magnetic'
             self.run_file(filename, args)
         plt.legend(loc='best')
         plt.show()
@@ -161,11 +179,10 @@ class CalculatePowerSpectrum(command.Command):
     def run_file(self, filename, args):
         import matplotlib.pyplot as plt
         calc = HydromagneticForceCalculator(filename)
-        x, y = calc.power_spectrum()
+        x, y = calc.power_spectrum(which=args.which, bins=args.bins)
         plt.xlim(x[0], x[-1])
-        plt.loglog(x, y, label=filename)
-        #plt.loglog(x, 1e-12*x**2)
-        #plt.loglog(x, 1e-12*x**1.3333)
+        plt.loglog(x, y, label=filename+':'+args.which)
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
