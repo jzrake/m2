@@ -1011,7 +1011,8 @@ int register_m2sim(lua_State *L)
     MI(relativistic),
     MI(magnetized),
     MI(rk_order),
-    MI(interpolation_fields),
+    MI(gradient_fields),
+    MI(gradient_estimation_method),
     MI(riemann_solver),
     MI(quartic_solver),
     MI(suppress_extrapolation_at_unhealthy_zones),
@@ -1199,6 +1200,8 @@ int luaopen_m2lib(lua_State *L)
   CONSTANT(M2_CT_FULL3D);
   CONSTANT(M2_RIEMANN_HLLE);
   CONSTANT(M2_RIEMANN_HLLC);
+  CONSTANT(M2_GRADIENT_ESTIMATION_PCM);
+  CONSTANT(M2_GRADIENT_ESTIMATION_PLM);
   CONSTANT(M2_QUARTIC_NONE);
   CONSTANT(M2_QUARTIC_FULL_COMPLEX);
   CONSTANT(M2_QUARTIC_ALGORITHMIC);

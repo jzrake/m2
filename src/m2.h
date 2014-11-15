@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "m2-cfg.h"
+//#include "mesh.h"
 #include "jsw_rand.h"
 
 
@@ -68,6 +69,10 @@ enum m2flag {
   M2_RIEMANN_HLLE,
   M2_RIEMANN_HLLC,
 
+  /* Gradient estimation */
+  M2_GRADIENT_ESTIMATION_PCM, /* piecewise-constant */
+  M2_GRADIENT_ESTIMATION_PLM, /* piecewise-linear (generalized minmod) */
+
   /* Quartic polynomial solvers */
   M2_QUARTIC_NONE,
   M2_QUARTIC_FULL_COMPLEX,
@@ -108,10 +113,42 @@ typedef struct m2prim m2prim;
 typedef struct m2sim_status m2sim_status;
 typedef struct m2reductions m2reductions;
 typedef struct m2stirring m2stirring;
+typedef struct mesh m2mesh;
 
 typedef void (*m2vol_operator)(m2vol *vol);
 typedef void (*m2sim_operator)(m2sim *m2);
 typedef void (*m2crd_function)(m2sim *m2, double X[4], double N[4], double *Y);
+
+enum {
+  MESH_GEOMETRY_CARTESIAN,
+  MESH_GEOMETRY_CYLINDRICAL,
+  MESH_GEOMETRY_SPHERICAL,
+
+  MESH_BOUNDARY_TYPE_PERIODIC,
+  MESH_BOUNDARY_TYPE_POLAR,
+  MESH_BOUNDARY_TYPE_ORIGIN,
+  MESH_BOUNDARY_TYPE_PROCESSOR
+} ;
+
+struct mesh
+{
+  int geometry;
+  int global_grid_size[4];
+  int global_grid_start[4];
+  int boundary_upper[4];
+  int boundary_lower[4];
+  int edge_bytes;
+  int face_bytes;
+  int cell_bytes;
+  int edges_shape[4][4];
+  int faces_shape[4][4];
+  int cells_shape[4];
+  double total_extent_lower[4];
+  double total_extent_upper[4];
+  struct mesh_edge *edges[4];
+  struct mesh_face *faces[4];
+  struct mesh_cell *cells;
+} ;
 
 struct m2prim
 {
@@ -129,6 +166,44 @@ struct m2aux
   double gas_pressure;
   double magnetic_pressure;
   m2sim *m2;
+} ;
+
+struct mesh_edge
+{
+  int id;
+  int axis;
+  double length;
+  double x[4]; /* coordinates of edge midpoint */
+  double emf; /* electromotive force (dimensions of voltage) */
+} ;
+
+struct mesh_face
+{
+  int id;
+  int axis;
+  double area;
+  double x[4]; /* coordinates of face centroid */
+  double BfluxA; /* magnetic flux */
+  double BfluxB; /* RK cache */
+  double flux[8]; /* Godunov fluxes */
+} ;
+
+struct mesh_cell
+{
+  int id;
+  int zone_type;
+  int global_i;
+  int global_j;
+  int global_k;
+  double volume;
+  double grad1[8];
+  double grad2[8];
+  double grad3[8];
+  double consA[5];
+  double consB[5]; /* RK cache for cons */
+  double x[4]; /* coordinates of cell center */
+  m2prim prim;
+  m2aux aux;
 } ;
 
 struct m2vol
@@ -224,7 +299,8 @@ struct m2sim
   int relativistic;
   int magnetized;
   int rk_order;
-  int interpolation_fields;
+  int gradient_fields;
+  int gradient_estimation_method;
   int riemann_solver;
   int quartic_solver;
   int suppress_extrapolation_at_unhealthy_zones;
@@ -252,6 +328,7 @@ struct m2sim
   m2crd_function initial_data_edge;
   m2vol_operator add_physical_source_terms;
   m2vol *volumes;
+  m2mesh mesh;
   void *user_struct;
   void *cart_comm;
   void *mpi_types;
@@ -317,6 +394,7 @@ void m2sim_write_ascii_2d(m2sim *m2, const char *fname);
 void m2sim_run_analysis(m2sim *m2);
 void m2sim_run_initial_data(m2sim *m2);
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P);
+void m2sim_to_interpolated(m2sim *m2, m2prim *P, m2aux *A, double *y, int stride);
 int m2sim_memory_usage(m2sim *m2);
 int m2sim_from_conserved_all(m2sim *m2);
 int m2sim_from_primitive_all(m2sim *m2);
@@ -327,7 +405,6 @@ int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
-double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V));
 void m2sim_drive(m2sim *m2);
 void m2sim_visualize(m2sim *m2, int argc, char **argv);
 
@@ -348,6 +425,27 @@ void m2stirring_init(m2stirring *S);
 void m2stirring_del(m2stirring *S);
 void m2stirring_next_realization(m2stirring *S);
 double m2stirring_get_field(m2stirring *S, double x[4], double n[4]);
+
+
+
+/* mesh */
+void mesh_new(struct mesh *M);
+void mesh_allocate(struct mesh *M);
+void mesh_deallocate(struct mesh *M);
+
+void mesh_cell_faces1(struct mesh *M, int cell_id, int face_ids[6]);
+void mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4]);
+void mesh_face_cells1(struct mesh *M, int axis, int face_id, int cell_ids[2]);
+void mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4]);
+void mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4]);
+void mesh_cell_faces(struct mesh *M, struct mesh_cell *cell, struct mesh_face *faces[6]);
+void mesh_face_edges(struct mesh *M, struct mesh_face *face, struct mesh_edge *edges[4]);
+void mesh_face_cells(struct mesh *M, struct mesh_face *face, struct mesh_cell *cells[2]);
+void mesh_edge_faces(struct mesh *M, struct mesh_edge *edge, struct mesh_face *faces[4]);
+void mesh_edge_cells(struct mesh *M, struct mesh_edge *edge, struct mesh_cell *cells[4]);
+
+int  mesh_multi_to_linear(int dims[4], int index[4]);
+void mesh_linear_to_multi(int n, int dims[4], int index[4]);
 
 
 

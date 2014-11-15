@@ -283,6 +283,8 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
       end
 
       for i,member in ipairs(struct.members(self._m2)) do
+	 -- TODO: write string value to config; rename to solver_config
+	 -- think of a way to remain backwards compatible with old checkpoints
          h5config[member] = tostring(self._m2[member])
       end
       for i,member in ipairs(struct.members(self.status)) do
@@ -357,7 +359,7 @@ function m2Application:read_checkpoint_hdf5(fname)
 
 
    -----------------------------------------------------------------------------
-   -- Read status and problem meta-data from HDF5
+   -- Read reductions log from HDF5
    -----------------------------------------------------------------------------
    local h5reduct = h5file['reductions_log']
    if h5reduct then

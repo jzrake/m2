@@ -1078,7 +1078,7 @@ function Spheromak:__init__()
       local d = r < shell and 1e0 or 1e5
       return {d, 0.1, 0.0, 0.0, 0.0}
    end
-   self.initial_data_face = function(x, n)
+   self.initial_data_face = function(x, n) -- !!ATTN!! this is setting B, not A
       local A = { }
       if mps.spherical then
 	 local r, t, p = x[1]+1e-12, x[2], x[3]

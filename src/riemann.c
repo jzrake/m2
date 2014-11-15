@@ -5,8 +5,18 @@
 
 /* #define RIEMANN_DEBUG */
 
+
 static void _hllc_nrhyd(m2riemann_problem *R);
 static void _hllc_nrmhd(m2riemann_problem *R);
+
+
+void riemann_solver(struct mesh_cell *CL,
+		    struct mesh_cell *CR,
+		    int axis, double F[8])
+{
+
+}
+
 
 void riemann_solver_hlle(m2riemann_problem *R)
 {

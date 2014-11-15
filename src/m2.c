@@ -52,7 +52,8 @@ void m2sim_new(m2sim *m2)
   m2->relativistic = 0;
   m2->magnetized = 0;
   m2->rk_order = 2;
-  m2->interpolation_fields = M2_PRIMITIVE;
+  m2->gradient_fields = M2_PRIMITIVE;
+  m2->gradient_estimation_method = M2_GRADIENT_ESTIMATION_PLM;
   m2->riemann_solver = M2_RIEMANN_HLLE;
   m2->quartic_solver = M2_QUARTIC_FULL_COMPLEX;
   m2->plm_parameter = 1.5;
@@ -92,8 +93,12 @@ void m2sim_new(m2sim *m2)
   m2->suppress_extrapolation_at_unhealthy_zones = 1;
   m2->pressure_floor = -1.0; /* disabled */
 
+  mesh_new(&m2->mesh);
   jsw_seed(&m2->stirring.random, 12345);
 }
+
+
+
 void m2sim_del(m2sim *m2)
 {
   if (m2->cart_comm) {
@@ -101,8 +106,12 @@ void m2sim_del(m2sim *m2)
   }
   free(m2->volumes);
   m2->volumes = NULL;
+  mesh_deallocate(&m2->mesh);
   m2stirring_del(&m2->stirring);
 }
+
+
+
 void m2sim_initialize(m2sim *m2)
 /*
  * Each axes is either periodic or is bounded by hard walls at both sides. If it
@@ -110,14 +119,10 @@ void m2sim_initialize(m2sim *m2)
  *
  */
 {
-  int *G = m2->domain_resolution;
   int *L = m2->local_grid_size;
   int *S = m2->local_grid_start;
-  int *ng0 = m2->number_guard_zones0;
-  int *ng1 = m2->number_guard_zones1;
-  int i, j, k, d;
+  int n, d;
   double I0[4], I1[4], x0[4], x1[4];
-  m2vol *V;
 
   L[0] = L[1] * L[2] * L[3];
 
@@ -125,143 +130,79 @@ void m2sim_initialize(m2sim *m2)
     m2sim_create_mpi_types(m2);
   }
 
-  m2->volumes = (m2vol*) realloc(m2->volumes, L[0] * sizeof(m2vol));
-  for (i=0; i<L[1]; ++i) {
-    for (j=0; j<L[2]; ++j) {
-      for (k=0; k<L[3]; ++k) {
 
-	V = m2->volumes + M2_IND(i,j,k);
-	memset(V, 0, sizeof(m2vol));
+  m2->mesh.cells_shape[1] = L[1];
+  m2->mesh.cells_shape[2] = L[2];
+  m2->mesh.cells_shape[3] = L[3];
+  mesh_allocate(&m2->mesh);
 
-	V->m2 = m2;
-	V->aux.m2 = m2;
-	/* ----------------------- */
-	/* cache cell global index */
-	/* ----------------------- */
-	for (d=1; d<=3; ++d) {
-	  V->global_index[0] = M2_IND(i,j,k);
-	  V->global_index[1] = i + S[1];
-	  V->global_index[2] = j + S[2];
-	  V->global_index[3] = k + S[3];
-	}
-	/* the left-most cell along each fleshed out, non-periodic axis is a
-	   shell (it has no volume data, only +1/2 face data) */
-	if ((m2->periodic_dimension[1] == 0 && V->global_index[1] == -1) ||
-	    (m2->periodic_dimension[2] == 0 && V->global_index[2] == -1) ||
-	    (m2->periodic_dimension[3] == 0 && V->global_index[3] == -1)) {
-	  V->zone_type = M2_ZONE_TYPE_SHELL;
-	}
-	else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) || 
-		 (G[2] > 1 && (j < ng0[2] || j >= L[2] - ng1[2])) || 
-		 (G[3] > 1 && (k < ng0[3] || k >= L[3] - ng1[3]))) {
-	  V->zone_type = M2_ZONE_TYPE_GUARD;
-	}
-	else {
-	  V->zone_type = M2_ZONE_TYPE_FULL;
-	}
-	V->zone_health = M2_ZONE_HEALTH_GOOD;
 
-	/* ----------------------- */
-	/* cache cell volumes      */
-	/* ----------------------- */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	if (V->zone_type != M2_ZONE_TYPE_SHELL) {
-	  V->volume = m2_volume_measure(x0, x1, m2->geometry);
-	}
-	else {
-	  V->volume = 0.0;
-	}
-	memcpy(V->x0, x0, 4 * sizeof(double));
-	memcpy(V->x1, x1, 4 * sizeof(double));
-	/* ------------------------ */
-	/* cache cell surface areas */
-	/* ------------------------ */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] + 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->area1 = m2_area_measure(x0, x1, m2->geometry, 1); /* axis 1 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] + 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->area2 = m2_area_measure(x0, x1, m2->geometry, 2); /* axis 2 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] + 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->area3 = m2_area_measure(x0, x1, m2->geometry, 3); /* axis 3 */
-	/* ---------------------------- */
-	/* cache cell linear dimensions */
-	/* ---------------------------- */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] + 0.5;
-	I0[3] = V->global_index[3] + 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->line1 = m2_line_measure(x0, x1, m2->geometry, 1); /* axis 1 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] + 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] + 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->line2 = m2_line_measure(x0, x1, m2->geometry, 2); /* axis 2 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] + 0.5;
-	I0[2] = V->global_index[2] + 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->line3 = m2_line_measure(x0, x1, m2->geometry, 3); /* axis 3 */
-      }
+  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+    int I[4];
+    struct mesh_cell *C = m2->mesh.cells + n;
+    mesh_linear_to_multi(n, m2->mesh.cells_shape, I);
+    C->global_i = I[1] + S[1];
+    C->global_j = I[2] + S[2];
+    C->global_k = I[3] + S[3];
+    I0[1] = C->global_i - 0.5;
+    I0[2] = C->global_j - 0.5;
+    I0[3] = C->global_k - 0.5;
+    I1[1] = C->global_i + 0.5;
+    I1[2] = C->global_j + 0.5;
+    I1[3] = C->global_k + 0.5;
+    m2sim_index_to_position(m2, I0, x0);
+    m2sim_index_to_position(m2, I1, x1);
+    C->volume = m2_volume_measure(x0, x1, m2->geometry);
+    C->x[1] = 0.5 * (x0[1] + x1[1]);
+    C->x[2] = 0.5 * (x0[2] + x1[2]);
+    C->x[3] = 0.5 * (x0[3] + x1[3]);
+  }
+
+  for (d=1; d<=3; ++d) {
+    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
+      int I[4];
+      struct mesh_face *F = m2->mesh.faces[d] + n;
+      mesh_linear_to_multi(n, m2->mesh.faces_shape[d], I);
+      I0[1] = I[1] + S[1];
+      I0[2] = I[2] + S[2];
+      I0[3] = I[3] + S[3];
+      I1[1] = I[1] + S[1] + 1.0 * (d != 1);
+      I1[2] = I[2] + S[2] + 1.0 * (d != 2);
+      I1[3] = I[3] + S[3] + 1.0 * (d != 3);
+      m2sim_index_to_position(m2, I0, x0);
+      m2sim_index_to_position(m2, I1, x1);
+      F->area = m2_area_measure(x0, x1, m2->geometry, d);
+      F->x[1] = 0.5 * (x0[1] + x1[1]);
+      F->x[2] = 0.5 * (x0[2] + x1[2]);
+      F->x[3] = 0.5 * (x0[3] + x1[3]);
+    }
+
+    for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
+      int I[4];
+      struct mesh_edge *E = m2->mesh.edges[d] + n;
+      mesh_linear_to_multi(n, m2->mesh.edges_shape[d], I);
+      I0[1] = I[1] + S[1];
+      I0[2] = I[2] + S[2];
+      I0[3] = I[3] + S[3];
+      I1[1] = I[1] + S[1] + 1.0 * (d == 1);
+      I1[2] = I[2] + S[2] + 1.0 * (d == 2);
+      I1[3] = I[3] + S[3] + 1.0 * (d == 3);
+      m2sim_index_to_position(m2, I0, x0);
+      m2sim_index_to_position(m2, I1, x1);
+      E->length = m2_line_measure(x0, x1, m2->geometry, d);
+      E->x[1] = 0.5 * (x0[1] + x1[1]);
+      E->x[2] = 0.5 * (x0[2] + x1[2]);
+      E->x[3] = 0.5 * (x0[3] + x1[3]);
     }
   }
 }
+
+
+
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
 {
   double u0;
-  switch (m2->interpolation_fields) {
+  switch (m2->gradient_fields) {
   case M2_PRIMITIVE:
     P->v1 = y[0];
     P->v2 = y[1];
@@ -294,35 +235,41 @@ void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P)
     break;
   }
 }
-void m2vol_to_interpolated(m2vol *V, double *y, int stride)
+
+
+
+void m2sim_to_interpolated(m2sim *m2, m2prim *P, m2aux *A, double *y, int stride)
 {
-  switch (V->m2->interpolation_fields) {
+  switch (m2->gradient_fields) {
   case M2_PRIMITIVE:
-    y[0*stride] = V->prim.v1;
-    y[1*stride] = V->prim.v2;
-    y[2*stride] = V->prim.v3;
-    y[3*stride] = V->prim.B1;
-    y[4*stride] = V->prim.B2;
-    y[5*stride] = V->prim.B3;
-    y[6*stride] = V->prim.d;
-    y[7*stride] = V->prim.p;
+    y[0*stride] = P->v1;
+    y[1*stride] = P->v2;
+    y[2*stride] = P->v3;
+    y[3*stride] = P->B1;
+    y[4*stride] = P->B2;
+    y[5*stride] = P->B3;
+    y[6*stride] = P->d;
+    y[7*stride] = P->p;
     break;
   case M2_PRIMITIVE_AND_FOUR_VELOCITY:
     /* gamma * beta = {y[0], y[1], y[2]} */
-    y[0*stride] = V->aux.velocity_four_vector[1];
-    y[1*stride] = V->aux.velocity_four_vector[2];
-    y[2*stride] = V->aux.velocity_four_vector[3];
-    y[3*stride] = V->prim.B1;
-    y[4*stride] = V->prim.B2;
-    y[5*stride] = V->prim.B3;
-    y[6*stride] = V->prim.d;
-    y[7*stride] = V->prim.p;
+    y[0*stride] = A->velocity_four_vector[1];
+    y[1*stride] = A->velocity_four_vector[2];
+    y[2*stride] = A->velocity_four_vector[3];
+    y[3*stride] = P->B1;
+    y[4*stride] = P->B2;
+    y[5*stride] = P->B3;
+    y[6*stride] = P->d;
+    y[7*stride] = P->p;
     break;
   default:
     MSG(FATAL, "unknown interpolation fields");
     break;
   }
 }
+
+
+
 double m2vol_minimum_dimension(m2vol *V)
 {
   double l1 = V->m2->domain_resolution[1] > 1 ? V->line1 : DBL_MAX;
@@ -382,6 +329,9 @@ double m2aux_get(m2aux *aux, int member)
   default: return m2aux_measure(aux, member);
   }
 }
+
+
+
 double m2aux_mach(m2aux *aux, double n[4], int mode)
 /*
  * Return a signed, directional Mach number for either fast, slow, or Alfven
@@ -417,26 +367,9 @@ double m2aux_mach(m2aux *aux, double n[4], int mode)
   }
   return (up + um) / (up - um);
 }
-double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
-{
-  m2vol *V;
-  int *L = m2->local_grid_size;
-  int n;
-  double y = 0.0;
-  for (n=0; n<L[0]; ++n) {
-    V = m2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
-      continue;
-    }
-    else if (cut_cb) {
-      if (cut_cb(V) == 0) {
-	continue;
-      }
-    }
-    y += m2aux_get(&V->aux, member) * V->volume;
-  }
-  return y;
-}
+
+
+
 void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
 {
   I[0] = global_index[0];
@@ -444,6 +377,9 @@ void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
   I[2] = global_index[2] - m2->local_grid_start[2];
   I[3] = global_index[3] - m2->local_grid_start[3];
 }
+
+
+
 void m2sim_run_analysis(m2sim *m2)
 {
   if (m2->analysis) {
@@ -453,85 +389,53 @@ void m2sim_run_analysis(m2sim *m2)
     /* it's OK, analysis function isn't required */
   }
 }
+
+
+
 void m2sim_run_initial_data(m2sim *m2)
 {
-  int *L = m2->local_grid_size;
-  int n, q;
-  double X[4];
-  double N[4]; /* unit vector for faces and edges */
+  int n, d;
+  double N[4] = {0,0,0,0}; /* unit vector for faces and edges */
   double prim[5], Bfield, Efield;
-  m2vol *V;
 
-  for (n=0; n<L[0]; ++n) {
+  struct mesh_cell *C;
+  struct mesh_face *F;
+  struct mesh_edge *E;
 
-    V = m2->volumes + n;
+  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+    C = m2->mesh.cells + n;
+    m2->initial_data_cell(m2, C->x, NULL, prim);
+    C->prim.d  = prim[RHO];
+    C->prim.p  = prim[PRE];
+    C->prim.v1 = prim[V11];
+    C->prim.v2 = prim[V22];
+    C->prim.v3 = prim[V33];
+    C->zone_type = M2_ZONE_TYPE_FULL; /* TODO: account for guard zones */
+  }
 
-    for (q=0; q<8; ++q) {
-      V->flux1[q] = 0.0;
-      V->flux2[q] = 0.0;
-      V->flux3[q] = 0.0;
+  for (d=1; d<=3; ++d) {
+    N[d] = 1.0;
+    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
+      F = m2->mesh.faces[d] + n;
+      if (m2->initial_data_face) {
+	m2->initial_data_face(m2, F->x, N, &Bfield);
+      }
+      else {
+	Bfield = 0.0;
+      }
+      F->BfluxA = Bfield * F->area;
     }
-
-    if (m2->initial_data_cell) {
-      X[0] = 0.0;
-      X[1] = 0.5 * (V->x1[1] + V->x0[1]);
-      X[2] = 0.5 * (V->x1[2] + V->x0[2]);
-      X[3] = 0.5 * (V->x1[3] + V->x0[3]);
-      m2->initial_data_cell(m2, X, NULL, prim);
-      V->prim.d  = prim[RHO];
-      V->prim.p  = prim[PRE];
-      V->prim.v1 = prim[V11];
-      V->prim.v2 = prim[V22];
-      V->prim.v3 = prim[V33];
+    for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
+      E = m2->mesh.edges[d] + n;
+      if (m2->initial_data_edge) {
+	m2->initial_data_edge(m2, E->x, N, &Efield);
+      }
+      else {
+	Efield = 0.0;
+      }
+      E->emf = Efield * E->length;
     }
-    if (m2->initial_data_face) {
-      N[1] = 1.0; X[1] =        V->x1[1];
-      N[2] = 0.0; X[2] = 0.5 * (V->x1[2] + V->x0[2]);
-      N[3] = 0.0; X[3] = 0.5 * (V->x1[3] + V->x0[3]);
-      m2->initial_data_face(m2, X, N, &Bfield);
-      V->Bflux1A = Bfield * V->area1;
-
-      N[1] = 0.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
-      N[2] = 1.0; X[2] =        V->x1[2];
-      N[3] = 0.0; X[3] = 0.5 * (V->x1[3] + V->x0[3]);
-      m2->initial_data_face(m2, X, N, &Bfield);
-      V->Bflux2A = Bfield * V->area2;
-
-      N[1] = 0.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
-      N[2] = 0.0; X[2] = 0.5 * (V->x1[2] + V->x0[2]);
-      N[3] = 1.0; X[3] =        V->x1[3];
-      m2->initial_data_face(m2, X, N, &Bfield);
-      V->Bflux3A = Bfield * V->area3;
-    }
-    else {
-      /* V->Bflux1A = 0.0; */
-      /* V->Bflux2A = 0.0; */
-      /* V->Bflux3A = 0.0; */
-    }
-    if (m2->initial_data_edge) {
-      N[1] = 1.0; X[1] = 0.5 * (V->x1[1] + V->x0[1]);
-      N[2] = 0.0; X[2] =        V->x1[2];
-      N[3] = 0.0; X[3] =        V->x1[3];
-      m2->initial_data_edge(m2, X, N, &Efield);
-      V->emf1 = Efield * V->line1;
-
-      N[1] = 0.0; X[1] =        V->x1[1];
-      N[2] = 1.0; X[2] = 0.5 * (V->x1[2] + V->x0[2]);
-      N[3] = 0.0; X[3] =        V->x1[3];
-      m2->initial_data_edge(m2, X, N, &Efield);
-      V->emf2 = Efield * V->line2;
-
-      N[1] = 0.0; X[1] =        V->x1[1];
-      N[2] = 0.0; X[2] =        V->x1[2];
-      N[3] = 1.0; X[3] = 0.5 * (V->x1[3] + V->x0[3]);
-      m2->initial_data_edge(m2, X, N, &Efield);
-      V->emf3 = Efield * V->line3;
-    }
-    else {
-      /* V->emf1 = 0.0; */
-      /* V->emf2 = 0.0; */
-      /* V->emf3 = 0.0; */
-    }
+    N[d] = 0.0;
   }
 
   /* in case data was set manually on interior zones, synch it first */
@@ -546,6 +450,7 @@ void m2sim_run_initial_data(m2sim *m2)
 
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)
 {
+  /* TODO: emove this function or change to a cell function */
   m2sim *m2 = V->m2;
   int *L = m2->local_grid_size;
   int I[4];

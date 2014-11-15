@@ -11,10 +11,13 @@ static inline void linear_to_multi(int n, int dims[4], int index[4])
   index[3] = n / S[3]; n -= index[3] * S[3]; 
 }
 
+
+
 static inline int multi_to_linear(int dims[4], int index[4])
 {
   int S[4] = {0, dims[3] * dims[2], dims[3], 1};
   int n = S[1]*index[1] + S[2]*index[2] + S[3]*index[3];
+  /* TODO: change out-of-bounds to real multi-dimensional check */
   return n < 0 || n >= dims[0] ? -1 : n; /* -1 indicates out-of-bounds */
 }
 
@@ -25,10 +28,30 @@ void mesh_linear_to_multi(int n, int dims[4], int index[4])
   linear_to_multi(n, dims, index);
 }
 
-void mesh_multi_to_linear(int dims[4], int index[4])
+
+
+int mesh_multi_to_linear(int dims[4], int index[4])
 {
-  multi_to_linear(dims, index);
+  return multi_to_linear(dims, index);
 }
+
+
+
+void mesh_new(struct mesh *M)
+{
+  int d, e;
+  M->cells = NULL;
+  for (d=0; d<=3; ++d) {
+    M->cells_shape[d] = 0;
+    for (e=0; e<=3; ++e) {
+      M->edges_shape[d][e] = 0;
+      M->faces_shape[d][e] = 0;
+    }
+    M->edges[d] = NULL;
+    M->faces[d] = NULL;
+  }
+}
+
 
 
 void mesh_allocate(struct mesh *M)
@@ -37,7 +60,6 @@ void mesh_allocate(struct mesh *M)
 #define F M->faces_shape
 #define C M->cells_shape
   int d, n;
-
   for (d=1; d<=3; ++d) {
     F[d][1] = C[1] + (d == 1);
     F[d][2] = C[2] + (d == 2);
@@ -46,19 +68,16 @@ void mesh_allocate(struct mesh *M)
     E[d][2] = C[2] + (d != 2);
     E[d][3] = C[3] + (d != 3);
   }
-
   for (d=1; d<=3; ++d) {
     E[d][0] = E[d][1] * E[d][2] * E[d][3];
     F[d][0] = F[d][1] * F[d][2] * F[d][3];
   }
   C[0] = C[1] * C[2] * C[3];
-
   for (d=1; d<=3; ++d) {
     M->edges[d] = (struct mesh_edge*) malloc(E[d][0]*sizeof(struct mesh_edge));
     M->faces[d] = (struct mesh_face*) malloc(F[d][0]*sizeof(struct mesh_face));
   }
   M->cells = (struct mesh_cell*) malloc(C[0]*sizeof(struct mesh_cell));
-
   for (d=1; d<=3; ++d) {
     for (n=0; n<E[d][0]; ++n) {
       M->edges[d][n].id = n;
@@ -72,7 +91,6 @@ void mesh_allocate(struct mesh *M)
   for (n=0; n<C[0]; ++n) {
     M->cells[n].id = n;
   }
-
 #undef E
 #undef F
 #undef C
