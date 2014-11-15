@@ -17,8 +17,14 @@ static inline int multi_to_linear(int dims[4], int index[4])
 {
   int S[4] = {0, dims[3] * dims[2], dims[3], 1};
   int n = S[1]*index[1] + S[2]*index[2] + S[3]*index[3];
-  /* TODO: change out-of-bounds to real multi-dimensional check */
-  return n < 0 || n >= dims[0] ? -1 : n; /* -1 indicates out-of-bounds */
+  if (index[1] < 0 || dims[1] <= index[1] ||
+      index[2] < 0 || dims[2] <= index[2] ||
+      index[3] < 0 || dims[3] <= index[3]) {
+    return -1;
+  }
+  else {
+    return n;
+  }
 }
 
 

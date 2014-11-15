@@ -458,3 +458,29 @@ m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)
   I[axis] += dist;
   return M2_VOL(I[1], I[2], I[3]);
 }
+
+
+
+
+/* -----------------------------------------------------------------------------
+* These functions return 1 if the error was fatal, and 0 otherwise. For each of
+* the error flags, there is a corresponding response description that includes
+* whether that error should be discarded or pushed, or is fatal.
+* -----------------------------------------------------------------------------
+*/
+int m2sim_error_cell(m2sim *m2, struct mesh_cell *C, int error_flag)
+{
+  return 0;
+}
+int m2sim_error_face(m2sim *m2, struct mesh_face *F, int error_flag)
+{
+  return 0;
+}
+int m2sim_error_edge(m2sim *m2, struct mesh_edge *E, int error_flag)
+{
+  return 0;
+}
+int m2sim_error_general(m2sim *m2, const char *message)
+{
+  return 1;
+}

@@ -1,35 +1,24 @@
 #include <string.h>
 #include <math.h>
 #include "m2.h"
-#include "riemann.h"
 #if M2_HAVE_MPI
 #include <mpi.h>
 #endif
 
 
 
-#define minval3(a,b,c) ((a<b) ? ((a<c) ? a : c) : ((b<c) ? b : c))
-#define sign(x) ((x > 0.0) - (x < 0.0))
-
 static void global_sum(m2sim *m2, int *N);
 static void global_min(m2sim *m2, double *x);
-static double plm_gradient(double *xs, double *fs, double plm);
-
+static double plm_gradient(double *xs, double *fs, double plm, int *error);
 
 
 
 int m2sim_calculate_flux(m2sim *m2)
 {
-  struct mesh_face *F;
-  struct mesh_cell *cells[2];
   int n, d;
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = m2->mesh.faces[d] + n;
-      mesh_face_cells(&m2->mesh, F, cells);
-      if (cells[0] && cells[1]) {
-	riemann_solver(cells[0], cells[1], d, F->flux);
-      }
+      m2sim_riemann_solver(m2, &m2->mesh.faces[d][n]);
     }
   }
   return 0;
@@ -49,6 +38,8 @@ int m2sim_calculate_gradient(m2sim *m2)
   struct mesh_cell *C[3];
   int *dims = m2->mesh.cells_shape;
   int n, d, q, i;
+  int err = 0;
+  int set_grad_to_zero = 0;
   int I[4];
   int m[3];
   double x[3];
@@ -63,13 +54,7 @@ int m2sim_calculate_gradient(m2sim *m2)
       C[1] = m2->mesh.cells + m[1];
       if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PCM ||
 	  m[0] == -1 || m[2] == -1) { /* bordering the grid edge */
-	for (q=0; q<8; ++q) {
-	  switch (d) {
-	  case 1: C[1]->grad1[q] = 0.0; break;
-	  case 2: C[1]->grad2[q] = 0.0; break;
-	  case 3: C[1]->grad3[q] = 0.0; break;
-	  }
-	}
+	set_grad_to_zero = 1;
       }
       else if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PLM) {
 	for (i=0; i<3; ++i) {
@@ -79,15 +64,28 @@ int m2sim_calculate_gradient(m2sim *m2)
 	}
 	for (q=0; q<8; ++q) {
 	  switch (d) {
-	  case 1: C[1]->grad1[q] = plm_gradient(x, &y[3*q], theta); break;
-	  case 2: C[1]->grad2[q] = plm_gradient(x, &y[3*q], theta); break;
-	  case 3: C[1]->grad3[q] = plm_gradient(x, &y[3*q], theta); break;
+	  case 1: C[1]->grad1[q] = plm_gradient(x, &y[3*q], theta, &err); break;
+	  case 2: C[1]->grad2[q] = plm_gradient(x, &y[3*q], theta, &err); break;
+	  case 3: C[1]->grad3[q] = plm_gradient(x, &y[3*q], theta, &err); break;
 	  }
+	}
+	if (err > 0) {
+	  m2sim_error_cell(m2, C[1], M2_ERROR_GRADIENT_ESTIMATION);
+	  set_grad_to_zero = 1;
 	}
       }
       else {
-	/* m2sim_push_error(m2, "invalid gradient_estimation_method") */
-	/* TODO: push an error (create m2 error stack) */
+	m2sim_error_general(m2, "invalid gradient estimation method");
+	set_grad_to_zero = 1;
+      }
+      if (set_grad_to_zero) {
+	for (q=0; q<8; ++q) {
+	  switch (d) {
+	  case 1: C[1]->grad1[q] = 0.0; break;
+	  case 2: C[1]->grad2[q] = 0.0; break;
+	  case 3: C[1]->grad3[q] = 0.0; break;
+	  }
+	}
       }
     }
   }
@@ -271,7 +269,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
     double dx1 = faces[1]->x[1] - faces[0]->x[1];
     double dx2 = faces[3]->x[2] - faces[2]->x[2];
     double dx3 = faces[5]->x[3] - faces[4]->x[3];
-    double L = minval3(dx1, dx2, dx3);
+    double L = M2_MIN3(dx1, dx2, dx3);
     double a = m2aux_maximum_wavespeed(&C->aux, &error);
     if (n == 0 || L/a < dt) {
       dt = L/a;
@@ -515,8 +513,10 @@ static void global_min(m2sim *m2, double *x)
 
 
 
-static double plm_gradient(double *xs, double *fs, double plm)
+static double plm_gradient(double *xs, double *fs, double plm, int *error)
 {
+#define sign M2_SIGN
+#define min3 M2_MIN3
   double xL = xs[0];
   double x0 = xs[1];
   double xR = xs[2];
@@ -528,10 +528,9 @@ static double plm_gradient(double *xs, double *fs, double plm)
   double c = (y0 - yR) / (x0 - xR) * plm;
   double sa = sign(a), sb = sign(b), sc = sign(c);
   double fa = fabs(a), fb = fabs(b), fc = fabs(c);
-  double g = 0.25 * fabs(sa + sb) * (sa + sc) * minval3(fa, fb, fc);
-  if (g != g) {
-    MSGF(FATAL, "got NAN gradient: [%f %f %f] [%f %f %f]",
-         xs[0], xs[1], xs[2], fs[0], fs[1], fs[2]);
-  }
+  double g = 0.25 * fabs(sa + sb) * (sa + sc) * min3(fa, fb, fc);
+  *error += g != g;
   return g;
+#undef sign
+#undef min3
 }

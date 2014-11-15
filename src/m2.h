@@ -93,6 +93,12 @@ enum m2flag {
   M2_STIRRING_CURRENT,
 } ;
 
+
+enum { M2_ERROR_BAD_EIGENVALUES,
+       M2_ERROR_FAILED_CONSERVED_INVERSION,
+       M2_ERROR_QUARTIC_SOLVER,
+       M2_ERROR_GRADIENT_ESTIMATION };
+
 enum { M2_BIT_BAD_EIGENVALUES,
        M2_BIT_FAILED_CONSERVED_INVERSION,
        M2_BIT_NEARLY_FAILED_CONSERVED_INVERSION,
@@ -361,7 +367,6 @@ double m2_magnetic_rope_vector_potential(double x[4], double n[4]);
 double m2vol_minimum_dimension(m2vol *V);
 double m2vol_coordinate_centroid(m2vol *V, int axis);
 void m2vol_coordinate_centroid_3d(m2vol *V, double x[4]);
-void m2vol_to_interpolated(m2vol *V, double *y, int stride);
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist);
 int m2vol_from_primitive(m2vol *V);
 
@@ -405,8 +410,16 @@ int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
+void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F);
 void m2sim_drive(m2sim *m2);
 void m2sim_visualize(m2sim *m2, int argc, char **argv);
+
+
+/* error functions */
+int m2sim_error_cell(m2sim *m2, struct mesh_cell *C, int error_flag);
+int m2sim_error_face(m2sim *m2, struct mesh_face *F, int error_flag);
+int m2sim_error_edge(m2sim *m2, struct mesh_edge *E, int error_flag);
+int m2sim_error_general(m2sim *m2, const char *message);
 
 
 /* aux */
@@ -462,6 +475,7 @@ void mesh_linear_to_multi(int n, int dims[4], int index[4]);
 		      ((k)>=0)&&(k)<L[3]?m2->volumes+M2_IND(i,j,k):NULL)
 #define M2_MAX3(a,b,c)(((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c)))
 #define M2_MIN3(a,b,c)(((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c)))
+#define M2_SIGN(a)(((a)>0)-((a)<0))
 
 #define DEBUG 'D'
 #define INFO 'I'

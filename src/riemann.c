@@ -3,6 +3,7 @@
 #include "hydro.h"
 #include "riemann.h"
 
+
 /* #define RIEMANN_DEBUG */
 
 
@@ -10,11 +11,98 @@ static void _hllc_nrhyd(m2riemann_problem *R);
 static void _hllc_nrmhd(m2riemann_problem *R);
 
 
-void riemann_solver(struct mesh_cell *CL,
-		    struct mesh_cell *CR,
-		    int axis, double F[8])
+void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
 {
+  struct mesh_cell *cells[2];
+  int q;
 
+  mesh_face_cells(&m2->mesh, F, cells);
+
+  if (cells[0] == NULL && cells[1] == NULL) {
+    for (q=0; q<8; ++q) F->flux[q] = 0.0;
+    return; /* F is on the domain boundary */
+  }
+
+  m2riemann_problem R = { .m2=m2 };
+  double *UL = R.Ul;
+  double *UR = R.Ur;
+  double *FL = R.Fl;
+  double *FR = R.Fr;
+  double *GL; /* gradient of interpolation variables */
+  double *GR;
+  double *lamL = R.lamL;
+  double *lamR = R.lamR;
+  double yl[8], yr[8]; /* cell-centered left/right interpolation variables */
+  double yL[8], yR[8]; /* face-centered left/right interpolation variables */
+  double xL = cells[0]->x[F->axis];
+  double xR = cells[1]->x[F->axis];
+  double *n = R.nhat;
+  m2prim *PL = &R.Pl;
+  m2prim *PR = &R.Pr;
+  m2aux *AL = &R.Al;
+  m2aux *AR = &R.Ar;
+  int err[6];
+
+  n[0] = 0.0;
+  n[1] = 0.0;
+  n[2] = 0.0;
+  n[3] = 0.0;
+  n[F->axis] = 1.0;
+
+  m2sim_to_interpolated(m2, &cells[0]->prim, &cells[0]->aux, yl, 1);
+  m2sim_to_interpolated(m2, &cells[1]->prim, &cells[1]->aux, yr, 1);
+
+  switch (F->axis) {
+  case 1: GL = cells[0]->grad1; GR = cells[1]->grad1; break;
+  case 2: GL = cells[0]->grad2; GR = cells[1]->grad2; break;
+  case 3: GL = cells[0]->grad3; GR = cells[1]->grad3; break;
+  }
+
+  for (q=0; q<8; ++q) yL[q] = yl[q] + GL[q] * (F->x[F->axis] - xL);
+  for (q=0; q<8; ++q) yR[q] = yr[q] + GR[q] * (F->x[F->axis] - xR);
+
+  m2sim_from_interpolated(m2, yL, PL);
+  m2sim_from_interpolated(m2, yR, PR);
+
+  UL[B11] = PL->B1;  UR[B11] = PR->B1;
+  UL[B22] = PL->B2;  UR[B22] = PR->B2;
+  UL[B33] = PL->B3;  UR[B33] = PR->B3;
+
+  switch (F->axis) {
+  case 1: UL[B11] = UR[B11] = PL->B1 = PR->B1 = F->BfluxA / F->area; break;
+  case 2: UL[B22] = UR[B22] = PL->B2 = PR->B2 = F->BfluxA / F->area; break;
+  case 3: UL[B33] = UR[B33] = PL->B3 = PR->B3 = F->BfluxA / F->area; break;
+  }
+
+  err[0] = m2sim_from_primitive(m2, PL, NULL, NULL, 1.0, UL, AL);
+  err[1] = m2sim_from_primitive(m2, PR, NULL, NULL, 1.0, UR, AR);
+  err[2] = m2aux_eigenvalues(AL, n, lamL);
+  err[3] = m2aux_eigenvalues(AR, n, lamR);
+  err[4] = m2aux_fluxes(AL, n, FL);
+  err[5] = m2aux_fluxes(AR, n, FR);
+
+  if (err[2] || err[3]) {
+    int is_fatal = m2sim_error_face(m2, F, M2_ERROR_BAD_EIGENVALUES);
+    if (is_fatal) {
+      for (q=0; q<8; ++q) F->flux[q] = 0.0;
+      return;
+    }
+    else {
+      lamL[0] = -1.0; lamL[7] = +1.0;
+      lamR[0] = -1.0; lamR[7] = +1.0;
+    }
+  }
+
+  R.Sl = M2_MIN3(lamL[0], lamR[0], 0.0);
+  R.Sr = M2_MAX3(lamL[7], lamR[7], 0.0);
+
+  switch (m2->riemann_solver) {
+  case M2_RIEMANN_HLLE: riemann_solver_hlle(&R); break;
+  case M2_RIEMANN_HLLC: riemann_solver_hllc(&R); break;
+  default: m2sim_error_general(m2, "invalid riemann solver");
+  }
+
+  memcpy(F->flux, R.F_hat, 8*sizeof(double));
 }
 
 
@@ -35,13 +123,16 @@ void riemann_solver_hlle(m2riemann_problem *R)
     F_hll[q] = (Sr*Fl[q] - Sl*Fr[q] + Sr*Sl*(Ur[q] - Ul[q])) / (Sr - Sl);
   }
 
-  memcpy(R->F_hat, F_hll, 8 * sizeof(double));
+  memcpy(R->F_hat, F_hll, 8*sizeof(double));
 }
+
+
 
 void riemann_solver_hllc(m2riemann_problem *R)
 {
   if (R->m2->relativistic) {
-    MSG(FATAL, "relativistic HLLC Riemann solver not implemented");
+    m2sim_error_general(R->m2,
+			"relativistic HLLC Riemann solver not implemented");
   }
   else if (R->m2->magnetized) {
     _hllc_nrmhd(R);
@@ -136,6 +227,8 @@ void _hllc_nrhyd(m2riemann_problem *R)
   else if (Sm<s && s<=Sr) for (q=0; q<8; ++q) F[q] = Fr[q] + Sr*(Urs[q]-Ur[q]);
   else if (Sr<s         ) for (q=0; q<8; ++q) F[q] = Fr[q];
 }
+
+
 
 void _hllc_nrmhd(m2riemann_problem *R)
 /*------------------------------------------------------------------------------

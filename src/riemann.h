@@ -28,9 +28,6 @@ typedef struct
   double Sc; /* contact wavespeed */
 } m2riemann_problem;
 
-void riemann_solver(struct mesh_cell *CL,
-		    struct mesh_cell *CR,
-		    int axis, double F[8]);
 void riemann_solver_hlle(m2riemann_problem *R);
 void riemann_solver_hllc(m2riemann_problem *R);
 
