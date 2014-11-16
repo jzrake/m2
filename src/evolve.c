@@ -44,7 +44,7 @@ int m2sim_calculate_gradient(m2sim *m2)
   int m[3];
   double x[3];
   double y[24];
-  double theta = m2->plm_parameter;
+  double plm = m2->plm_parameter;
   double *G;
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
@@ -58,8 +58,10 @@ int m2sim_calculate_gradient(m2sim *m2)
       case 2: G = C[1]->grad2; break;
       case 3: G = C[1]->grad3; break;
       }
-      if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PCM ||
-	  m[0] == -1 || m[2] == -1) { /* bordering the grid edge */
+      if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PCM) {
+	set_grad_to_zero = 1;
+      }
+      else if (m[0] == -1 || m[2] == -1) { /* bordering the grid edge */
 	set_grad_to_zero = 1;
       }
       else if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PLM) {
@@ -70,7 +72,7 @@ int m2sim_calculate_gradient(m2sim *m2)
 	  m2sim_to_interpolated(m2, &C[i]->prim, &C[i]->aux, &y[i], 3);
 	}
 	for (q=0; q<8; ++q) {
-	  G[q] = plm_gradient(x, &y[3*q], theta, &err);
+	  G[q] = plm_gradient(x, &y[3*q], plm, &err);
 	}
 	if (err > 0) {
 	  m2sim_error_cell(m2, C[1], M2_ERROR_GRADIENT_ESTIMATION);
@@ -78,8 +80,8 @@ int m2sim_calculate_gradient(m2sim *m2)
 	}
       }
       else {
-	m2sim_error_general(m2, "invalid gradient estimation method");
 	set_grad_to_zero = 1;
+	m2sim_error_general(m2, "invalid gradient estimation method");
       }
       if (set_grad_to_zero) {
 	for (q=0; q<8; ++q) {
@@ -259,7 +261,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
   struct mesh_face *faces[6];
   int error;
   int n;
-  double dt=0;
+  double dt=-1;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
     /* TODO: unless guards have already been synchronized, this function must
        skip non-interior cells. */
@@ -270,7 +272,7 @@ double m2sim_minimum_courant_time(m2sim *m2)
     double dx3 = faces[5]->x[3] - faces[4]->x[3];
     double L = M2_MIN3(dx1, dx2, dx3);
     double a = m2aux_maximum_wavespeed(&C->aux, &error);
-    if (n == 0 || L/a < dt) {
+    if (dt < 0 || L/a < dt) {
       dt = L/a;
     }
   }
@@ -312,8 +314,7 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 void m2sim_drive(m2sim *m2)
 {
   double dt;
-  int n, q, err = 0, rk_order = m2->rk_order;
-  int *L = m2->local_grid_size;
+  int err = 0, rk_order = m2->rk_order;
   double kzps; /* kilozones per second */
   char checkpoint_name[1024];
 

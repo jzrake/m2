@@ -136,13 +136,12 @@ void m2sim_initialize(m2sim *m2)
   m2->mesh.cells_shape[3] = L[3];
   mesh_allocate(&m2->mesh);
 
-  printf("F: %d %d\n", m2->mesh.faces_shape[1][0], m2->mesh.faces_shape[1][1]);
-  printf("C: %d %d\n", m2->mesh.cells_shape   [0], m2->mesh.cells_shape   [1]);
 
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
     int I[4];
     struct mesh_cell *C = m2->mesh.cells + n;
     mesh_linear_to_multi(n, m2->mesh.cells_shape, I);
+    C->aux.m2 = m2;
     C->global_i = I[1] + S[1];
     C->global_j = I[2] + S[2];
     C->global_k = I[3] + S[3];
@@ -165,12 +164,12 @@ void m2sim_initialize(m2sim *m2)
       int I[4];
       struct mesh_face *F = m2->mesh.faces[d] + n;
       mesh_linear_to_multi(n, m2->mesh.faces_shape[d], I);
-      I0[1] = I[1] + S[1];
-      I0[2] = I[2] + S[2];
-      I0[3] = I[3] + S[3];
-      I1[1] = I[1] + S[1] + 1.0 * (d != 1);
-      I1[2] = I[2] + S[2] + 1.0 * (d != 2);
-      I1[3] = I[3] + S[3] + 1.0 * (d != 3);
+      I0[1] = I[1] + S[1] - 0.5;
+      I0[2] = I[2] + S[2] - 0.5;
+      I0[3] = I[3] + S[3] - 0.5;
+      I1[1] = I[1] + S[1] - 0.5 + 1.0 * (d != 1);
+      I1[2] = I[2] + S[2] - 0.5 + 1.0 * (d != 2);
+      I1[3] = I[3] + S[3] - 0.5 + 1.0 * (d != 3);
       m2sim_index_to_position(m2, I0, x0);
       m2sim_index_to_position(m2, I1, x1);
       F->area = m2_area_measure(x0, x1, m2->geometry, d);
@@ -183,12 +182,12 @@ void m2sim_initialize(m2sim *m2)
       int I[4];
       struct mesh_edge *E = m2->mesh.edges[d] + n;
       mesh_linear_to_multi(n, m2->mesh.edges_shape[d], I);
-      I0[1] = I[1] + S[1];
-      I0[2] = I[2] + S[2];
-      I0[3] = I[3] + S[3];
-      I1[1] = I[1] + S[1] + 1.0 * (d == 1);
-      I1[2] = I[2] + S[2] + 1.0 * (d == 2);
-      I1[3] = I[3] + S[3] + 1.0 * (d == 3);
+      I0[1] = I[1] + S[1] - 0.5;
+      I0[2] = I[2] + S[2] - 0.5;
+      I0[3] = I[3] + S[3] - 0.5;
+      I1[1] = I[1] + S[1] - 0.5 + 1.0 * (d == 1);
+      I1[2] = I[2] + S[2] - 0.5 + 1.0 * (d == 2);
+      I1[3] = I[3] + S[3] - 0.5 + 1.0 * (d == 3);
       m2sim_index_to_position(m2, I0, x0);
       m2sim_index_to_position(m2, I1, x1);
       E->length = m2_line_measure(x0, x1, m2->geometry, d);
@@ -197,6 +196,7 @@ void m2sim_initialize(m2sim *m2)
       E->x[3] = 0.5 * (x0[3] + x1[3]);
     }
   }
+  /* TODO: test locations of edges in multiple dimensions */
 }
 
 

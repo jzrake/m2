@@ -895,32 +895,30 @@ static int L_m2sim_visualize(lua_State *L)
 }
 static int L_m2sim_get_reductions(lua_State *L)
 {
+  int n;
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   m2reductions *R = (m2reductions *) lua_struct_new(L, "m2reductions");
-  int n, N = m2->local_grid_size[0];
   R->total_volume          = 0.0;
   R->total_mass            = 0.0;
   R->total_energy          = 0.0;
   R->total_kinetic_energy  = 0.0;
   R->total_internal_energy = 0.0;
   R->total_magnetic_energy = 0.0;
-  for (n=0; n<N; ++n) {
-    m2vol *V = &m2->volumes[n];
-    double v = V->volume;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) continue;
+  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+    struct mesh_cell *C = m2->mesh.cells + n;
+    double v = C->volume;
+    if (C->zone_type != M2_ZONE_TYPE_FULL) continue; /* TODO: ensure zone_type is set */
     R->total_volume          += v;
-    R->total_mass            += v*m2aux_get(&V->aux, M2_OBSERVER_MASS_DENSITY);
-    R->total_energy          += v*m2aux_get(&V->aux, M2_TOTAL_ENERGY_DENSITY);
-    R->total_kinetic_energy  += v*m2aux_get(&V->aux, M2_KINETIC_ENERGY_DENSITY);
-    R->total_internal_energy += v*m2aux_get(&V->aux, M2_INTERNAL_ENERGY_DENSITY);
-    R->total_magnetic_energy += v*m2aux_get(&V->aux, M2_MAGNETIC_ENERGY_DENSITY);
+    R->total_mass            += v*m2aux_get(&C->aux, M2_OBSERVER_MASS_DENSITY);
+    R->total_energy          += v*m2aux_get(&C->aux, M2_TOTAL_ENERGY_DENSITY);
+    R->total_kinetic_energy  += v*m2aux_get(&C->aux, M2_KINETIC_ENERGY_DENSITY);
+    R->total_internal_energy += v*m2aux_get(&C->aux, M2_INTERNAL_ENERGY_DENSITY);
+    R->total_magnetic_energy += v*m2aux_get(&C->aux, M2_MAGNETIC_ENERGY_DENSITY);
   }
-
 #if M2_HAVE_MPI
     MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
     MPI_Allreduce(MPI_IN_PLACE, (double*)R, 6, MPI_DOUBLE, MPI_SUM, cart_comm);
 #endif
-
   return 1;
 }
 

@@ -14,15 +14,6 @@ static void _hllc_nrmhd(m2riemann_problem *R);
 void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
 {
   struct mesh_cell *cells[2];
-  int q;
-
-  mesh_face_cells(&m2->mesh, F, cells);
-
-  if (cells[0] == NULL || cells[1] == NULL) {
-    for (q=0; q<8; ++q) F->flux[q] = 0.0;
-    return; /* F is on the domain boundary */
-  }
-
   m2riemann_problem R = { .m2=m2 };
   double *UL = R.Ul;
   double *UR = R.Ur;
@@ -34,20 +25,32 @@ void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
   double *lamR = R.lamR;
   double yl[8], yr[8]; /* cell-centered left/right interpolation variables */
   double yL[8], yR[8]; /* face-centered left/right interpolation variables */
-  double xL = cells[0]->x[F->axis];
-  double xR = cells[1]->x[F->axis];
+  double xL;
+  double xR;
   double *n = R.nhat;
   m2prim *PL = &R.Pl;
   m2prim *PR = &R.Pr;
   m2aux *AL = &R.Al;
   m2aux *AR = &R.Ar;
   int err[6];
+  int q;
 
-  n[0] = 0.0;
-  n[1] = 0.0;
-  n[2] = 0.0;
-  n[3] = 0.0;
+  n[0] = 0.0; n[1] = 0.0; n[2] = 0.0; n[3] = 0.0;
   n[F->axis] = 1.0;
+
+  mesh_face_cells(&m2->mesh, F, cells);
+
+  if (cells[0] == NULL) {
+    m2aux_fluxes(&cells[1]->aux, n, F->flux);
+    return;
+  }
+  if (cells[1] == NULL) {
+    m2aux_fluxes(&cells[0]->aux, n, F->flux);
+    return;
+  }
+
+  xL = cells[0]->x[F->axis];
+  xR = cells[1]->x[F->axis];
 
   m2sim_to_interpolated(m2, &cells[0]->prim, &cells[0]->aux, yl, 1);
   m2sim_to_interpolated(m2, &cells[1]->prim, &cells[1]->aux, yr, 1);
@@ -104,6 +107,7 @@ void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
 
   memcpy(F->flux, R.F_hat, 8*sizeof(double));
 }
+
 
 
 void riemann_solver_hlle(m2riemann_problem *R)

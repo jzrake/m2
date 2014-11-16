@@ -100,7 +100,7 @@ function m2Application:__init__(args)
 	    local dims = self._cart_comm:get 'dims'
 	    if coords[n] == 0 then
 	       --Ng0[n] = 1 -- so that there's a layer of shells
-	       Ng0[n] = 1 -- TODO: note how this modifes older data layout
+	       Ng0[n] = 1 -- TODO: note how this modifies older data layout
 	    end
 	    if coords[n] == dims[n] - 1 then
 	       Ng1[n] = 0
