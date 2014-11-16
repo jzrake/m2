@@ -635,8 +635,8 @@ static int L_m2sim_get_volume_data(lua_State *L)
   int offset = luaL_checkoption(L, 2, NULL, lst);
   int n, N = m2->local_grid_size[0];
   double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
-  for (n=0; n<N; ++n) {
-    D[n] = *((double *) &m2->volumes[n].prim + offset);
+  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+    D[n] = *((double*) &m2->mesh.cells[n].prim + offset);
   }
   return 1;
 }
@@ -648,8 +648,8 @@ static int L_m2sim_set_volume_data(lua_State *L)
   int offset = luaL_checkoption(L, 2, NULL, lst);
   int n, N = m2->local_grid_size[0];
   double *D = (double *) buf_check_buffer(L, 3, N * sizeof(double));
-  for (n=0; n<N; ++n) {
-    *((double*) &m2->volumes[n].prim + offset) = D[n];
+  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+    *((double*) &m2->mesh.cells[n].prim + offset) = D[n];
   }
   return 0;
 }
@@ -659,15 +659,11 @@ static int L_m2sim_get_face_data(lua_State *L)
   int axis = luaL_checkunsigned(L, 2);
   int n, N = m2->local_grid_size[0];
   double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
-  ptrdiff_t offs;
-  switch (axis) {
-  case 1: offs = offsetof(m2vol, Bflux1A); break;
-  case 2: offs = offsetof(m2vol, Bflux2A); break;
-  case 3: offs = offsetof(m2vol, Bflux3A); break;
-  default: luaL_error(L, "argument 2 must be 1, 2, or 3"); offs = 0; break;
+  if (axis != 1 && axis != 2 && axis != 3) {
+    luaL_error(L, "argument 2 must be 1, 2, or 3");
   }
-  for (n=0; n<N; ++n) {
-    D[n] = *((double *)((void *) &m2->volumes[n] + offs));
+  for (n=0; n<m2->mesh.faces_shape[axis][n]; ++n) {
+    D[n] = *((double*) &m2->mesh.faces[axis][n].BfluxA);
   }
   return 1;
 }
@@ -676,16 +672,12 @@ static int L_m2sim_set_face_data(lua_State *L)
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   int axis = luaL_checkunsigned(L, 2);
   int n, N = m2->local_grid_size[0];
-  double *D = (double *) buf_check_buffer(L, 3, N * sizeof(double));
-  ptrdiff_t offs;
-  switch (axis) {
-  case 1: offs = offsetof(m2vol, Bflux1A); break;
-  case 2: offs = offsetof(m2vol, Bflux2A); break;
-  case 3: offs = offsetof(m2vol, Bflux3A); break;
-  default: luaL_error(L, "argument 2 must be 1, 2, or 3"); offs = 0; break;
+  double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
+  if (axis != 1 && axis != 2 && axis != 3) {
+    luaL_error(L, "argument 2 must be 1, 2, or 3");
   }
-  for (n=0; n<N; ++n) {
-    *((double *)((void *) &m2->volumes[n] + offs)) = D[n];
+  for (n=0; n<m2->mesh.faces_shape[axis][n]; ++n) {
+    *((double*) &m2->mesh.faces[axis][n].BfluxA) = D[n];
   }
   return 1;
 }

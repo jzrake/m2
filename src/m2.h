@@ -143,9 +143,6 @@ struct mesh
   int global_grid_start[4];
   int boundary_upper[4];
   int boundary_lower[4];
-  int edge_bytes;
-  int face_bytes;
-  int cell_bytes;
   int edges_shape[4][4];
   int faces_shape[4][4];
   int cells_shape[4];

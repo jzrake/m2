@@ -18,7 +18,7 @@ void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
 
   mesh_face_cells(&m2->mesh, F, cells);
 
-  if (cells[0] == NULL && cells[1] == NULL) {
+  if (cells[0] == NULL || cells[1] == NULL) {
     for (q=0; q<8; ++q) F->flux[q] = 0.0;
     return; /* F is on the domain boundary */
   }

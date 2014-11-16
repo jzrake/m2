@@ -39,35 +39,38 @@ int m2sim_calculate_gradient(m2sim *m2)
   int *dims = m2->mesh.cells_shape;
   int n, d, q, i;
   int err = 0;
-  int set_grad_to_zero = 0;
+  int set_grad_to_zero;
   int I[4];
   int m[3];
   double x[3];
   double y[24];
   double theta = m2->plm_parameter;
+  double *G;
   for (d=1; d<=3; ++d) {
-    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
+    for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
       mesh_linear_to_multi(n, dims, I);
       I[d] -= 1; m[0] = mesh_multi_to_linear(dims, I); I[d] += 1;
       I[d] += 1; m[2] = mesh_multi_to_linear(dims, I); I[d] -= 1;
       m[1] = n;
       C[1] = m2->mesh.cells + m[1];
+      switch (d) {
+      case 1: G = C[1]->grad1; break;
+      case 2: G = C[1]->grad2; break;
+      case 3: G = C[1]->grad3; break;
+      }
       if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PCM ||
 	  m[0] == -1 || m[2] == -1) { /* bordering the grid edge */
 	set_grad_to_zero = 1;
       }
       else if (m2->gradient_estimation_method == M2_GRADIENT_ESTIMATION_PLM) {
+	set_grad_to_zero = 0;
 	for (i=0; i<3; ++i) {
 	  C[i] = m2->mesh.cells + m[i];
 	  x[i] = C[i]->x[d];
 	  m2sim_to_interpolated(m2, &C[i]->prim, &C[i]->aux, &y[i], 3);
 	}
 	for (q=0; q<8; ++q) {
-	  switch (d) {
-	  case 1: C[1]->grad1[q] = plm_gradient(x, &y[3*q], theta, &err); break;
-	  case 2: C[1]->grad2[q] = plm_gradient(x, &y[3*q], theta, &err); break;
-	  case 3: C[1]->grad3[q] = plm_gradient(x, &y[3*q], theta, &err); break;
-	  }
+	  G[q] = plm_gradient(x, &y[3*q], theta, &err);
 	}
 	if (err > 0) {
 	  m2sim_error_cell(m2, C[1], M2_ERROR_GRADIENT_ESTIMATION);
@@ -80,11 +83,7 @@ int m2sim_calculate_gradient(m2sim *m2)
       }
       if (set_grad_to_zero) {
 	for (q=0; q<8; ++q) {
-	  switch (d) {
-	  case 1: C[1]->grad1[q] = 0.0; break;
-	  case 2: C[1]->grad2[q] = 0.0; break;
-	  case 3: C[1]->grad3[q] = 0.0; break;
-	  }
+	  G[q] = 0.0;
 	}
       }
     }
@@ -323,30 +322,6 @@ void m2sim_drive(m2sim *m2)
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
   m2->status.time_step = dt;
 
-  for (q=0; q<8; ++q) {
-    m2->status.num_failures[q] = 0;
-    /*m2->status.num_failures[q] &= ~(1<<M2_BIT_FAILED_CONSERVED_INVERSION);*/
-  }
-
-
-  /* ======================================================================== */
-  /* Mark all zones as healthy on first attempt */
-  /* ======================================================================== */
-  if (m2->status.drive_attempt == 0) {
-    for (n=0; n<L[0]; ++n) {
-      m2->volumes[n].zone_health = 0;
-    }
-  }
-
-
-  /* ======================================================================== */
-  /* Cache the primitive variables in case a reset is needed                  */
-  /* ======================================================================== */
-  m2prim *cached_prim = (m2prim *) malloc(L[0] * sizeof(m2prim));
-  for (n=0; n<L[0]; ++n) {
-    cached_prim[n] = m2->volumes[n].prim;
-  }
-
   double cad = m2->cadence_checkpoint_tpl;
   double now = m2->status.time_simulation;
   double las = m2->status.time_last_checkpoint_tpl;
@@ -360,16 +335,13 @@ void m2sim_drive(m2sim *m2)
   }
 
 
+
   /* ======================================================================== */
   /* Start the clock                                                          */
   /* ======================================================================== */
-#ifdef _OPENMP
-  double start_wtime, stop_wtime;
-  start_wtime = omp_get_wtime();
-#else
   clock_t start_cycle, stop_cycle;
   start_cycle = clock();
-#endif
+
 
 
   /* ======================================================================== */
@@ -390,64 +362,16 @@ void m2sim_drive(m2sim *m2)
     break;
   }
 
-
-  /* ======================================================================== */
-  /* Sum up the different kinds of errors                                     */
-  /* ======================================================================== */
-  for (n=0; n<L[0]; ++n) {
-    m2vol *V = m2->volumes + n;
-    for (q=0; q<8; ++q) {
-      m2->status.num_failures[q] += 0 != (V->zone_health & (1<<q));
-    }
-  }
-#if M2_HAVE_MPI
-  if (m2->cart_comm) {
-    MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
-    MPI_Allreduce(MPI_IN_PLACE, m2->status.num_failures, 8,
-		  MPI_INT,
-		  MPI_SUM, cart_comm);
-  }
-#endif
+  m2->status.iteration_number += 1;
+  m2->status.time_simulation += dt;
+  m2->status.error_code = 0;
 
 
-  if (err) {
-    /* ====================================================================== */
-    /* Reset data to before the step was attempted                            */
-    /* ====================================================================== */
-    for (n=0; n<L[0]; ++n) {
-      m2vol *V = m2->volumes + n;
-      V->prim = cached_prim[n]; /* recover cell-centered prim */
-      V->Bflux1A = V->Bflux1B; /* recover face-centered flux */
-      V->Bflux2A = V->Bflux2B;
-      V->Bflux3A = V->Bflux3B;
-      for (q=0; q<5; ++q) {
-        V->consA[q] = V->consB[q]; /* recover conserved variables */
-      }
-      /* recover auxiliary variables */
-      m2sim_from_primitive(V->m2, &V->prim, NULL, NULL, V->volume,
-                           NULL, &V->aux);
-    }
-    /* print status message */
-    m2->status.error_code = 1;
-  }
-  else {
-    /* ====================================================================== */
-    /* Successful step                                                        */
-    /* ====================================================================== */
-    m2->status.iteration_number += 1;
-    m2->status.time_simulation += dt;
-    m2->status.error_code = 0;
-  }
 
+  stop_cycle = clock();
+  kzps = 1e-3 * m2->local_grid_size[0] / (stop_cycle - start_cycle) *
+    CLOCKS_PER_SEC;
 
-#ifdef _OPENMP
-    stop_wtime = omp_get_wtime();
-    kzps = 1e-3 * m2->local_grid_size[0] / (stop_wtime - start_wtime);
-#else
-    stop_cycle = clock();
-    kzps = 1e-3 * m2->local_grid_size[0] / (stop_cycle - start_cycle) *
-      CLOCKS_PER_SEC;
-#endif
 
 
   /* ======================================================================== */
@@ -465,7 +389,6 @@ void m2sim_drive(m2sim *m2)
 	   m2->status.num_failures[2],
 	   m2->status.num_failures[3],
 	   m2->status.num_failures[4]);
-  free(cached_prim);
 }
 
 

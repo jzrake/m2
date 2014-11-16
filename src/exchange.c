@@ -123,6 +123,7 @@ void m2sim_delete_mpi_types(m2sim *m2)
 
 int m2sim_synchronize_guard(m2sim *m2)
 {
+  return 0; /* TODO */
   if (m2->cart_comm == NULL) {
     MSG(FATAL, "guard zone synch without MPI is not yet implemented [TODO]");
   }

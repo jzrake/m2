@@ -136,6 +136,8 @@ void m2sim_initialize(m2sim *m2)
   m2->mesh.cells_shape[3] = L[3];
   mesh_allocate(&m2->mesh);
 
+  printf("F: %d %d\n", m2->mesh.faces_shape[1][0], m2->mesh.faces_shape[1][1]);
+  printf("C: %d %d\n", m2->mesh.cells_shape   [0], m2->mesh.cells_shape   [1]);
 
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
     int I[4];
