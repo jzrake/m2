@@ -1,6 +1,40 @@
 #include <stddef.h>
+#include <memory.h>
 #include <mpi.h>
 #include "m2.h"
+
+
+#define copy_cell(C,D)					\
+  do {							\
+    C->prim = D->prim;					\
+    C->aux  = D->aux;					\
+    memcpy(C->consA, D->consA, 5*sizeof(double));	\
+    memcpy(C->consB, D->consB, 5*sizeof(double));	\
+    memcpy(C->grad1, D->grad1, 8*sizeof(double));	\
+    memcpy(C->grad2, D->grad2, 8*sizeof(double));	\
+    memcpy(C->grad3, D->grad3, 8*sizeof(double));	\
+  } while (0)						\
+
+
+#define copy_face(F,G)						\
+  do {								\
+    F->BfluxA = G->BfluxA;					\
+    F->BfluxB = G->BfluxB;					\
+    memcpy(F->flux, G->flux, 8*sizeof(double));			\
+  } while (0)							\
+
+
+#define global_index(C,d)					\
+  d==1 ? C->global_i : (d==2 ? C->global_j : C->global_k)	\
+
+
+int global_index_face(m2sim *m2, struct mesh_face *F, int d)
+{
+  int I[4];
+  mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I);
+  return I[d] + m2->local_grid_start[d];
+}
+
 
 struct mpi_types
 {
@@ -22,6 +56,9 @@ void m2sim_create_mpi_types(m2sim *m2)
   int o = MPI_ORDER_C;
   int n;
 
+  /* TODO: use the MPI upper bound type to improve safety
+     http://www.mpich.org/static/docs/v3.1/www3/MPI_Type_struct.html
+  */
   B[ 0] = 4;   D[ 0] = offsetof(m2vol, global_index); T[ 0] = MPI_INT;
   B[ 1] = 1;   D[ 1] = offsetof(m2vol, Bflux1A);      T[ 1] = MPI_DOUBLE;
   B[ 2] = 1;   D[ 2] = offsetof(m2vol, Bflux2A);      T[ 2] = MPI_DOUBLE;
@@ -121,11 +158,71 @@ void m2sim_delete_mpi_types(m2sim *m2)
   m2->mpi_types = NULL;
 }
 
+
+
 int m2sim_synchronize_guard(m2sim *m2)
+{
+  struct mesh_cell *C, *D;
+  struct mesh_face *F, *G;
+  int I[4];
+  int n, d, m;
+
+  for (d=1; d<=3; ++d) {
+    for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+      C = m2->mesh.cells + n;
+      if (global_index(C, d) < 0) {
+	mesh_linear_to_multi(n, m2->mesh.cells_shape, I);
+	I[d] += m2->domain_resolution[d];
+	m = mesh_multi_to_linear(m2->mesh.cells_shape, I);
+	D = m2->mesh.cells + m;
+	copy_cell(C, D);
+      }
+      else if (global_index(C, d) >= m2->domain_resolution[d]) {
+	mesh_linear_to_multi(n, m2->mesh.cells_shape, I);
+	I[d] -= m2->domain_resolution[d];
+	m = mesh_multi_to_linear(m2->mesh.cells_shape, I);
+	D = m2->mesh.cells + m;
+	copy_cell(C, D);
+      }
+    }
+  }
+
+  for (d=1; d<=3; ++d) {
+    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
+      F = m2->mesh.faces[d] + n;
+
+      I[1] = global_index_face(m2, F, 1);
+      I[2] = global_index_face(m2, F, 2);
+      I[3] = global_index_face(m2, F, 3);
+
+      if (I[d] < 0) {
+	I[d] += m2->mesh.cells_shape[d];
+	m = mesh_multi_to_linear(m2->mesh.faces_shape[d], I);
+	G = m2->mesh.faces[d] + m;
+	copy_face(F, G);
+	I[d] -= m2->mesh.cells_shape[d];
+      }
+
+      else if (I[d] >= m2->domain_resolution[d]) {
+	I[d] -= m2->mesh.cells_shape[d];
+	m = mesh_multi_to_linear(m2->mesh.faces_shape[d], I);
+	G = m2->mesh.faces[d] + m;
+	copy_face(F, G);
+	I[d] += m2->mesh.cells_shape[d];
+      }
+    }
+  }
+
+  return 0;
+}
+
+
+
+int m2sim_synchronize_guard__(m2sim *m2)
 {
   return 0; /* TODO */
   if (m2->cart_comm == NULL) {
-    MSG(FATAL, "guard zone synch without MPI is not yet implemented [TODO]");
+    MSG(FATAL, "guard zone synch without MPI is not yet implemented");
   }
   struct mpi_types *MT = (struct mpi_types *) m2->mpi_types;
   MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);

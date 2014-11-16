@@ -295,6 +295,7 @@ void m2vol_coordinate_centroid_3d(m2vol *V, double x[4])
 }
 int m2sim_memory_usage(m2sim *m2)
 {
+  /* TODO: correct this, and print it on startup */
   return m2->local_grid_size[0] * sizeof(m2vol) / (1<<20);
 }
 double m2aux_get(m2aux *aux, int member)

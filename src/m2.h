@@ -464,7 +464,7 @@ void mesh_linear_to_multi(int n, int dims[4], int index[4]);
  * --------------------------------------------------------------- */
 #define M2_PI (4*atan(1))
 #define M2_STRING_LEN 256
-#define M2_STRING_SET(d,s) strncpy(d, s, 256); d[255] = '\0';
+#define M2_STRING_SET(d,s) do{strncpy(d,s,256);d[255]='\0';}while(0)
 
 #define M2_IND(i,j,k)((i)*L[2]*L[3]+(j)*L[3]+(k))
 #define M2_VOL(i,j,k)(((i)>=0)&&(i)<L[1]&&				\
