@@ -34,10 +34,14 @@ void m2sim_new(m2sim *m2)
   m2->number_guard_zones1[1] = 0;
   m2->number_guard_zones1[2] = 0;
   m2->number_guard_zones1[3] = 0;
-  m2->periodic_dimension[0] = 0;
-  m2->periodic_dimension[1] = 0;
-  m2->periodic_dimension[2] = 0;
-  m2->periodic_dimension[3] = 0;
+  m2->boundary_condition_lower[0] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_lower[1] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_lower[2] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_lower[3] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_upper[0] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_upper[1] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_upper[2] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_upper[3] = M2_BOUNDARY_OPEN;
 
   m2->volumes = NULL;
   m2->user_struct = NULL;

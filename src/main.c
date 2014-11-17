@@ -991,7 +991,8 @@ int register_m2sim(lua_State *L)
     MS(local_grid_start, "ivec4"),
     MS(number_guard_zones0, "ivec4"),
     MS(number_guard_zones1, "ivec4"),
-    MS(periodic_dimension, "ivec4"),
+    MS(boundary_condition_lower, "ivec4"),
+    MS(boundary_condition_upper, "ivec4"),
     MS(stirring, "m2stirring"),
     MS(status, "m2sim_status"),
     MI(coordinate_scaling1),
@@ -1201,6 +1202,12 @@ int luaopen_m2lib(lua_State *L)
   CONSTANT(M2_STIRRING_NONE);
   CONSTANT(M2_STIRRING_KINETIC);
   CONSTANT(M2_STIRRING_CURRENT);
+  CONSTANT(M2_BOUNDARY_PERIODIC);
+  CONSTANT(M2_BOUNDARY_OPEN);
+  CONSTANT(M2_BOUNDARY_REFLECTING);
+  CONSTANT(M2_BOUNDARY_POLAR);
+  CONSTANT(M2_BOUNDARY_ORIGIN);
+  CONSTANT(M2_BOUNDARY_PROCESSOR);
 #undef CONSTANT
 
   return 1;

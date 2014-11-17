@@ -24,16 +24,25 @@
   } while (0)							\
 
 
-#define global_index(C,d)					\
-  d==1 ? C->global_i : (d==2 ? C->global_j : C->global_k)	\
 
-
-int global_index_face(m2sim *m2, struct mesh_face *F, int d)
-{
-  int I[4];
-  mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I);
-  return I[d] + m2->local_grid_start[d];
+static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis) {
+  switch (axis) {
+  case 1: return C->global_i;
+  case 2: return C->global_j;
+  case 3: return C->global_k;
+  default: return 0;
+  }
 }
+
+
+
+/* static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d) */
+/* { */
+/*   int I[4]; */
+/*   mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I); */
+/*   return I[d] + m2->local_grid_start[d]; */
+/* } */
+
 
 
 struct mpi_types
@@ -163,55 +172,52 @@ void m2sim_delete_mpi_types(m2sim *m2)
 int m2sim_synchronize_guard(m2sim *m2)
 {
   struct mesh_cell *C, *D;
-  struct mesh_face *F, *G;
-  int I[4];
-  int n, d, m;
+  int n, d, gind;
 
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
       C = m2->mesh.cells + n;
-      if (global_index(C, d) < 0) {
-	mesh_linear_to_multi(n, m2->mesh.cells_shape, I);
-	I[d] += m2->domain_resolution[d];
-	m = mesh_multi_to_linear(m2->mesh.cells_shape, I);
-	D = m2->mesh.cells + m;
-	copy_cell(C, D);
+      gind = global_index_cell(m2, C, d);
+      if (m2->boundary_condition_lower[d] == M2_BOUNDARY_PERIODIC) {
+	if (gind < 0) {
+	  D = C + m2->domain_resolution[d] * m2->mesh.cells_stride[d];
+	  copy_cell(C, D);
+	}
       }
-      else if (global_index(C, d) >= m2->domain_resolution[d]) {
-	mesh_linear_to_multi(n, m2->mesh.cells_shape, I);
-	I[d] -= m2->domain_resolution[d];
-	m = mesh_multi_to_linear(m2->mesh.cells_shape, I);
-	D = m2->mesh.cells + m;
-	copy_cell(C, D);
-      }
-    }
-  }
-
-  for (d=1; d<=3; ++d) {
-    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = m2->mesh.faces[d] + n;
-
-      I[1] = global_index_face(m2, F, 1);
-      I[2] = global_index_face(m2, F, 2);
-      I[3] = global_index_face(m2, F, 3);
-
-      if (I[d] < 0) {
-	I[d] += m2->mesh.cells_shape[d];
-	m = mesh_multi_to_linear(m2->mesh.faces_shape[d], I);
-	G = m2->mesh.faces[d] + m;
-	copy_face(F, G);
-	I[d] -= m2->mesh.cells_shape[d];
-      }
-
-      else if (I[d] >= m2->domain_resolution[d]) {
-	I[d] -= m2->mesh.cells_shape[d];
-	m = mesh_multi_to_linear(m2->mesh.faces_shape[d], I);
-	G = m2->mesh.faces[d] + m;
-	copy_face(F, G);
-	I[d] += m2->mesh.cells_shape[d];
+      if (m2->boundary_condition_upper[d] == M2_BOUNDARY_PERIODIC) {
+	if (gind >= m2->domain_resolution[d]) {
+	  D = C - m2->domain_resolution[d] * m2->mesh.cells_stride[d];
+	  copy_cell(C, D);
+	}
       }
     }
   }
+
+  /* for (d=1; d<=3; ++d) { */
+  /*   for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) { */
+  /*     F = m2->mesh.faces[d] + n; */
+
+  /*     I[1] = global_index_face(m2, F, 1); */
+  /*     I[2] = global_index_face(m2, F, 2); */
+  /*     I[3] = global_index_face(m2, F, 3); */
+
+  /*     if (I[d] < 0) { */
+  /* 	I[d] += m2->mesh.cells_shape[d]; */
+  /* 	m = mesh_multi_to_linear(m2->mesh.faces_shape[d], I); */
+  /* 	G = m2->mesh.faces[d] + m; */
+  /* 	copy_face(F, G); */
+  /* 	I[d] -= m2->mesh.cells_shape[d]; */
+  /*     } */
+
+  /*     else if (I[d] >= m2->domain_resolution[d]) { */
+  /* 	I[d] -= m2->mesh.cells_shape[d]; */
+  /* 	m = mesh_multi_to_linear(m2->mesh.faces_shape[d], I); */
+  /* 	G = m2->mesh.faces[d] + m; */
+  /* 	copy_face(F, G); */
+  /* 	I[d] += m2->mesh.cells_shape[d]; */
+  /*     } */
+  /*   } */
+  /* } */
 
   return 0;
 }

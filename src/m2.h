@@ -91,6 +91,14 @@ enum m2flag {
   M2_STIRRING_NONE,
   M2_STIRRING_KINETIC,
   M2_STIRRING_CURRENT,
+
+  /* Boundary conditions */
+  M2_BOUNDARY_PERIODIC,
+  M2_BOUNDARY_OPEN,
+  M2_BOUNDARY_REFLECTING,
+  M2_BOUNDARY_POLAR,
+  M2_BOUNDARY_ORIGIN, /* spherical-polar coordinates */
+  M2_BOUNDARY_PROCESSOR
 } ;
 
 
@@ -104,8 +112,7 @@ enum { M2_BIT_BAD_EIGENVALUES,
        M2_BIT_NEARLY_FAILED_CONSERVED_INVERSION,
        M2_BIT_NEGATIVE_PRESSURE,
        M2_BIT_NEGATIVE_ENERGY,
-       M2_BIT_NEGATIVE_DENSITY,
-} ;
+       M2_BIT_NEGATIVE_DENSITY } ;
 
 /* indices into cons[AB] and flux[123] arrays */
 enum { TAU, S11, S22, S33, DDD, B11, B22, B33 };
@@ -125,17 +132,6 @@ typedef void (*m2vol_operator)(m2vol *vol);
 typedef void (*m2sim_operator)(m2sim *m2);
 typedef void (*m2crd_function)(m2sim *m2, double X[4], double N[4], double *Y);
 
-enum {
-  MESH_GEOMETRY_CARTESIAN,
-  MESH_GEOMETRY_CYLINDRICAL,
-  MESH_GEOMETRY_SPHERICAL,
-
-  MESH_BOUNDARY_TYPE_PERIODIC,
-  MESH_BOUNDARY_TYPE_POLAR,
-  MESH_BOUNDARY_TYPE_ORIGIN,
-  MESH_BOUNDARY_TYPE_PROCESSOR
-} ;
-
 struct mesh
 {
   int geometry;
@@ -146,6 +142,9 @@ struct mesh
   int edges_shape[4][4];
   int faces_shape[4][4];
   int cells_shape[4];
+  int edges_stride[4][4];
+  int faces_stride[4][4];
+  int cells_stride[4];
   double total_extent_lower[4];
   double total_extent_upper[4];
   struct mesh_edge *edges[4];
@@ -294,7 +293,9 @@ struct m2sim
   int local_grid_start[4];
   int number_guard_zones0[4];
   int number_guard_zones1[4];
-  int periodic_dimension[4];
+  //  int periodic_dimension[4];
+  int boundary_condition_lower[4];
+  int boundary_condition_upper[4];
   int coordinate_scaling1; /* logarithmic, linear, etc */
   int coordinate_scaling2;
   int coordinate_scaling3;

@@ -97,6 +97,17 @@ void mesh_allocate(struct mesh *M)
   for (n=0; n<C[0]; ++n) {
     M->cells[n].id = n;
   }
+  M->cells_stride[1] = C[3] * C[2];
+  M->cells_stride[2] = C[3];
+  M->cells_stride[3] = 1;
+  for (d=1; d<=3; ++d) {
+    M->edges_stride[d][1] = E[d][3] * E[d][2];
+    M->edges_stride[d][2] = E[d][3];
+    M->edges_stride[d][3] = 1;
+    M->faces_stride[d][1] = F[d][3] * F[d][2];
+    M->faces_stride[d][1] = F[d][3];
+    M->faces_stride[d][1] = 1;
+  }
 #undef E
 #undef F
 #undef C

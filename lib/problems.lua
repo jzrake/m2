@@ -256,13 +256,13 @@ function DensityWave:build_m2(runtime_cfg)
    local N2 = dims >= 2 and (runtime_cfg.resolution or 64) or 1
    local N3 = dims >= 3 and (runtime_cfg.resolution or 64) or 1
    local build_args = {lower={0.0, 0.0, 0.0},
-   upper={1.0, 1.0, 1.0},
-   resolution={N1,N2,N3},
-   periods={true,true,true},
-   scaling={'linear'},
-   relativistic=false,
-   magnetized=false,
-   geometry='cartesian'}
+		       upper={1.0, 1.0, 1.0},
+		       resolution={N1,N2,N3},
+		       periods={true,true,true},
+		       scaling={'linear','linear','linear'},
+		       relativistic=false,
+		       magnetized=false,
+		       geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local m2 = m2app.m2Application(build_args)
@@ -454,13 +454,13 @@ function BlastMHD:set_runtime_defaults(runtime_cfg)
 end
 function BlastMHD:build_m2(runtime_cfg)
    local build_args = {lower={-0.5,-0.5,-0.5},
-   upper={ 0.5, 0.5, 0.5},
-   resolution={64,64,1},
-   periods={true,true,true},
-   scaling={'linear', 'linear', 'linear'},
-   relativistic=false,
-   magnetized=true,
-   geometry='cartesian'}
+		       upper={ 0.5, 0.5, 0.5},
+		       resolution={64,64,1},
+		       periods={true,true,true},
+		       scaling={'linear', 'linear', 'linear'},
+		       relativistic=false,
+		       magnetized=true,
+		       geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    if runtime_cfg.resolution then

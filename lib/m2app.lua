@@ -69,7 +69,7 @@ end
 
 function m2Application:__init__(args)
    args = args or { }
-
+   local open = m2lib.M2_BOUNDARY_OPEN
    local resolution = args.resolution or {128,1,1}
    local lower = args.lower or {0,0,0}
    local upper = args.upper or {1,1,1}
@@ -77,12 +77,18 @@ function m2Application:__init__(args)
    local geometry = to_enum(args.geometry or 'cartesian')
    local proc_sizes = {0, 0, 0}
    local periods = {0, 0, 0}
+   local bc_upper = args.boundary_conditions_upper or {open, open, open}
+   local bc_lower = args.boundary_conditions_lower or {open, open, open}
    local Ng0 = m2lib.ivec4()
    local Ng1 = m2lib.ivec4()
    for i,v in ipairs(args['scaling'] or { }) do scaling[i] = to_enum(v) end
 
    for n=1,3 do
-      if (args.periods or { })[n] then periods[n] = 1 end
+      if (args.periods or { })[n] then
+	 bc_upper[n] = m2lib.M2_BOUNDARY_PERIODIC
+	 bc_lower[n] = m2lib.M2_BOUNDARY_PERIODIC
+	 periods[n] = 1
+      end
       if resolution[n] == 1 then proc_sizes[n] = 1 end
    end
 
@@ -92,6 +98,10 @@ function m2Application:__init__(args)
    local start, size = self._cart_comm:partition(resolution)
 
    for n=1,3 do
+
+      self._m2.boundary_condition_upper[n] = bc_upper[n]
+      self._m2.boundary_condition_lower[n] = bc_lower[n]
+
       if resolution[n] > 1 then
 	 Ng0[n] = 2
 	 Ng1[n] = 2
@@ -109,7 +119,6 @@ function m2Application:__init__(args)
       end
       self._m2.local_grid_size [n] = size [n] + Ng0[n] + Ng1[n]
       self._m2.local_grid_start[n] = start[n] - Ng0[n]
-      self._m2.periodic_dimension[n] = periods[n]
    end
    self._m2.cart_comm = self._cart_comm._comm
    self._m2.domain_resolution = m2lib.ivec4(0, unpack(resolution))
