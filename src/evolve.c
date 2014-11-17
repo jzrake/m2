@@ -282,11 +282,8 @@ double m2sim_minimum_courant_time(m2sim *m2)
 
 
 
-int m2sim_enforce_boundary_condition(m2sim *m2)
+int m2sim_enforce_user_constraint(m2sim *m2)
 {
-  if (m2->boundary_conditions_cell) {
-    m2->boundary_conditions_cell(m2);
-  }
   return 0;
 }
 
@@ -296,16 +293,58 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   int err = 0;
   err += m2sim_calculate_gradient(m2);
-  err += m2sim_calculate_flux(m2); /* FAILURES: bad eigenvalues */
-  err += m2sim_synchronize_guard(m2); /* so that Godunov fluxes are communicated */
+  /* Outermost 1 cells have invalid gradient data */
+
+  err += m2sim_synchronize_cells(m2);
+  /* Communicate outermost 1 cells across MPI and periodic boundaries. All
+     cells have valid gradient data. */
+
+  err += m2sim_calculate_flux(m2);
+  /* Outermost 1 faces at MPI and periodic boundaries have invalid Godunov
+     fluxes. */
+  /* TODO: set physical BC's on Godunov fluxes at domain and topological
+     boundary */
+
+  err += m2sim_synchronize_faces(m2);
+  /* Communicate outermost 1 faces across MPI and periodic boundaries. All
+     faces have valid Godunov and magnetic fluxes */
+
   err += m2sim_calculate_emf(m2);
+  /* TODO: set physical BC's on Godunov EMF's at domain and topological
+     boundary */
+  /* TODO: source terms from stirring the current go after the calculation of
+     Godunov EMF's */
+  /* EMF's on MPI and periodic boundary are still wrong, because they only
+     account for 3 of 4 faces on a planar boundary, and 2 of 4 faces at the
+     intersection of two planar boundaries */
+
   err += m2sim_exchange_flux(m2, dt);
+  /* TODO: communicate outermost 1 faces across MPI and periodic boundaries, to
+     account for incorrect EMF's on boundary faces */
+  /* NOTE: conserved quantites in cells on MPI and periodic boundaries have the
+     correct values because Godunov fluxes on even their face was
+     communicated */
+
   err += m2sim_add_source_terms(m2, dt);
+  /* NOTE: valid for all cells */
+
+  err += m2sim_enforce_user_constraint(m2);
+  /* NOTE: this is where additional user constraints are being enforced. These
+     might include driving the momentum, or a "soft" boundary condition where
+     the solution is driven toward something user prescribed. Such constraints
+     may be enforced on the conserved quantities consA and BfluxA only.
+     Modifications to prim, aux, or cell-centered magnetic field will be
+     over-written in the next two steps. */
+
   err += m2sim_average_runge_kutta(m2, rkparam);
-  err += m2sim_enforce_boundary_condition(m2);
+  /* NOTE: applies to consA and BfluxA only, all cells and faces have valid
+     conserved quantities */
+
   err += m2sim_magnetic_flux_to_cell_center(m2);
+  /* NOTE: all cells have valid cell-centered fields */
+
   err += m2sim_from_conserved_all(m2);
-  err += m2sim_synchronize_guard(m2);
+  /* NOTE: all cells and faces are valid */
   return err;
 }
 

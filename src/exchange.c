@@ -169,11 +169,11 @@ void m2sim_delete_mpi_types(m2sim *m2)
 
 
 
-int m2sim_synchronize_guard(m2sim *m2)
+int m2sim_synchronize_cells(m2sim *m2)
 {
+  /* TODO: implement the MPI version of this */
   struct mesh_cell *C, *D;
   int n, d, gind;
-
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
       C = m2->mesh.cells + n;
@@ -192,7 +192,14 @@ int m2sim_synchronize_guard(m2sim *m2)
       }
     }
   }
+  return 0;
+}
 
+
+
+int m2sim_synchronize_faces(m2sim *m2)
+{
+  /* TODO: implement serial and MPI version of this */
   /* for (d=1; d<=3; ++d) { */
   /*   for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) { */
   /*     F = m2->mesh.faces[d] + n; */
@@ -218,7 +225,6 @@ int m2sim_synchronize_guard(m2sim *m2)
   /*     } */
   /*   } */
   /* } */
-
   return 0;
 }
 
