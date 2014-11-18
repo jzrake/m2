@@ -95,6 +95,59 @@ int m2sim_calculate_flux(m2sim *m2)
 
 int m2sim_calculate_emf(m2sim *m2)
 {
+  if (!m2->magnetized) {
+    return 0;
+  }
+  struct mesh_edge *E;
+  struct mesh_face *F[4];
+  int n, d=3;
+  int B1, B2, B3;
+  for (d=1; d<=3; ++d) {
+    switch (d) {
+    case 1: B1 = B11; B2 = B22; B3 = B33; break;
+    case 2: B1 = B22; B2 = B33; B3 = B11; break;
+    case 3: B1 = B33; B2 = B11; B3 = B22; break;
+    }
+    for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
+      E = &m2->mesh.edges[d][n];
+      mesh_edge_faces(&m2->mesh, E, F);
+      E->emf = 0.0;
+      if (F[0]) E->emf -= E->length * F[0]->flux[B3];
+      if (F[1]) E->emf -= E->length * F[1]->flux[B3];
+      if (F[2]) E->emf += E->length * F[2]->flux[B2];
+      if (F[3]) E->emf += E->length * F[3]->flux[B2];
+      E->emf /= (F[0]!=NULL) + (F[1]!=NULL) + (F[2]!=NULL) + (F[3]!=NULL);
+    }
+  }
+  return 0;
+}
+
+
+
+int m2sim_exchange_flux(m2sim *m2, double dt)
+{
+  struct mesh_cell *cells[2];
+  struct mesh_face *faces[4], *F;
+  struct mesh_edge *E;
+  int n, d, q;
+  for (d=1; d<=3; ++d) {
+    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
+      F = &m2->mesh.faces[d][n];
+      mesh_face_cells(&m2->mesh, F, cells);
+      for (q=0; q<5; ++q) {
+        if (cells[0]) cells[0]->consA[q] -= dt * F->area * F->flux[q];
+        if (cells[1]) cells[1]->consA[q] += dt * F->area * F->flux[q];
+      }
+    }
+    for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
+      E = &m2->mesh.edges[d][n];
+      mesh_edge_faces(&m2->mesh, E, faces);
+      if (faces[0]) faces[0]->BfluxA -= E->emf * dt;
+      if (faces[1]) faces[1]->BfluxA += E->emf * dt;
+      if (faces[2]) faces[2]->BfluxA += E->emf * dt;
+      if (faces[3]) faces[3]->BfluxA -= E->emf * dt;
+    }
+  }
   return 0;
 }
 
@@ -155,35 +208,6 @@ int m2sim_calculate_gradient(m2sim *m2)
 	  G[q] = 0.0;
 	}
       }
-    }
-  }
-  return 0;
-}
-
-
-
-int m2sim_exchange_flux(m2sim *m2, double dt)
-{
-  struct mesh_cell *cells[2];
-  struct mesh_face *faces[4], *F;
-  struct mesh_edge *E;
-  int n, d, q;
-  for (d=1; d<=3; ++d) {
-    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = &m2->mesh.faces[d][n];
-      mesh_face_cells(&m2->mesh, F, cells);
-      for (q=0; q<5; ++q) {
-        if (cells[0]) cells[0]->consA[q] -= dt * F->area * F->flux[q];
-        if (cells[1]) cells[1]->consA[q] += dt * F->area * F->flux[q];
-      }
-    }
-    for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
-      E = &m2->mesh.edges[d][n];
-      mesh_edge_faces(&m2->mesh, E, faces);
-      if (faces[0]) faces[0]->BfluxA -= E->emf * dt; /* TODO: double-check sign */
-      if (faces[1]) faces[1]->BfluxA += E->emf * dt;
-      if (faces[2]) faces[2]->BfluxA -= E->emf * dt;
-      if (faces[3]) faces[3]->BfluxA += E->emf * dt;
     }
   }
   return 0;

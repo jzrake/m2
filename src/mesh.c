@@ -152,7 +152,7 @@ void mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4])
   int a2 = (axis + 1 - 1) % 3 + 1;
   int a3 = (axis + 2 - 1) % 3 + 1;
   linear_to_multi(face_id, F[axis], I);
-  edge_ids[0] = multi_to_linear(E[a2], I); I[a2] += 1; /* TODO: test */
+  edge_ids[0] = multi_to_linear(E[a2], I); I[a2] += 1; /* TODO: test (probably correct) */
   edge_ids[1] = multi_to_linear(E[a2], I); I[a2] -= 1;
   edge_ids[2] = multi_to_linear(E[a3], I); I[a3] += 1;
   edge_ids[3] = multi_to_linear(E[a3], I); I[a3] -= 1;
@@ -184,10 +184,10 @@ void mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4])
   int a2 = (axis + 1 - 1) % 3 + 1;
   int a3 = (axis + 2 - 1) % 3 + 1;
   linear_to_multi(edge_id, E[axis], I);
-  face_ids[0] = multi_to_linear(F[a2], I); I[a2] += 1; /* TODO: test */
-  face_ids[1] = multi_to_linear(F[a2], I); I[a2] -= 1;
-  face_ids[2] = multi_to_linear(F[a3], I); I[a3] += 1;
-  face_ids[3] = multi_to_linear(F[a3], I); I[a3] -= 1;
+  I[a3] -= 1; face_ids[0] = multi_to_linear(F[a2], I);
+  I[a3] += 1; face_ids[1] = multi_to_linear(F[a2], I);
+  I[a2] -= 1; face_ids[2] = multi_to_linear(F[a3], I);
+  I[a2] += 1; face_ids[3] = multi_to_linear(F[a3], I);
 #undef E
 #undef F  
 }

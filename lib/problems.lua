@@ -285,14 +285,14 @@ end
 --------------------------------------------------------------------------------
 local Shocktube = class.class('Shocktube', TestProblem)
 function Shocktube:build_m2(runtime_cfg)
-   local build_args = {lower={0.0, 0.0, 0.0},
-   upper={1.0, 1.0, 1.0},
-   resolution={512,1,1},
-   periods={false,false,false},
-   scaling={'linear'},
-   relativistic=false,
-   magnetized=true,
-   geometry='cartesian'}
+   local build_args = {
+      lower={0.0, 0.0, 0.0},
+      upper={1.0, 1.0, 1.0},
+      resolution={512,1,1},
+      scaling={'linear'},
+      relativistic=false,
+      magnetized=true,
+      geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    if runtime_cfg.resolution then
@@ -307,7 +307,6 @@ function Shocktube:build_m2(runtime_cfg)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
    m2:set_gradient_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
-   m2:set_boundary_conditions_flux1(outflow_bc_flux(1))
    m2:set_problem(self)
    return m2
 end

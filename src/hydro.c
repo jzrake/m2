@@ -305,8 +305,8 @@ int m2aux_fluxes(m2aux *aux, double n[4], double *F)
   F[S22] = S2 * vn + (pg + pb) * n2 - b2 * Bn / u0;
   F[S33] = S3 * vn + (pg + pb) * n3 - b3 * Bn / u0;
   F[B11] = B1 * vn - Bn * v1;
-  F[B22] = B2 * vn - Bn * v2;
-  F[B33] = B3 * vn - Bn * v3;
+  F[B22] = B2 * vn - Bn * v2; /* = -Ez =  vx By - vy Bx */
+  F[B33] = B3 * vn - Bn * v3; /* =  Ey = -vz Bx + vx Bz */
   return 0;
 }
 double m2aux_maximum_wavespeed(m2aux *aux, int *err)
