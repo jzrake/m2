@@ -438,16 +438,16 @@ void mesh_new(struct mesh *M);
 void mesh_allocate(struct mesh *M);
 void mesh_deallocate(struct mesh *M);
 
-void mesh_cell_faces1(struct mesh *M, int cell_id, int face_ids[6]);
-void mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4]);
-void mesh_face_cells1(struct mesh *M, int axis, int face_id, int cell_ids[2]);
-void mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4]);
-void mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4]);
-void mesh_cell_faces(struct mesh *M, struct mesh_cell *cell, struct mesh_face *faces[6]);
-void mesh_face_edges(struct mesh *M, struct mesh_face *face, struct mesh_edge *edges[4]);
-void mesh_face_cells(struct mesh *M, struct mesh_face *face, struct mesh_cell *cells[2]);
-void mesh_edge_faces(struct mesh *M, struct mesh_edge *edge, struct mesh_face *faces[4]);
-void mesh_edge_cells(struct mesh *M, struct mesh_edge *edge, struct mesh_cell *cells[4]);
+int mesh_cell_faces1(struct mesh *M, int cell_id, int face_ids[6]);
+int mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4]);
+int mesh_face_cells1(struct mesh *M, int axis, int face_id, int cell_ids[2]);
+int mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4]);
+int mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4]);
+int mesh_cell_faces(struct mesh *M, struct mesh_cell *cell, struct mesh_face *faces[6]);
+int mesh_face_edges(struct mesh *M, struct mesh_face *face, struct mesh_edge *edges[4]);
+int mesh_face_cells(struct mesh *M, struct mesh_face *face, struct mesh_cell *cells[2]);
+int mesh_edge_faces(struct mesh *M, struct mesh_edge *edge, struct mesh_face *faces[4]);
+int mesh_edge_cells(struct mesh *M, struct mesh_edge *edge, struct mesh_cell *cells[4]);
 
 int  mesh_multi_to_linear(int dims[4], int index[4]);
 void mesh_linear_to_multi(int n, int dims[4], int index[4]);

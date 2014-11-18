@@ -12,6 +12,7 @@ static inline void global_min(m2sim *m2, double *x);
 static inline double plm_gradient(double *xs, double *fs, double plm, int *error);
 static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis);
 /* static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d); */
+static inline int global_index_edge(m2sim *m2, struct mesh_edge *E, int d);
 
 
 
@@ -32,59 +33,47 @@ int m2sim_calculate_flux(m2sim *m2)
   /* Here we apply reflecting boundary conditions on the fluxes, if
      necessary. */
   for (d=1; d<=3; ++d) {
+
+    int B1, B2, B3;
+    int S1, S2, S3;
+
     if (m2->domain_resolution[d] == 1) {
       continue;
     }
+    else {
+      switch (d) {
+      case 1: B1 = B11; B2 = B22; B3 = B33; S1 = S11; S2 = S22; S3 = S33; break;
+      case 2: B1 = B22; B2 = B33; B3 = B11; S1 = S22; S2 = S33; S3 = S11; break;
+      case 3: B1 = B33; B2 = B11; B3 = B22; S1 = S33; S2 = S11; S3 = S22; break;
+      }
+    }
+
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
       G = NULL;
       F = &m2->mesh.faces[d][n];
       mesh_face_cells(&m2->mesh, F, cells);
       if (cells[0] == NULL &&
 	  m2->boundary_condition_lower[d] == M2_BOUNDARY_REFLECTING) {
-	if (global_index_cell(m2, cells[1], d) == -1) { /* TODO: when shell
-							   thing is removed,
-							   this should be a zero
-							   not a -1 */
-	  /* we're on the lower wall */
+	/* TODO: when shell thing is removed, this should be a zero not a -1 */
+	if (global_index_cell(m2, cells[1], d) == -1) {
 	  G = F + m2->mesh.faces_stride[d][d];
 	}
       }
       if (cells[1] == NULL &&
 	  m2->boundary_condition_upper[d] == M2_BOUNDARY_REFLECTING) {
 	if (global_index_cell(m2, cells[0], d) == m2->domain_resolution[d]-1) {
-	  /* we're on the upper wall */
 	  G = F - m2->mesh.faces_stride[d][d];
 	}
       }
       if (G) {
 	F->flux[DDD] = -G->flux[DDD];
 	F->flux[TAU] = -G->flux[TAU];
-	switch (d) {
-	case 1:
-	  F->flux[S11] = +G->flux[S11];
-	  F->flux[S22] = -G->flux[S22];
-	  F->flux[S33] = -G->flux[S33];
-	  F->flux[B11] = -G->flux[B11];
-	  F->flux[B22] = +G->flux[B22];
-	  F->flux[B33] = +G->flux[B33];
-	  break;
-	case 2:
-	  F->flux[S11] = -G->flux[S11];
-	  F->flux[S22] = +G->flux[S22];
-	  F->flux[S33] = -G->flux[S33];
-	  F->flux[B11] = +G->flux[B11];
-	  F->flux[B22] = -G->flux[B22];
-	  F->flux[B33] = +G->flux[B33];
-	  break;
-	case 3:
-	  F->flux[S11] = -G->flux[S11];
-	  F->flux[S22] = -G->flux[S22];
-	  F->flux[S33] = +G->flux[S33];
-	  F->flux[B11] = +G->flux[B11];
-	  F->flux[B22] = +G->flux[B22];
-	  F->flux[B33] = -G->flux[B33];
-	  break;
-	}
+	F->flux[S1] = +G->flux[S1];
+	F->flux[S2] = -G->flux[S2];
+	F->flux[S3] = -G->flux[S3];
+	F->flux[B1] = -G->flux[B1];
+	F->flux[B2] = +G->flux[B2];
+	F->flux[B3] = +G->flux[B3];
       }
     }
   }
@@ -100,8 +89,9 @@ int m2sim_calculate_emf(m2sim *m2)
   }
   struct mesh_edge *E;
   struct mesh_face *F[4];
-  int n, d=3;
+  int n, d, num_faces;
   int B1, B2, B3;
+  int a2, a3, g2, g3;
   for (d=1; d<=3; ++d) {
     switch (d) {
     case 1: B1 = B11; B2 = B22; B3 = B33; break;
@@ -110,13 +100,42 @@ int m2sim_calculate_emf(m2sim *m2)
     }
     for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
       E = &m2->mesh.edges[d][n];
-      mesh_edge_faces(&m2->mesh, E, F);
+      num_faces = mesh_edge_faces(&m2->mesh, E, F);
       E->emf = 0.0;
-      if (F[0]) E->emf -= E->length * F[0]->flux[B3];
-      if (F[1]) E->emf -= E->length * F[1]->flux[B3];
-      if (F[2]) E->emf += E->length * F[2]->flux[B2];
-      if (F[3]) E->emf += E->length * F[3]->flux[B2];
-      E->emf /= (F[0]!=NULL) + (F[1]!=NULL) + (F[2]!=NULL) + (F[3]!=NULL);
+      if (F[0]) E->emf -= F[0]->flux[B3];
+      if (F[1]) E->emf -= F[1]->flux[B3];
+      if (F[2]) E->emf += F[2]->flux[B2];
+      if (F[3]) E->emf += F[3]->flux[B2];
+      E->emf *= E->length / num_faces;
+      /* reflecting boundary condition */
+      a2 = (d+1-1)%3+1;
+      a3 = (d+2-1)%3+1;
+      if ((num_faces != 4) &&
+	  (m2->boundary_condition_lower[a2] == M2_BOUNDARY_REFLECTING ||
+	   m2->boundary_condition_lower[a3] == M2_BOUNDARY_REFLECTING ||
+	   m2->boundary_condition_upper[a2] == M2_BOUNDARY_REFLECTING ||
+	   m2->boundary_condition_upper[a3] == M2_BOUNDARY_REFLECTING)) {
+	g2 = global_index_edge(m2, E, a2);
+	g3 = global_index_edge(m2, E, a3);
+	/* If the edge lies in any of the four domain boundary surfaces, and
+	   that surface is conducting, then set the emf on that edge to zero. */
+	if (g2 == -1 &&
+	    m2->boundary_condition_lower[a2] == M2_BOUNDARY_REFLECTING) {
+	  E->emf = 0.0;
+	}
+	if (g3 == -1 &&
+	    m2->boundary_condition_lower[a3] == M2_BOUNDARY_REFLECTING) {
+	  E->emf = 0.0;
+	}
+	if (g2 == m2->domain_resolution[a2] &&
+	    m2->boundary_condition_upper[a2] == M2_BOUNDARY_REFLECTING) {
+	  E->emf = 0.0;
+	}
+	if (g3 == m2->domain_resolution[a3] &&
+	    m2->boundary_condition_upper[a3] == M2_BOUNDARY_REFLECTING) {
+	  E->emf = 0.0;
+	}
+      }
     }
   }
   return 0;
@@ -167,6 +186,9 @@ int m2sim_calculate_gradient(m2sim *m2)
   double plm = m2->plm_parameter;
   double *G;
   for (d=1; d<=3; ++d) {
+    if (m2->domain_resolution[d] == 1) {
+      continue;
+    }
     for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
       mesh_linear_to_multi(n, dims, I);
       I[d] -= 1; m[0] = mesh_multi_to_linear(dims, I); I[d] += 1;
@@ -597,5 +619,14 @@ int global_index_face(m2sim *m2, struct mesh_face *F, int d)
 {
   int I[4];
   mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I);
+  return I[d] + m2->local_grid_start[d];
+}
+
+
+
+int global_index_edge(m2sim *m2, struct mesh_edge *E, int d)
+{
+  int I[4];
+  mesh_linear_to_multi(E->id, m2->mesh.edges_shape[d], I);
   return I[d] + m2->local_grid_start[d];
 }

@@ -127,7 +127,7 @@ void mesh_deallocate(struct mesh *M)
 
 
 
-void mesh_cell_faces1(struct mesh *M, int cell_id, int face_ids[6])
+int mesh_cell_faces1(struct mesh *M, int cell_id, int face_ids[6])
 {
 #define C M->cells_shape
 #define F M->faces_shape
@@ -138,13 +138,19 @@ void mesh_cell_faces1(struct mesh *M, int cell_id, int face_ids[6])
     face_ids[n+0] = multi_to_linear(F[d], I); I[d] += 1;
     face_ids[n+1] = multi_to_linear(F[d], I); I[d] -= 1;
   }
+  return ((face_ids[0] != -1) +
+	  (face_ids[1] != -1) +
+	  (face_ids[2] != -1) +
+	  (face_ids[3] != -1) +
+	  (face_ids[4] != -1) +
+	  (face_ids[5] != -1));
 #undef C
 #undef F
 }
 
 
 
-void mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4])
+int mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4])
 {
 #define E M->edges_shape
 #define F M->faces_shape
@@ -156,13 +162,17 @@ void mesh_face_edges1(struct mesh *M, int axis, int face_id, int edge_ids[4])
   edge_ids[1] = multi_to_linear(E[a2], I); I[a2] -= 1;
   edge_ids[2] = multi_to_linear(E[a3], I); I[a3] += 1;
   edge_ids[3] = multi_to_linear(E[a3], I); I[a3] -= 1;
+  return ((edge_ids[0] != -1) +
+	  (edge_ids[1] != -1) +
+	  (edge_ids[2] != -1) +
+	  (edge_ids[3] != -1));
 #undef E
 #undef F
 }
 
 
 
-void mesh_face_cells1(struct mesh *M, int axis, int face_id, int cell_ids[2])
+int mesh_face_cells1(struct mesh *M, int axis, int face_id, int cell_ids[2])
 {
 #define C M->cells_shape
 #define F M->faces_shape
@@ -170,13 +180,15 @@ void mesh_face_cells1(struct mesh *M, int axis, int face_id, int cell_ids[2])
   linear_to_multi(face_id, F[axis], I);
   I[axis] -= 1; cell_ids[0] = multi_to_linear(C, I);
   I[axis] += 1; cell_ids[1] = multi_to_linear(C, I);
+  return ((cell_ids[0] != -1) +
+	  (cell_ids[1] != -1));
 #undef C
 #undef F
 }
 
 
 
-void mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4])
+int mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4])
 {
 #define E M->edges_shape
 #define F M->faces_shape
@@ -188,13 +200,17 @@ void mesh_edge_faces1(struct mesh *M, int axis, int edge_id, int face_ids[4])
   I[a3] += 1; face_ids[1] = multi_to_linear(F[a2], I);
   I[a2] -= 1; face_ids[2] = multi_to_linear(F[a3], I);
   I[a2] += 1; face_ids[3] = multi_to_linear(F[a3], I);
+  return ((face_ids[0] != -1) +
+	  (face_ids[1] != -1) +
+	  (face_ids[2] != -1) +
+	  (face_ids[3] != -1));
 #undef E
 #undef F  
 }
 
 
 
-void mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4])
+int mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4])
 {
 #define E M->edges_shape
 #define F M->faces_shape
@@ -207,6 +223,10 @@ void mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4])
   cell_ids[1] = multi_to_linear(C, I); I[a2] -= 1;
   cell_ids[2] = multi_to_linear(C, I); I[a3] += 1;
   cell_ids[3] = multi_to_linear(C, I); I[a3] -= 1;
+  return ((cell_ids[0] != -1) +
+	  (cell_ids[1] != -1) +
+	  (cell_ids[2] != -1) +
+	  (cell_ids[3] != -1));
 #undef E
 #undef F
 #undef C
@@ -214,66 +234,71 @@ void mesh_edge_cells1(struct mesh *M, int axis, int edge_id, int cell_ids[4])
 
 
 
-void mesh_cell_faces(struct mesh *M, struct mesh_cell *cell, struct mesh_face *faces[6])
+int mesh_cell_faces(struct mesh *M, struct mesh_cell *cell, struct mesh_face *faces[6])
 {
   int face_ids[6];
   int n, d;
-  mesh_cell_faces1(M, cell->id, face_ids);
+  int num = mesh_cell_faces1(M, cell->id, face_ids);
   for (d=1; d<=3; ++d) {
     n = 2*(d-1);
     faces[n+0] = face_ids[n+0] == -1 ? NULL : M->faces[d] + face_ids[n+0];
     faces[n+1] = face_ids[n+1] == -1 ? NULL : M->faces[d] + face_ids[n+1];
   }
+  return num;
 }
 
 
 
-void mesh_face_edges(struct mesh *M, struct mesh_face *face, struct mesh_edge *edges[4])
+int mesh_face_edges(struct mesh *M, struct mesh_face *face, struct mesh_edge *edges[4])
 {
   int edge_ids[4];
   int a2 = (face->axis + 1 - 1) % 3 + 1;
   int a3 = (face->axis + 2 - 1) % 3 + 1;
-  mesh_face_edges1(M, face->axis, face->id, edge_ids);
+  int num = mesh_face_edges1(M, face->axis, face->id, edge_ids);
   edges[0] = edge_ids[0] == -1 ? NULL : M->edges[a2] + edge_ids[0];
   edges[1] = edge_ids[1] == -1 ? NULL : M->edges[a2] + edge_ids[1];
   edges[2] = edge_ids[2] == -1 ? NULL : M->edges[a3] + edge_ids[2];
   edges[3] = edge_ids[3] == -1 ? NULL : M->edges[a3] + edge_ids[3];
+  return num;
 }
 
 
 
-void mesh_face_cells(struct mesh *M, struct mesh_face *face, struct mesh_cell *cells[2])
+int mesh_face_cells(struct mesh *M, struct mesh_face *face, struct mesh_cell *cells[2])
 {
   int cell_ids[4];
-  mesh_face_cells1(M, face->axis, face->id, cell_ids);
+  int num = mesh_face_cells1(M, face->axis, face->id, cell_ids);
   cells[0] = cell_ids[0] == -1 ? NULL : M->cells + cell_ids[0];
   cells[1] = cell_ids[1] == -1 ? NULL : M->cells + cell_ids[1];
+  return num;
 }
 
 
 
-void mesh_edge_faces(struct mesh *M, struct mesh_edge *edge, struct mesh_face *faces[4])
+int mesh_edge_faces(struct mesh *M, struct mesh_edge *edge, struct mesh_face *faces[4])
 {
   int face_ids[4];
   int a2 = (edge->axis + 1 - 1) % 3 + 1;
   int a3 = (edge->axis + 2 - 1) % 3 + 1;
-  mesh_edge_faces1(M, edge->axis, edge->id, face_ids);
+  int num = mesh_edge_faces1(M, edge->axis, edge->id, face_ids);
   faces[0] = face_ids[0] == -1 ? NULL : M->faces[a2] + face_ids[0];
   faces[1] = face_ids[1] == -1 ? NULL : M->faces[a2] + face_ids[1];
   faces[2] = face_ids[2] == -1 ? NULL : M->faces[a3] + face_ids[2];
   faces[3] = face_ids[3] == -1 ? NULL : M->faces[a3] + face_ids[3];
+  return num;
 }
 
 
 
-void mesh_edge_cells(struct mesh *M, struct mesh_edge *edge, struct mesh_cell *cells[4])
+int mesh_edge_cells(struct mesh *M, struct mesh_edge *edge, struct mesh_cell *cells[4])
 {
   int cell_ids[4];
-  mesh_edge_cells1(M, edge->axis, edge->id, cell_ids);
+  int num = mesh_edge_cells1(M, edge->axis, edge->id, cell_ids);
   cells[0] = cell_ids[0] == -1 ? NULL : M->cells + cell_ids[0];
   cells[1] = cell_ids[1] == -1 ? NULL : M->cells + cell_ids[1];
   cells[2] = cell_ids[2] == -1 ? NULL : M->cells + cell_ids[2];
   cells[3] = cell_ids[3] == -1 ? NULL : M->cells + cell_ids[3];
+  return num;
 }
 
 
