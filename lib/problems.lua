@@ -538,68 +538,6 @@ end
 
 
 
-local Jet = class.class('Jet', TestProblem)
-Jet.explanation = [[
---------------------------------------------------------------------------------
--- Stability of relativistic magnetized jets
---------------------------------------------------------------------------------]]
-function Jet:__init__()
-   local m2jet = require 'm2jet'
-   local mps = m2jet.jet_model_parameters()
-   local doc = { }
-   self.model_parameters = mps
-   self.model_parameters_doc = doc
-
-   self.initial_data_cell = function(x)
-      return {mps.ambient_density,
-	      mps.ambient_pressure,
-	      0.0, 0.0, 0.0}
-   end
-   self.initial_data_edge = function(x, n)
-      local nu = mps.nu_parameter
-      local r = x[1]
-      local t = x[2]
-      local R = r * math.sin(t)
-      local P = 0.25 * r^nu * (1.0 - math.abs(math.cos(t)))
-      local Af = P / (R + 0.01) -- A_phi
-      return {-Af * n[3]}
-   end
-end
-function Jet:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 128.0
-end
-function Jet:build_m2(runtime_cfg)
-   local r0 = 1.0
-   local r1 = 100.0
-   local N = runtime_cfg.resolution or 64
-   local build_args = {lower={r0, 0.0, 0.0},
-   upper={r1, math.pi/2, 2*math.pi},
-   resolution={ },
-   periods={false,false,true},
-   scaling={'logarithmic', 'linear', 'linear'},
-   relativistic=false,
-   magnetized=true,
-   geometry='spherical'}
-   build_args.resolution[1] = N / 2 * math.floor(math.log10(r1/r0))
-   build_args.resolution[2] = N / 2
-   build_args.resolution[3] = 1
-   local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
-   m2:set_gamma_law_index(5./3)
-   m2:set_rk_order(runtime_cfg.rkorder or 2)
-   m2:set_cfl_parameter(0.4)
-   m2:set_plm_parameter(1.8)
-   m2:set_gradient_fields(m2lib.M2_PRIMITIVE)
-   m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
-   --m2:set_add_physical_source_terms(m2lib.jet_add_physical_source_terms)
-   m2:set_boundary_conditions_cell(m2lib.jet_boundary_conditions_cell)
-   m2:set_problem(self)
-   return m2
-end
-
-
-
 local MagnetarWind = class.class('MagnetarWind', TestProblem)
 MagnetarWind.explanation = [[
 --------------------------------------------------------------------------------
@@ -1148,7 +1086,6 @@ return {
    ContactWave   = ContactWave,
    BlastMHD      = BlastMHD,
    Implosion2d   = Implosion2d,
-   Jet           = Jet,
    MagnetarWind  = MagnetarWind,
    InternalShock = InternalShock,
    DecayingMHD   = DecayingMHD,

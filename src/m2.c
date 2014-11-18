@@ -82,17 +82,14 @@ void m2sim_new(m2sim *m2)
   m2->initial_data_edge = NULL;
 
   m2->cadence_checkpoint_hdf5 = 0.0;
-  m2->cadence_checkpoint_tpl = 0.0;
   m2->cadence_analysis = 0.0;
 
   /* status initializer */
   m2->status.iteration_number = 0;
   m2->status.time_simulation = 0.0;
   m2->status.time_last_checkpoint_hdf5 = 0.0;
-  m2->status.time_last_checkpoint_tpl = 0.0;
   m2->status.time_last_analysis = 0.0;
   m2->status.checkpoint_number_hdf5 = 0;
-  m2->status.checkpoint_number_tpl = 0;
   m2->status.drive_attempt = 0;
   m2->suppress_extrapolation_at_unhealthy_zones = 1;
   m2->pressure_floor = -1.0; /* disabled */
@@ -445,6 +442,8 @@ void m2sim_run_initial_data(m2sim *m2)
   m2sim_from_primitive_all(m2);
 }
 
+
+
 m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)
 {
   /* TODO: emove this function or change to a cell function */
@@ -456,6 +455,58 @@ m2vol *m2vol_neighbor(m2vol *V, int axis, int dist)
   return M2_VOL(I[1], I[2], I[3]);
 }
 
+
+
+void m2sim_print(m2sim *m2)
+{
+  printf("domain_extent_lower: [%f %f %f]\n",
+	 m2->domain_extent_lower[1],
+	 m2->domain_extent_lower[2],
+	 m2->domain_extent_lower[3]);
+  printf("domain_extent_upper: [%f %f %f]\n",
+	 m2->domain_extent_upper[1],
+	 m2->domain_extent_upper[2],
+	 m2->domain_extent_upper[3]);
+  printf("domain_resolution: [%d %d %d]\n",
+	 m2->domain_resolution[1],
+	 m2->domain_resolution[2],
+	 m2->domain_resolution[3]);
+  printf("magnetized: %s\n", m2->magnetized ? "yes" : "no");
+  printf("relativistic: %s\n", m2->relativistic ? "yes" : "no");
+}
+
+
+
+void m2_print_state(m2prim *P, m2aux *aux, double *U)
+{
+  if (P) {
+    printf("d  = %+8.6e\n", P->d);
+    printf("p  = %+8.6e\n", P->p);
+    printf("v1 = %+8.6e\n", P->v1);
+    printf("v2 = %+8.6e\n", P->v2);
+    printf("v3 = %+8.6e\n", P->v3);
+    printf("B1 = %+8.6e\n", P->B1);
+    printf("B2 = %+8.6e\n", P->B2);
+    printf("B3 = %+8.6e\n", P->B3);
+  }
+  if (aux) {
+    double *u = aux->velocity_four_vector;
+    double *b = aux->magnetic_four_vector;
+    double *S = aux->momentum_density;
+    printf("d = %+8.6e\n", aux->comoving_mass_density);
+    printf("p = %+8.6e\n", aux->gas_pressure);
+    printf("u = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", u[0], u[1], u[2], u[3]);
+    printf("b = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", b[0], b[1], b[2], b[3]);
+    printf("S = [%+8.6e %+8.6e %+8.6e %+8.6e]\n", S[0], S[1], S[2], S[3]);
+  }
+  if (U) {
+    printf("DDD = %+8.6e\n", U[DDD]);
+    printf("TAU = %+8.6e\n", U[TAU]);
+    printf("S11 = %+8.6e\n", U[S11]);
+    printf("S22 = %+8.6e\n", U[S22]);
+    printf("S33 = %+8.6e\n", U[S33]);
+  }
+}
 
 
 

@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "m2-cfg.h"
-//#include "mesh.h"
 #include "jsw_rand.h"
 
 
@@ -12,7 +11,7 @@
  * M2 PUBLIC API
  * --------------------------------------------------------------- */
 enum m2flag {
-  /* geometry */
+  /* Geometry */
   M2_CARTESIAN,
   M2_CYLINDRICAL,
   M2_SPHERICAL,
@@ -20,7 +19,7 @@ enum m2flag {
   M2_LINEAR,
   M2_LOGARITHMIC,
 
-  /* may have many uses including interpolation variables */
+  /* Gradient fields, etc */
   M2_CONSERVED,
   M2_AUXILIARY,
   M2_PRIMITIVE,
@@ -263,10 +262,8 @@ struct m2sim_status
   double time_simulation;
   double time_step;
   double time_last_checkpoint_hdf5;
-  double time_last_checkpoint_tpl;
   double time_last_analysis;
   int iteration_number;
-  int checkpoint_number_tpl;
   int checkpoint_number_hdf5;
   int error_code;
   int drive_attempt;
@@ -313,7 +310,6 @@ struct m2sim
   double cfl_parameter;
   double gamma_law_index;
   double cadence_checkpoint_hdf5;
-  double cadence_checkpoint_tpl;
   double cadence_analysis;
   m2stirring stirring;
   m2sim_status status;
@@ -390,8 +386,6 @@ int m2sim_cache_conserved(m2sim *m2);
 int m2sim_enforce_user_constraint(m2sim *m2);
 int m2sim_synchronize_cells(m2sim *m2);
 int m2sim_synchronize_faces(m2sim *m2);
-int m2sim_save_checkpoint_tpl(m2sim *m2, const char *fname);
-int m2sim_load_checkpoint_tpl(m2sim *m2, const char *fname);
 void m2sim_print(m2sim *m2);
 void m2sim_write_ascii_1d(m2sim *m2, const char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, const char *fname);

@@ -30,8 +30,6 @@ public:
   GLUI_EditText *chkptname_field;
   GLUI_FileBrowser *chkptload_browser;
   enum {
-    ACTION_LOAD_FILE,
-    ACTION_SAVE_FILE,
     ACTION_TAKE_SCREENSHOT,
     ACTION_RESET_VIEW,
     ACTION_STEP,
@@ -233,10 +231,6 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   new GLUI_Button(parent, "Step", ACTION_STEP, action_cb);
   new GLUI_Button(parent, "Quit", ACTION_QUIT, action_cb);
   new GLUI_Column(parent);
-  chkptload_browser = new GLUI_FileBrowser(parent, "Load M2 file");
-  new GLUI_Button(parent, "Load checkpoint", ACTION_LOAD_FILE, action_cb);
-  chkptname_field = new GLUI_EditText(parent, "Checkpoint file name");
-  new GLUI_Button(parent, "Save checkpoint", ACTION_SAVE_FILE, action_cb);
   time_label->deactivate();
   iter_label->deactivate();
   zoom_sb->set_float_limits(-3.0, 0.0);
@@ -257,13 +251,6 @@ void SimulationController::refresh_cb(int user_id)
 void SimulationController::action_cb(int action_id)
 {
   switch (action_id) {
-  case ACTION_SAVE_FILE:
-    m2sim_save_checkpoint_tpl(M2, sim_controller->chkptname_field->get_text());
-    break;
-  case ACTION_LOAD_FILE:
-    m2sim_load_checkpoint_tpl(M2, sim_controller->chkptload_browser->get_file());
-    sim_controller->refresh();
-    break;
   case ACTION_TAKE_SCREENSHOT:
     sim_controller->take_screenshot();
     break;
@@ -628,8 +615,6 @@ void load_next_frame()
   else {
     checkpoint_number += 1;
   }
-  snprintf(fname, 256, "sgrbA/chkpt.%04d.m2", checkpoint_number);
-  m2sim_load_checkpoint_tpl(M2, fname);
   sim_controller->refresh();
 
   if (M2->status.time_simulation < 100.0) {
