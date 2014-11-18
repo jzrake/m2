@@ -7,18 +7,85 @@
 
 
 
-static void global_sum(m2sim *m2, int *N);
-static void global_min(m2sim *m2, double *x);
-static double plm_gradient(double *xs, double *fs, double plm, int *error);
+static inline void global_sum(m2sim *m2, int *N);
+static inline void global_min(m2sim *m2, double *x);
+static inline double plm_gradient(double *xs, double *fs, double plm, int *error);
+static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis);
+/* static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d); */
 
 
 
 int m2sim_calculate_flux(m2sim *m2)
 {
+  struct mesh_cell *cells[2];
+  struct mesh_face *F, *G;
   int n, d;
+
+  /* Solve the riemann problem between all adjacent cells. Faces that have only
+     one cell attached are given the flux of the interior cell. */
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
       m2sim_riemann_solver(m2, &m2->mesh.faces[d][n]);
+    }
+  }
+
+  /* Here we apply reflecting boundary conditions on the fluxes, if
+     necessary. */
+  for (d=1; d<=3; ++d) {
+    if (m2->domain_resolution[d] == 1) {
+      continue;
+    }
+    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
+      G = NULL;
+      F = &m2->mesh.faces[d][n];
+      mesh_face_cells(&m2->mesh, F, cells);
+      if (cells[0] == NULL &&
+	  m2->boundary_condition_lower[d] == M2_BOUNDARY_REFLECTING) {
+	if (global_index_cell(m2, cells[1], d) == -1) { /* TODO: when shell
+							   thing is removed,
+							   this should be a zero
+							   not a -1 */
+	  /* we're on the lower wall */
+	  G = F + m2->mesh.faces_stride[d][d];
+	}
+      }
+      if (cells[1] == NULL &&
+	  m2->boundary_condition_upper[d] == M2_BOUNDARY_REFLECTING) {
+	if (global_index_cell(m2, cells[0], d) == m2->domain_resolution[d]-1) {
+	  /* we're on the upper wall */
+	  G = F - m2->mesh.faces_stride[d][d];
+	}
+      }
+      if (G) {
+	F->flux[DDD] = -G->flux[DDD];
+	F->flux[TAU] = -G->flux[TAU];
+	switch (d) {
+	case 1:
+	  F->flux[S11] = +G->flux[S11];
+	  F->flux[S22] = -G->flux[S22];
+	  F->flux[S33] = -G->flux[S33];
+	  F->flux[B11] = -G->flux[B11];
+	  F->flux[B22] = +G->flux[B22];
+	  F->flux[B33] = +G->flux[B33];
+	  break;
+	case 2:
+	  F->flux[S11] = -G->flux[S11];
+	  F->flux[S22] = +G->flux[S22];
+	  F->flux[S33] = -G->flux[S33];
+	  F->flux[B11] = +G->flux[B11];
+	  F->flux[B22] = -G->flux[B22];
+	  F->flux[B33] = +G->flux[B33];
+	  break;
+	case 3:
+	  F->flux[S11] = -G->flux[S11];
+	  F->flux[S22] = -G->flux[S22];
+	  F->flux[S33] = +G->flux[S33];
+	  F->flux[B11] = +G->flux[B11];
+	  F->flux[B22] = +G->flux[B22];
+	  F->flux[B33] = -G->flux[B33];
+	  break;
+	}
+      }
     }
   }
   return 0;
@@ -103,7 +170,7 @@ int m2sim_exchange_flux(m2sim *m2, double dt)
   int n, d, q;
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = m2->mesh.faces[d] + n;
+      F = &m2->mesh.faces[d][n];
       mesh_face_cells(&m2->mesh, F, cells);
       for (q=0; q<5; ++q) {
         if (cells[0]) cells[0]->consA[q] -= dt * F->area * F->flux[q];
@@ -111,7 +178,7 @@ int m2sim_exchange_flux(m2sim *m2, double dt)
       }
     }
     for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
-      E = m2->mesh.edges[d] + n;
+      E = &m2->mesh.edges[d][n];
       mesh_edge_faces(&m2->mesh, E, faces);
       if (faces[0]) faces[0]->BfluxA -= E->emf * dt; /* TODO: double-check sign */
       if (faces[1]) faces[1]->BfluxA += E->emf * dt;
@@ -132,7 +199,7 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
   double x0[4];
   double x1[4];
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     mesh_cell_faces(&m2->mesh, C, F);
     x0[0] = 0.0;
     x1[0] = dt;
@@ -156,14 +223,14 @@ int m2sim_cache_conserved(m2sim *m2)
   struct mesh_face *F;
   int n, d, q;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     for (q=0; q<5; ++q) {
       C->consB[q] = C->consA[q];
     }
   }
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = m2->mesh.faces[d] + n;
+      F = &m2->mesh.faces[d][n];
       F->BfluxB = F->BfluxA;
     }
   }
@@ -178,14 +245,14 @@ int m2sim_average_runge_kutta(m2sim *m2, double b)
   struct mesh_face *F;
   int n, d, q;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     for (q=0; q<5; ++q) {
       C->consA[q] = b * C->consA[q] + (1.0 - b) * C->consB[q];
     }
   }
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = m2->mesh.faces[d] + n;
+      F = &m2->mesh.faces[d][n];
       F->BfluxA = b * F->BfluxA + (1.0 - b) * F->BfluxB;
     }
   }
@@ -206,7 +273,7 @@ int m2sim_magnetic_flux_to_cell_center(m2sim *m2)
   struct mesh_face *F[6];
   int n;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     mesh_cell_faces(&m2->mesh, C, F);
     C->prim.B1 = (F[0]->BfluxA + F[1]->BfluxA) / (F[0]->area + F[1]->area);
     C->prim.B2 = (F[2]->BfluxA + F[3]->BfluxA) / (F[2]->area + F[3]->area);
@@ -226,7 +293,7 @@ int m2sim_from_conserved_all(m2sim *m2)
   int error, num_bad=0;
   int n;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     B[0] = 0.0;
     B[1] = C->prim.B1;
     B[2] = C->prim.B2;
@@ -246,7 +313,7 @@ int m2sim_from_primitive_all(m2sim *m2)
   struct mesh_cell *C;
   int n;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     m2sim_from_primitive(m2, &C->prim, NULL, NULL, C->volume,
                          C->consA, &C->aux);
   }
@@ -257,15 +324,15 @@ int m2sim_from_primitive_all(m2sim *m2)
 
 double m2sim_minimum_courant_time(m2sim *m2)
 {
+  /* This function assumes that cells at the MPI and periodic boundaries have
+     valid aux data. */
   struct mesh_cell *C;
   struct mesh_face *faces[6];
   int error;
   int n;
   double dt=-1;
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
-    /* TODO: unless guards have already been synchronized, this function must
-       skip non-interior cells. */
-    C = m2->mesh.cells + n;
+    C = &m2->mesh.cells[n];
     mesh_cell_faces(&m2->mesh, C, faces);
     double dx1 = faces[1]->x[1] - faces[0]->x[1];
     double dx2 = faces[3]->x[2] - faces[2]->x[2];
@@ -293,7 +360,7 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 {
   int err = 0;
   err += m2sim_calculate_gradient(m2);
-  /* Outermost 1 cells have invalid gradient data */
+  /* Outermost 1 cells have invalid gradient data. */
 
   err += m2sim_synchronize_cells(m2);
   /* Communicate outermost 1 cells across MPI and periodic boundaries. All
@@ -307,7 +374,7 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
 
   err += m2sim_synchronize_faces(m2);
   /* Communicate outermost 1 faces across MPI and periodic boundaries. All
-     faces have valid Godunov and magnetic fluxes */
+     faces have valid Godunov and magnetic fluxes. */
 
   err += m2sim_calculate_emf(m2);
   /* TODO: set physical BC's on Godunov EMF's at domain and topological
@@ -316,35 +383,35 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
      Godunov EMF's */
   /* EMF's on MPI and periodic boundary are still wrong, because they only
      account for 3 of 4 faces on a planar boundary, and 2 of 4 faces at the
-     intersection of two planar boundaries */
+     intersection of two planar boundaries. */
 
   err += m2sim_exchange_flux(m2, dt);
   /* TODO: communicate outermost 1 faces across MPI and periodic boundaries, to
      account for incorrect EMF's on boundary faces */
-  /* NOTE: conserved quantites in cells on MPI and periodic boundaries have the
+  /* Conserved quantites in cells on MPI and periodic boundaries have the
      correct values because Godunov fluxes on even their face was
-     communicated */
+     communicated. */
 
   err += m2sim_add_source_terms(m2, dt);
-  /* NOTE: valid for all cells */
+  /* Valid for all cells. */
 
   err += m2sim_enforce_user_constraint(m2);
-  /* NOTE: this is where additional user constraints are being enforced. These
-     might include driving the momentum, or a "soft" boundary condition where
-     the solution is driven toward something user prescribed. Such constraints
-     may be enforced on the conserved quantities consA and BfluxA only.
+  /* This is where additional user constraints are being enforced. These might
+     include driving the momentum, or a "soft" boundary condition where the
+     solution is driven toward something user prescribed. Such constraints may
+     be enforced on the conserved quantities consA and BfluxA only.
      Modifications to prim, aux, or cell-centered magnetic field will be
      over-written in the next two steps. */
 
   err += m2sim_average_runge_kutta(m2, rkparam);
-  /* NOTE: applies to consA and BfluxA only, all cells and faces have valid
-     conserved quantities */
+  /* Applies to consA and BfluxA only, all cells and faces have valid conserved
+     quantities. */
 
   err += m2sim_magnetic_flux_to_cell_center(m2);
-  /* NOTE: all cells have valid cell-centered fields */
+  /* All cells have valid cell-centered fields. */
 
   err += m2sim_from_conserved_all(m2);
-  /* NOTE: all cells and faces are valid */
+  /* All cells and faces are valid. */
   return err;
 }
 
@@ -355,31 +422,19 @@ void m2sim_drive(m2sim *m2)
   double dt;
   int err = 0, rk_order = m2->rk_order;
   double kzps; /* kilozones per second */
-  char checkpoint_name[1024];
+  clock_t start_cycle, stop_cycle;
 
-  m2sim_run_analysis(m2);
+
+
   m2sim_cache_conserved(m2);
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
   m2->status.time_step = dt;
-
-  double cad = m2->cadence_checkpoint_tpl;
-  double now = m2->status.time_simulation;
-  double las = m2->status.time_last_checkpoint_tpl;
-
-  if (cad > 0.0 && now - las > cad) {
-    m2->status.checkpoint_number_tpl += 1;
-    m2->status.time_last_checkpoint_tpl += cad;
-    snprintf(checkpoint_name, sizeof(checkpoint_name), "chkpt.%04d.m2",
-             m2->status.checkpoint_number_tpl);
-    m2sim_save_checkpoint_tpl(m2, checkpoint_name);
-  }
 
 
 
   /* ======================================================================== */
   /* Start the clock                                                          */
   /* ======================================================================== */
-  clock_t start_cycle, stop_cycle;
   start_cycle = clock();
 
 
@@ -401,6 +456,8 @@ void m2sim_drive(m2sim *m2)
     err = m2sim_runge_kutta_substep(m2, dt, 2.0/3.0); if (err) {err=3; break;}
     break;
   }
+
+
 
   m2->status.iteration_number += 1;
   m2->status.time_simulation += dt;
@@ -496,4 +553,25 @@ static double plm_gradient(double *xs, double *fs, double plm, int *error)
   return g;
 #undef sign
 #undef min3
+}
+
+
+
+int global_index_cell(m2sim *m2, struct mesh_cell *C, int d)
+{
+  switch (d) {
+  case 1: return C->global_i;
+  case 2: return C->global_j;
+  case 3: return C->global_k;
+  default: return 0;
+  }
+}
+
+
+
+int global_index_face(m2sim *m2, struct mesh_face *F, int d)
+{
+  int I[4];
+  mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I);
+  return I[d] + m2->local_grid_start[d];
 }

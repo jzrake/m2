@@ -25,8 +25,9 @@
 
 
 
-static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis) {
-  switch (axis) {
+static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int d)
+{
+  switch (d) {
   case 1: return C->global_i;
   case 2: return C->global_j;
   case 3: return C->global_k;
@@ -36,12 +37,12 @@ static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis) {
 
 
 
-/* static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d) */
-/* { */
-/*   int I[4]; */
-/*   mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I); */
-/*   return I[d] + m2->local_grid_start[d]; */
-/* } */
+static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d)
+{
+  int I[4];
+  mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I);
+  return I[d] + m2->local_grid_start[d];
+}
 
 
 

@@ -395,10 +395,10 @@ int m2sim_load_checkpoint_tpl(m2sim *m2, const char *fname);
 void m2sim_print(m2sim *m2);
 void m2sim_write_ascii_1d(m2sim *m2, const char *fname);
 void m2sim_write_ascii_2d(m2sim *m2, const char *fname);
-void m2sim_run_analysis(m2sim *m2);
 void m2sim_run_initial_data(m2sim *m2);
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P);
 void m2sim_to_interpolated(m2sim *m2, m2prim *P, m2aux *A, double *y, int stride);
+int m2sim_riemann_solver(m2sim *m2, struct mesh_face *F);
 int m2sim_memory_usage(m2sim *m2);
 int m2sim_from_conserved_all(m2sim *m2);
 int m2sim_from_primitive_all(m2sim *m2);
@@ -409,7 +409,6 @@ int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
 			 m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
-void m2sim_riemann_solver(m2sim *m2, struct mesh_face *F);
 void m2sim_drive(m2sim *m2);
 void m2sim_visualize(m2sim *m2, int argc, char **argv);
 

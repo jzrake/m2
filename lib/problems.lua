@@ -496,10 +496,9 @@ function Implosion2d:__init__()
    local doc = { }
    self.model_parameters = mps
    self.model_parameters_doc = doc
-
    self.initial_data_cell = function(x)
       local r = x[1] + x[2]
-      if r > -0.4 then
+      if r < 0.4 then
          return {1.0, 10.0, 0.0, 0.0, 0.0}
       else
          return {0.1, 0.10, 0.0, 0.0, 0.0}
@@ -510,48 +509,31 @@ function Implosion2d:set_runtime_defaults(runtime_cfg)
    runtime_cfg.tmax = 0.4
 end
 function Implosion2d:build_m2(runtime_cfg)
-   local function bc_reflecting(m2)
-      local n1 = m2.domain_resolution[1]
-      local n2 = m2.domain_resolution[2]
-      for n,V in m2:volumes() do
-         local ax, V1 -- axis and partner (interior) cell
-         if V.global_index[1] == 0 then V1 = V:neighbor(1, 3); ax = 1; end
-         if V.global_index[1] == 1 then V1 = V:neighbor(1, 1); ax = 1; end
-         if V.global_index[1] == n1-2 then V1 = V:neighbor(1, -1); ax = 1; end
-         if V.global_index[1] == n1-1 then V1 = V:neighbor(1, -3); ax = 1; end
-         if V.global_index[2] == 0 then V1 = V:neighbor(2, 3); ax = 2; end
-         if V.global_index[2] == 1 then V1 = V:neighbor(2, 1); ax = 2; end
-         if V.global_index[2] == n2-2 then V1 = V:neighbor(2, -1); ax = 2; end
-         if V.global_index[2] == n2-1 then V1 = V:neighbor(2, -3); ax = 2; end
-         if V1 ~= nil then
-            V.prim = V1.prim
-            if ax == 1 then V.prim.v1 = -V.prim.v1 end
-            if ax == 2 then V.prim.v2 = -V.prim.v2 end
-            V:from_primitive()
-         end
-      end
-   end
    local build_args = {
       lower={-0.5,-0.5,-0.5},
       upper={ 0.5, 0.5, 0.5},
+      bc_upper={'reflecting','reflecting','reflecting'},
+      bc_lower={'reflecting','reflecting','reflecting'},
       resolution={64,64,1},
-      periods={false,false,false},
-      scaling={'linear', 'linear', 'linear'},
+      scaling={'linear','linear','linear'},
       relativistic=false,
       magnetized=false,
       geometry='cartesian'
    }
+   if runtime_cfg.resolution then
+      build_args.resolution[1] = runtime_cfg.resolution
+      build_args.resolution[2] = runtime_cfg.resolution
+   end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
    m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
-   m2:set_cfl_parameter(0.4)
-   m2:set_plm_parameter(2.0)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.6)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
    m2:set_gradient_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
    m2:set_problem(self)
-   m2:set_boundary_conditions_cell(bc_reflecting)
    return m2
 end
 

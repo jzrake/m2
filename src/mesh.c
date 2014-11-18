@@ -105,8 +105,8 @@ void mesh_allocate(struct mesh *M)
     M->edges_stride[d][2] = E[d][3];
     M->edges_stride[d][3] = 1;
     M->faces_stride[d][1] = F[d][3] * F[d][2];
-    M->faces_stride[d][1] = F[d][3];
-    M->faces_stride[d][1] = 1;
+    M->faces_stride[d][2] = F[d][3];
+    M->faces_stride[d][3] = 1;
   }
 #undef E
 #undef F

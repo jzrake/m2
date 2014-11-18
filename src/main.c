@@ -966,7 +966,6 @@ WRAP1(average_runge_kutta)
 WRAP0(magnetic_flux_to_cell_center)
 WRAP0(enforce_user_constraint)
 WRAP0(print)
-WRAP0(run_analysis)
 WRAP2(memory_usage)
 WRAP2(from_conserved_all)
 WRAP2(from_primitive_all)
@@ -1048,7 +1047,6 @@ int register_m2sim(lua_State *L)
     METHOD(magnetic_flux_to_cell_center),
     METHOD(enforce_user_constraint),
     METHOD(print),
-    METHOD(run_analysis),
     METHOD(run_initial_data),
     METHOD(memory_usage),
     METHOD(from_conserved_all),

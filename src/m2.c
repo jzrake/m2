@@ -34,11 +34,11 @@ void m2sim_new(m2sim *m2)
   m2->number_guard_zones1[1] = 0;
   m2->number_guard_zones1[2] = 0;
   m2->number_guard_zones1[3] = 0;
-  m2->boundary_condition_lower[0] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_lower[0] = 0;
   m2->boundary_condition_lower[1] = M2_BOUNDARY_OPEN;
   m2->boundary_condition_lower[2] = M2_BOUNDARY_OPEN;
   m2->boundary_condition_lower[3] = M2_BOUNDARY_OPEN;
-  m2->boundary_condition_upper[0] = M2_BOUNDARY_OPEN;
+  m2->boundary_condition_upper[0] = 0;
   m2->boundary_condition_upper[1] = M2_BOUNDARY_OPEN;
   m2->boundary_condition_upper[2] = M2_BOUNDARY_OPEN;
   m2->boundary_condition_upper[3] = M2_BOUNDARY_OPEN;
@@ -383,18 +383,6 @@ void m2sim_index_global_to_local(m2sim *m2, int global_index[4], int I[4])
   I[1] = global_index[1] - m2->local_grid_start[1];
   I[2] = global_index[2] - m2->local_grid_start[2];
   I[3] = global_index[3] - m2->local_grid_start[3];
-}
-
-
-
-void m2sim_run_analysis(m2sim *m2)
-{
-  if (m2->analysis) {
-    m2->analysis(m2);
-  }
-  else {
-    /* it's OK, analysis function isn't required */
-  }
 }
 
 
