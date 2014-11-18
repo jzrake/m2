@@ -1209,8 +1209,6 @@ int luaopen_m2lib(lua_State *L)
 }
 
 
-/* problem-specific Lua modules */
-int luaopen_m2jet(lua_State *L);
 
 
 int main(int argc, char **argv)
@@ -1255,7 +1253,7 @@ int main(int argc, char **argv)
   luaL_requiref(L, "struct", luaopen_struct, 0); lua_pop(L, 1);
 
   luaL_requiref(L, "m2lib", luaopen_m2lib, 0); lua_pop(L, 1);
-  luaL_requiref(L, "m2jet", luaopen_m2jet, 0); lua_pop(L, 1);
+
 
   // Set the Lua path
   // ---------------------------------------------------------------------------

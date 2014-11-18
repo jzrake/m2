@@ -36,7 +36,6 @@ local function main()
    parser:option '--tmax' :convert(tonumber)
    parser:option '--output-path' :default '.'
    parser:option '--hdf5-cadence' :convert(tonumber)
-   parser:option '--tpl-cadence' :convert(tonumber)
    parser:option '--msg-cadence' :convert(tonumber)
    parser:option '--reductions-cadence' :convert(tonumber)
    :description('number of iterations between taking reductions')

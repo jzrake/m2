@@ -95,9 +95,6 @@ function TestProblem:run(user_config_callback, restart_file)
    local m2 = self:build_m2(runtime_cfg)
    local dims = m2._cart_comm:get 'dims'
 
-   -- Give the random number generator a different seed on each rank
-   math.randomseed(m2._cart_comm:rank())
-
    m2:print_splash()
    m2:print_config()
    log:log_message('run', serpent.block(runtime_cfg), 1)
@@ -267,7 +264,6 @@ function DensityWave:build_m2(runtime_cfg)
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
@@ -300,7 +296,6 @@ function Shocktube:build_m2(runtime_cfg)
    end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.0)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(self.gamma_law_index or 5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.8)
@@ -471,7 +466,6 @@ function BlastMHD:build_m2(runtime_cfg)
    end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.4)
@@ -525,12 +519,69 @@ function Implosion2d:build_m2(runtime_cfg)
    end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.6)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
    m2:set_gradient_fields(m2lib.M2_PRIMITIVE)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   return m2
+end
+
+
+
+local KelvinHelmholtz = class.class('KelvinHelmholtz', TestProblem)
+KelvinHelmholtz.explanation = [[
+--------------------------------------------------------------------------------
+-- KelvinHelmholtz test
+--------------------------------------------------------------------------------]]
+function KelvinHelmholtz:__init__()
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+   self.initial_data_cell = function(x)
+      local th = math.tanh
+      local d1 = 1.0
+      local d2 = 2.0
+      local u1 =-0.5
+      local u2 = 0.5
+      local dy = 0.035
+      local w0 = 0.01
+      local d = 0.5*(d2-d1)*(th((x[2]-0.25)/dy)-th((x[2]-0.75)/dy))+d1
+      local p = 2.5
+      local u = 0.5*(u2-u1)*(th((x[2]-0.25)/dy)-th((x[2]-0.75)/dy)-1)
+      local v = w0 * math.sin(4*math.pi*x[1])
+      return {d, p, u, v, 0}
+   end
+end
+function KelvinHelmholtz:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 2.0
+end
+function KelvinHelmholtz:build_m2(runtime_cfg)
+   local build_args = {
+      lower={0.0, 0.0, 0.0},
+      upper={1.0, 1.0, 1.0},
+      periods={true,true,true},
+      resolution={64,64,1},
+      scaling={'linear','linear','linear'},
+      relativistic=false,
+      magnetized=false,
+      geometry='cartesian'
+   }
+   if runtime_cfg.resolution then
+      build_args.resolution[1] = runtime_cfg.resolution
+      build_args.resolution[2] = runtime_cfg.resolution
+   end
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 1.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.5)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
+   m2:set_gradient_fields(m2lib.M2_PRIMITIVE)
+   m2:set_gradient_estimation_method(m2lib.M2_GRADIENT_ESTIMATION_PLM)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
    m2:set_problem(self)
    return m2
@@ -675,7 +726,6 @@ function MagnetarWind:build_m2(runtime_cfg)
    end
 
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
@@ -709,81 +759,6 @@ function MagnetarWind:reconfigure_after_failure(m2, attempt)
    else
       return false
    end
-end
-
-
-
-local InternalShock = class.class('InternalShock', TestProblem)
-InternalShock.explanation = [[
---------------------------------------------------------------------------------
--- Collision of relativistic pancakes
---------------------------------------------------------------------------------]]
-function InternalShock:__init__()
-   local mps = { }
-   local doc = { }
-   self.model_parameters = mps
-   self.model_parameters_doc = doc
-
-   -- ==========================================================================
-   mps.r0 = 0.10
-   mps.b = 0.08
-   mps.v0 = 0.8
-   mps.three_d = false; doc.three_d='run in three dimensions'
-   -- ==========================================================================
-
-   self.initial_data_cell = function(x)
-      local r1 = ((x[1] + 0.25)^2 + (x[2] + mps.b)^2)^0.5
-      local r2 = ((x[1] - 0.25)^2 + (x[2] - mps.b)^2)^0.5
-      local d0, vx
-      if r1 < mps.r0 then
-         d0 = 100.0
-         vx = mps.v0
-      elseif r2 < mps.r0 then
-         d0 = 100.0
-         vx = -mps.v0
-      else
-         d0 = 1.0
-         vx = 0.0
-      end
-      return {d0, 0.5, vx, 0.0, 0.0}
-   end
-
-   self.initial_data_face = function(x, n)
-      return {0.01 * n[1]}
-   end
-end
-function InternalShock:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 2.0
-end
-function InternalShock:build_m2(runtime_cfg)
-
-   local build_args = {
-      lower={-1.0,-0.5, 0.0},
-      upper={ 1.0, 0.5, 1.0},
-      resolution={128,64,1},
-      periods={true,true,true},
-      scaling={'linear', 'linear', 'linear'},
-      relativistic=true,
-      magnetized=true,
-      geometry='cartesian'
-   }
-   local N = runtime_cfg.resolution or 128
-   build_args.resolution[1] = N * 2
-   build_args.resolution[2] = N
-   local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
-   m2:set_gamma_law_index(4./3)
-   m2:set_rk_order(runtime_cfg.rkorder or 2)
-   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.4)
-   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
-   m2:set_gradient_fields(m2lib.M2_PRIMITIVE_AND_FOUR_VELOCITY)
-   m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
-   m2:set_quartic_solver(runtime_cfg.quartic or m2lib.M2_QUARTIC_FULL_COMPLEX)
-   m2:set_suppress_extrapolation_at_unhealthy_zones(1)
-   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
-   m2:set_problem(self)
-   return m2
 end
 
 
@@ -853,7 +828,6 @@ function DecayingMHD:build_m2(runtime_cfg)
    end
    local m2 = m2app.m2Application(build_args)
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
@@ -920,7 +894,6 @@ function Dynamo:build_m2(runtime_cfg)
    m2.stirring.wavelength = self.model_parameters.scale
 
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(5./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
@@ -1061,7 +1034,6 @@ function Spheromak:build_m2(runtime_cfg)
    local m2 = m2app.m2Application(build_args)
 
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
@@ -1080,15 +1052,15 @@ end
 
 
 return {
-   DensityWave   = DensityWave,
-   RyuJones      = RyuJones,
-   BrioWu        = BrioWu,
-   ContactWave   = ContactWave,
-   BlastMHD      = BlastMHD,
-   Implosion2d   = Implosion2d,
-   MagnetarWind  = MagnetarWind,
-   InternalShock = InternalShock,
-   DecayingMHD   = DecayingMHD,
-   Dynamo        = Dynamo,
-   Spheromak     = Spheromak,
+   DensityWave     = DensityWave,
+   RyuJones        = RyuJones,
+   BrioWu          = BrioWu,
+   ContactWave     = ContactWave,
+   BlastMHD        = BlastMHD,
+   Implosion2d     = Implosion2d,
+   KelvinHelmholtz = KelvinHelmholtz,
+   MagnetarWind    = MagnetarWind,
+   DecayingMHD     = DecayingMHD,
+   Dynamo          = Dynamo,
+   Spheromak       = Spheromak,
 }

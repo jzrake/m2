@@ -424,8 +424,8 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
      include driving the momentum, or a "soft" boundary condition where the
      solution is driven toward something user prescribed. Such constraints may
      be enforced on the conserved quantities consA and BfluxA only.
-     Modifications to prim, aux, or cell-centered magnetic field will be
-     over-written in the next two steps. */
+     Modifications to cell-centered magnetic field, prim, or aux will be
+     over-written in the last two steps. */
 
   err += m2sim_average_runge_kutta(m2, rkparam);
   /* Applies to consA and BfluxA only, all cells and faces have valid conserved

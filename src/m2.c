@@ -114,11 +114,6 @@ void m2sim_del(m2sim *m2)
 
 
 void m2sim_initialize(m2sim *m2)
-/*
- * Each axes is either periodic or is bounded by hard walls at both sides. If it
- * is periodic, then the number of guard zones in both directions
- *
- */
 {
   int *L = m2->local_grid_size;
   int *S = m2->local_grid_start;
