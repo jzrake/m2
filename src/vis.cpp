@@ -30,6 +30,8 @@ public:
   GLUI_EditText *chkptname_field;
   GLUI_FileBrowser *chkptload_browser;
   enum {
+    ACTION_LOAD_FILE,
+    ACTION_SAVE_FILE,
     ACTION_TAKE_SCREENSHOT,
     ACTION_RESET_VIEW,
     ACTION_STEP,
@@ -79,7 +81,7 @@ public:
   void keyboard(int key, int x, int y) { }
   void draw();
   void refresh();
-  double get_scalar(m2vol *V);
+  double get_scalar(struct mesh_cell *C);
   static std::map<int, DatasetController*> instances;
   static void refresh_cb(int user_id);
 } ;
@@ -90,7 +92,6 @@ std::map<int, DatasetController*> DatasetController::instances;
 static SimulationController *sim_controller = NULL;
 static m2sim *M2;
 static void color_map(double val, GLfloat rgb[3], int ct);
-//static void load_next_frame();
 
 
 
@@ -127,7 +128,6 @@ void myGlutIdle(void)
   if (sim_controller->AutoAdvance) {
     m2sim_drive(M2);
     printf("%s\n", M2->status.message);
-    //load_next_frame();
     sim_controller->refresh();
   }
 }
@@ -231,6 +231,10 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   new GLUI_Button(parent, "Step", ACTION_STEP, action_cb);
   new GLUI_Button(parent, "Quit", ACTION_QUIT, action_cb);
   new GLUI_Column(parent);
+  chkptload_browser = new GLUI_FileBrowser(parent, "Load M2 file");
+  new GLUI_Button(parent, "Load checkpoint", ACTION_LOAD_FILE, action_cb);
+  chkptname_field = new GLUI_EditText(parent, "Checkpoint file name");
+  new GLUI_Button(parent, "Save checkpoint", ACTION_SAVE_FILE, action_cb);
   time_label->deactivate();
   iter_label->deactivate();
   zoom_sb->set_float_limits(-3.0, 0.0);
@@ -417,9 +421,9 @@ DatasetController::DatasetController(GLUI_Panel *parent)
 void DatasetController::draw()
 {
   if (!Visible) return;
-  for (int n=0; n<M2->local_grid_size[0]; ++n) {
+  for (int n=0; n<M2->mesh.faces_shape[3][0]/2; ++n) {
     if (DrawMesh) {
-      glBegin(GL_LINE_STRIP);
+      glBegin(GL_LINE_LOOP);
     }
     else {
       glBegin(GL_QUADS);
@@ -443,22 +447,22 @@ void DatasetController::draw()
     ++it;
   }
 }
-double DatasetController::get_scalar(m2vol *V)
+double DatasetController::get_scalar(struct mesh_cell *C)
 {
   int mem = obj_keys[DataMember];
   double rhat[4] = { 0.0, 1.0, 0.0, 0.0 };
   double y;
   if (mem == VIS_MAGNETIC_PITCH) {
-    y = atan(m2aux_get(&V->aux, M2_MAGNETIC3)/
-	     m2aux_get(&V->aux, M2_MAGNETIC1)) * 180 / M2_PI;
+    y = atan(m2aux_get(&C->aux, M2_MAGNETIC3)/
+	     m2aux_get(&C->aux, M2_MAGNETIC1)) * 180 / M2_PI;
   }
   else if (mem == M2_MACH_ALFVEN ||
       mem == M2_MACH_FAST ||
       mem == M2_MACH_SLOW) {
-    y = m2aux_mach(&V->aux, rhat, mem);
+    y = m2aux_mach(&C->aux, rhat, mem);
   }
   else {
-    y = m2aux_get(&V->aux, mem);
+    y = m2aux_get(&C->aux, mem);
   }
   if (LogScale) {
     if (fabs(y) < 1e-6) {
@@ -471,7 +475,7 @@ double DatasetController::get_scalar(m2vol *V)
 void DatasetController::refresh()
 {
   if (!Visible) return;
-  int *L = M2->local_grid_size;
+  int N = M2->mesh.faces_shape[3][0]/2;
   double y;
   double x00[4]; /* vertex coordinates */
   double x01[4];
@@ -481,58 +485,47 @@ void DatasetController::refresh()
   double x01c[4];
   double x11c[4];
   double x10c[4];
-  m2vol *V;
-  VertexData = (GLfloat*) realloc(VertexData, L[0]*3*4*sizeof(GLfloat));
-  ColorData = (GLfloat*) realloc(ColorData, L[0]*3*sizeof(GLfloat));
+  struct mesh_cell *C[2];
+  struct mesh_face *F;
+  struct mesh_edge *E[4];
+  VertexData = (GLfloat*) realloc(VertexData, N*3*4*sizeof(GLfloat));
+  ColorData = (GLfloat*) realloc(ColorData, N*3*sizeof(GLfloat));
   if (AutoRange) {
     DataRange[0] = +1e10;
     DataRange[1] = -1e10;
-    for (int n=0; n<L[0]; ++n) {
-      V = M2->volumes + n;
-      if (V->zone_type != M2_ZONE_TYPE_FULL) {
-	continue;
-      }
-      y = get_scalar(V);
+    for (int n=0; n<M2->mesh.cells_shape[0]; ++n) {
+      y = get_scalar(M2->mesh.cells + n);
       if (y < DataRange[0]) DataRange[0] = y;
       if (y > DataRange[1]) DataRange[1] = y;
     }
   }
-  for (int n=0; n<L[0]; ++n) {
-    V = M2->volumes + n;
-    if (V->zone_type != M2_ZONE_TYPE_FULL) {
-      VertexData[4*3*n + 0*3 + 0] = 0.0;
-      VertexData[4*3*n + 0*3 + 1] = 0.0;
-      VertexData[4*3*n + 0*3 + 2] = 0.0;
-      VertexData[4*3*n + 1*3 + 0] = 0.0;
-      VertexData[4*3*n + 1*3 + 1] = 0.0;
-      VertexData[4*3*n + 1*3 + 2] = 0.0;
-      VertexData[4*3*n + 2*3 + 0] = 0.0;
-      VertexData[4*3*n + 2*3 + 1] = 0.0;
-      VertexData[4*3*n + 2*3 + 2] = 0.0;
-      VertexData[4*3*n + 3*3 + 0] = 0.0;
-      VertexData[4*3*n + 3*3 + 1] = 0.0;
-      VertexData[4*3*n + 3*3 + 2] = 0.0;
-      ColorData[3*n + 0] = 0.0;
-      ColorData[3*n + 1] = 0.0;
-      ColorData[3*n + 2] = 0.0;
-      continue;
-    }
-    x00[1] = V->x0[1];
-    x00[2] = V->x0[2];
-    x00[3] = V->x0[3] + AngularOffset;
-    x01[1] = V->x1[1];
-    x01[2] = V->x0[2];
-    x01[3] = V->x0[3] + AngularOffset;
-    x11[1] = V->x1[1];
-    x11[2] = V->x1[2];
-    x11[3] = V->x0[3] + AngularOffset;
-    x10[1] = V->x0[1];
-    x10[2] = V->x1[2];
-    x10[3] = V->x0[3] + AngularOffset;
+  for (int n=0; n<N; ++n) {
+    F = &M2->mesh.faces[3][2*n];
+
+    mesh_face_edges(&M2->mesh, F, E);
+    mesh_face_cells(&M2->mesh, F, C);
+
+    x00[1] = E[2]->x[1];
+    x00[2] = E[0]->x[2];
+    x00[3] = E[0]->x[3] + AngularOffset;
+
+    x01[1] = E[3]->x[1];
+    x01[2] = E[0]->x[2];
+    x01[3] = E[0]->x[3] + AngularOffset;
+
+    x11[1] = E[3]->x[1];
+    x11[2] = E[1]->x[2];
+    x11[3] = E[0]->x[3] + AngularOffset;
+
+    x10[1] = E[2]->x[1];
+    x10[2] = E[1]->x[2];
+    x10[3] = E[0]->x[3] + AngularOffset;
+
     m2_to_cartesian(x00, x00c, M2->geometry);
     m2_to_cartesian(x01, x01c, M2->geometry);
     m2_to_cartesian(x11, x11c, M2->geometry);
     m2_to_cartesian(x10, x10c, M2->geometry);
+
     VertexData[4*3*n + 0*3 + 0] = x00c[1];
     VertexData[4*3*n + 0*3 + 1] = x00c[2];
     VertexData[4*3*n + 0*3 + 2] = x00c[3];
@@ -545,91 +538,65 @@ void DatasetController::refresh()
     VertexData[4*3*n + 3*3 + 0] = x10c[1];
     VertexData[4*3*n + 3*3 + 1] = x10c[2];
     VertexData[4*3*n + 3*3 + 2] = x10c[3];
-    y = get_scalar(M2->volumes + n);
+
+
+    y = get_scalar(C[1]);
     y -= DataRange[0];
     y /= DataRange[1] - DataRange[0];
     color_map(y, &ColorData[3*n], ColorMap);
   }
 
-  field_lines.clear();
+  // return;
+  // field_lines.clear();
+  // for (int line_num=0; line_num<50; ++line_num) {
+  //   std::vector<GLfloat> line;
+  //   double x[4] = {0.0,
+  // 		   M2->domain_extent_lower[1] + 1.0,
+  // 		   M2_PI * (line_num+0.5) / 100,
+  // 		   0.0};
+  //   double xc[4];
+  //   while (x[0] < 40.0) {
+  //     m2sim_volume_at_position(M2, x, &V, NULL);
+  //     if (V == NULL) break;
 
-  return;
-  for (int line_num=0; line_num<50; ++line_num) {
-    std::vector<GLfloat> line;
-    double x[4] = {0.0,
-		   M2->domain_extent_lower[1] + 1.0,
-		   M2_PI * (line_num+0.5) / 100,
-		   0.0};
-    double xc[4];
-    while (x[0] < 40.0) {
-      m2sim_volume_at_position(M2, x, &V, NULL);
-      if (V == NULL) break;
+  //     double v1 = V->prim.B1;
+  //     double v2 = V->prim.B2;
+  //     double v3 = V->prim.B3;
+  //     double v0 = sqrt(v1*v1 + v2*v2 + v3*v3);
+  //     double ds = 0.01;
+  //     if (fabs(v0) < 1e-10) v0 = 1.0;
 
-      double v1 = V->prim.B1;
-      double v2 = V->prim.B2;
-      double v3 = V->prim.B3;
-      double v0 = sqrt(v1*v1 + v2*v2 + v3*v3);
-      double ds = 0.01;
-      if (fabs(v0) < 1e-10) v0 = 1.0;
+  //     // if (line_num > 25) {
+  //     // 	v1 *= -1.0;
+  //     // 	v2 *= -1.0;
+  //     // 	v3 *= -1.0;
+  //     // }
 
-      // if (line_num > 25) {
-      // 	v1 *= -1.0;
-      // 	v2 *= -1.0;
-      // 	v3 *= -1.0;
-      // }
+  //     /* correct velocity for scale factors (spherical hard-coded for now) */
+  //     v1 /= v0 * 1.0;
+  //     v2 /= v0 * x[1];
+  //     v3 /= v0 * x[1] * sin(x[2]);
 
-      /* correct velocity for scale factors (spherical hard-coded for now) */
-      v1 /= v0 * 1.0;
-      v2 /= v0 * x[1];
-      v3 /= v0 * x[1] * sin(x[2]);
+  //     x[0] += ds;
+  //     x[1] += v1 * ds;
+  //     x[2] += v2 * ds;
+  //     x[3] += v3 * ds;
 
-      x[0] += ds;
-      x[1] += v1 * ds;
-      x[2] += v2 * ds;
-      x[3] += v3 * ds;
-
-      x[3] += AngularOffset;
-      m2_to_cartesian(x, xc, M2->geometry);
-      line.push_back(xc[1]);
-      line.push_back(xc[2] - 0.01);
-      line.push_back(xc[3]);
-      x[3] -= AngularOffset;
-    }
-    field_lines.push_back(line);
-  }
+  //     x[3] += AngularOffset;
+  //     m2_to_cartesian(x, xc, M2->geometry);
+  //     line.push_back(xc[1]);
+  //     line.push_back(xc[2] - 0.01);
+  //     line.push_back(xc[3]);
+  //     x[3] -= AngularOffset;
+  //   }
+  //   field_lines.push_back(line);
+  // }
 }
 void DatasetController::refresh_cb(int user_id)
 {
   instances[user_id]->refresh();
 }
 
-
-
-void load_next_frame()
-{
-  static int checkpoint_number = 0;
-  char fname[256];
-  if (checkpoint_number == 900) {
-    return;
-  }
-  else {
-    checkpoint_number += 1;
-  }
-  sim_controller->refresh();
-
-  if (M2->status.time_simulation < 100.0) {
-    sim_controller->ZoomLevel -= 0.001;
-  }
-  else if (M2->status.time_simulation < 1000.0) {
-    if (sim_controller->ZoomLevel > -2.5) {
-      sim_controller->ZoomLevel -= 0.005;
-    }
-  }
-
-  snprintf(fname, 256, "sgrbA/pressure.%04d.ppm", checkpoint_number);
-  sim_controller->imagename_field->set_text(fname);
-  sim_controller->take_screenshot();
-}
 
 
 void color_map(double val, GLfloat rgb[3], int ct)

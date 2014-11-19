@@ -145,10 +145,6 @@ class Checkpoint(object):
         return self._file['problem_name'].value
 
     @property
-    def periodic_dimension(self):
-        return self._fromstring(self._config['periodic_dimension'], int)
-
-    @property
     def dimensionality(self):
         return (self.domain_resolution > 1).sum()
 

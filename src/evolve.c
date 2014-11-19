@@ -108,6 +108,9 @@ int m2sim_calculate_emf(m2sim *m2)
       if (F[2]) E->emf += F[2]->flux[B2];
       if (F[3]) E->emf += F[3]->flux[B2];
       E->emf *= E->length / num_faces;
+
+
+
       /* reflecting boundary condition */
       a2 = (d+1-1)%3+1;
       a3 = (d+2-1)%3+1;

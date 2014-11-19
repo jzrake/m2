@@ -290,7 +290,6 @@ struct m2sim
   int local_grid_start[4];
   int number_guard_zones0[4];
   int number_guard_zones1[4];
-  //  int periodic_dimension[4];
   int boundary_condition_lower[4];
   int boundary_condition_upper[4];
   int coordinate_scaling1; /* logarithmic, linear, etc */
