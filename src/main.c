@@ -631,9 +631,9 @@ static int L_m2sim_get_volume_data(lua_State *L)
 			     "B1", "B2", "B3", "p", "d", NULL};
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   int offset = luaL_checkoption(L, 2, NULL, lst);
-  int n, N = m2->local_grid_size[0];
+  int n, N = m2->mesh.cells_shape[0];
   double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
-  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+  for (n=0; n<N; ++n) {
     D[n] = *((double*) &m2->mesh.cells[n].prim + offset);
   }
   return 1;
@@ -644,10 +644,11 @@ static int L_m2sim_set_volume_data(lua_State *L)
 			     "B1", "B2", "B3", "p", "d", NULL};
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   int offset = luaL_checkoption(L, 2, NULL, lst);
-  int n, N = m2->local_grid_size[0];
+  int n, N = m2->mesh.cells_shape[0];
   double *D = (double *) buf_check_buffer(L, 3, N * sizeof(double));
-  for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
+  for (n=0; n<N; ++n) {
     *((double*) &m2->mesh.cells[n].prim + offset) = D[n];
+    //printf("%f\n", D[n]);
   }
   return 0;
 }
@@ -655,13 +656,14 @@ static int L_m2sim_get_face_data(lua_State *L)
 {
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   int axis = luaL_checkunsigned(L, 2);
-  int n, N = m2->local_grid_size[0];
+  int n, N = m2->mesh.faces_shape[axis][0];
   double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
   if (axis != 1 && axis != 2 && axis != 3) {
     luaL_error(L, "argument 2 must be 1, 2, or 3");
   }
-  for (n=0; n<m2->mesh.faces_shape[axis][n]; ++n) {
+  for (n=0; n<N; ++n) {
     D[n] = *((double*) &m2->mesh.faces[axis][n].BfluxA);
+    /* D[n] = *((double*) &m2->mesh.faces[axis][n].x[axis]); */
   }
   return 1;
 }
@@ -669,8 +671,8 @@ static int L_m2sim_set_face_data(lua_State *L)
 {
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   int axis = luaL_checkunsigned(L, 2);
-  int n, N = m2->local_grid_size[0];
-  double *D = (double *) buf_new_buffer(L, NULL, N * sizeof(double));
+  int n, N = m2->mesh.faces_shape[axis][0];
+  double *D = (double *) buf_check_buffer(L, 3, N * sizeof(double));
   if (axis != 1 && axis != 2 && axis != 3) {
     luaL_error(L, "argument 2 must be 1, 2, or 3");
   }
@@ -770,7 +772,7 @@ static int L_m2sim_run_initial_data(lua_State *L)
 {
   m2sim *m2 = (m2sim *) lua_struct_checkstruct(L, 1, "m2sim");
   m2crd_function orig_cell = m2->initial_data_cell;
-  m2crd_function orig_face = m2->initial_data_edge;
+  m2crd_function orig_face = m2->initial_data_face;
   m2crd_function orig_edge = m2->initial_data_edge;
 
   struct user_call *u = (struct user_call*) malloc(sizeof(struct user_call));
@@ -967,6 +969,8 @@ WRAP0(print)
 WRAP2(memory_usage)
 WRAP2(from_conserved_all)
 WRAP2(from_primitive_all)
+WRAP0(synchronize_cells)
+WRAP0(synchronize_faces)
 WRAP2(minimum_courant_time)
 
 #undef WRAP0
@@ -1047,6 +1051,9 @@ int register_m2sim(lua_State *L)
     METHOD(run_initial_data),
     METHOD(memory_usage),
     METHOD(from_conserved_all),
+    METHOD(from_primitive_all),
+    METHOD(synchronize_cells),
+    METHOD(synchronize_faces),
     METHOD(from_primitive_all),
     METHOD(minimum_courant_time),
     METHOD(drive),

@@ -172,6 +172,8 @@ void m2sim_initialize(m2sim *m2)
       F->x[1] = 0.5 * (x0[1] + x1[1]);
       F->x[2] = 0.5 * (x0[2] + x1[2]);
       F->x[3] = 0.5 * (x0[3] + x1[3]);
+      F->BfluxA = 0.0;
+      F->BfluxB = 0.0;
     }
 
     for (n=0; n<m2->mesh.edges_shape[d][0]; ++n) {
@@ -190,6 +192,7 @@ void m2sim_initialize(m2sim *m2)
       E->x[1] = 0.5 * (x0[1] + x1[1]);
       E->x[2] = 0.5 * (x0[2] + x1[2]);
       E->x[3] = 0.5 * (x0[3] + x1[3]);
+      E->emf = 0.0;
     }
   }
   /* TODO: test locations of edges in multiple dimensions */
@@ -391,12 +394,14 @@ void m2sim_run_initial_data(m2sim *m2)
 
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
     C = m2->mesh.cells + n;
-    m2->initial_data_cell(m2, C->x, NULL, prim);
-    C->prim.d  = prim[RHO];
-    C->prim.p  = prim[PRE];
-    C->prim.v1 = prim[V11];
-    C->prim.v2 = prim[V22];
-    C->prim.v3 = prim[V33];
+    if (m2->initial_data_cell) {
+      m2->initial_data_cell(m2, C->x, NULL, prim);
+      C->prim.d  = prim[RHO];
+      C->prim.p  = prim[PRE];
+      C->prim.v1 = prim[V11];
+      C->prim.v2 = prim[V22];
+      C->prim.v3 = prim[V33];
+    }
     C->zone_type = M2_ZONE_TYPE_FULL; /* TODO: account for guard zones */
   }
 
@@ -408,7 +413,7 @@ void m2sim_run_initial_data(m2sim *m2)
 	m2->initial_data_face(m2, F->x, N, &Bfield);
       }
       else {
-	Bfield = 0.0;
+	/* Bfield = 0.0; */
       }
       F->BfluxA = Bfield * F->area;
     }

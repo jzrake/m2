@@ -52,10 +52,11 @@ int m2sim_calculate_flux(m2sim *m2)
       G = NULL;
       F = &m2->mesh.faces[d][n];
       mesh_face_cells(&m2->mesh, F, cells);
+      /* TODO: this can be replaced with checking global index of faces
+	 directly */
       if (cells[0] == NULL &&
 	  m2->boundary_condition_lower[d] == M2_BOUNDARY_REFLECTING) {
-	/* TODO: when shell thing is removed, this should be a zero not a -1 */
-	if (global_index_cell(m2, cells[1], d) == -1) {
+	if (global_index_cell(m2, cells[1], d) == 0) {
 	  G = F + m2->mesh.faces_stride[d][d];
 	}
       }
@@ -119,11 +120,11 @@ int m2sim_calculate_emf(m2sim *m2)
 	g3 = global_index_edge(m2, E, a3);
 	/* If the edge lies in any of the four domain boundary surfaces, and
 	   that surface is conducting, then set the emf on that edge to zero. */
-	if (g2 == -1 &&
+	if (g2 == 0 &&
 	    m2->boundary_condition_lower[a2] == M2_BOUNDARY_REFLECTING) {
 	  E->emf = 0.0;
 	}
-	if (g3 == -1 &&
+	if (g3 == 0 &&
 	    m2->boundary_condition_lower[a3] == M2_BOUNDARY_REFLECTING) {
 	  E->emf = 0.0;
 	}
@@ -475,7 +476,6 @@ void m2sim_drive(m2sim *m2)
   m2sim_cache_conserved(m2);
   dt = m2->cfl_parameter * m2sim_minimum_courant_time(m2);
   m2->status.time_step = dt;
-
 
 
   /* ======================================================================== */

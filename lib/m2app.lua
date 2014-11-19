@@ -106,7 +106,7 @@ function m2Application:__init__(args)
 	    local coords = self._cart_comm:get 'coords'
 	    local dims = self._cart_comm:get 'dims'
 	    if coords[n] == 0 then
-	       Ng0[n] = 1 -- TODO: remove this guard zone and update HDF5 data
+	       Ng0[n] = 0 -- TODO: remove this guard zone and update HDF5 data
 			  -- layout accordingly
 	    end
 	    if coords[n] == dims[n] - 1 then
@@ -174,13 +174,11 @@ function m2Application:print_status()
    print()
 end
 
-function m2Application:memory_selections()
+function m2Application:memory_selections_cell()
    -----------------------------------------------------------------------------
    -- Build descriptions of file and memory space selections
    -----------------------------------------------------------------------------
    local global_shape = self:global_shape()
-   local coords = self._cart_comm:get 'coords'
-   local period = self._cart_comm:get 'periods'
    local Ng0 = self._m2.number_guard_zones0
    local Ng1 = self._m2.number_guard_zones1
    local file = { exten={}, start={}, strid={}, count={}, block={} }
@@ -188,6 +186,7 @@ function m2Application:memory_selections()
 
    for n=1,#global_shape do
       file.exten[n] = self._m2.domain_resolution[n]
+      -- TODO: this extra Ng is troubling, why is it there?
       file.start[n] = self._m2.local_grid_start[n] + Ng0[n]
       file.strid[n] = 1
       file.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
@@ -198,20 +197,6 @@ function m2Application:memory_selections()
       mems.strid[n] = 1
       mems.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
       mems.block[n] = 1
-
-      -- If there is no periodicity along this axis then add another layer of
-      -- data at the left boundary for face-centered data
-      if period[n] == 0 then
-      	 if coords[n] == 0 then
-      	    file.exten[n] = file.exten[n] + 1
-      	    file.count[n] = file.count[n] + 1
-      	    mems.start[n] = mems.start[n] - 1
-      	    mems.count[n] = mems.count[n] + 1
-      	 else
-      	    file.exten[n] = file.exten[n] + 1
-      	    file.start[n] = file.start[n] + 1
-      	 end
-      end
    end
 
    for _,s in pairs {file, mems} do
@@ -223,21 +208,90 @@ function m2Application:memory_selections()
    return file, mems
 end
 
+function m2Application:memory_selections_face(axis)
+   -----------------------------------------------------------------------------
+   -- Build descriptions of file and memory space selections
+   -----------------------------------------------------------------------------
+   local global_shape = self:global_shape()
+   local coords = self._cart_comm:get 'coords'
+   local Ng0 = self._m2.number_guard_zones0
+   local Ng1 = self._m2.number_guard_zones1
+   local file = { exten={}, start={}, strid={}, count={}, block={} }
+   local mems = { exten={}, start={}, strid={}, count={}, block={} }
+
+   for n=1,3 do
+      file.exten[n] = self._m2.domain_resolution[n]
+      file.start[n] = self._m2.local_grid_start[n] + Ng0[n]
+      file.strid[n] = 1
+      file.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
+      file.block[n] = 1
+
+      mems.exten[n] = self._m2.local_grid_size[n]
+      mems.start[n] = Ng0[n]
+      mems.strid[n] = 1
+      mems.count[n] = self._m2.local_grid_size[n] - Ng0[n] - Ng1[n]
+      mems.block[n] = 1
+   end
+
+
+
+   if coords[axis] == 0 then
+      file.exten[axis] = file.exten[axis] + 1
+      file.count[axis] = file.count[axis] + 1
+      mems.count[axis] = mems.count[axis] + 1
+   else
+      mems.start[axis] = mems.start[axis] + 1
+   end
+   mems.exten[axis] = mems.exten[axis] + 1
+
+
+   -- TODO: test this in parallel
+   -- print("\n\n\nfile:", axis)
+   -- print("exten:", unpack(file.exten))
+   -- print("start:", unpack(file.start))
+   -- print("strid:", unpack(file.strid))
+   -- print("count:", unpack(file.count))
+   -- print("block:", unpack(file.block))
+
+
+   -- print("\nmems:", axis)
+   -- print("exten:", unpack(mems.exten))
+   -- print("start:", unpack(mems.start))
+   -- print("strid:", unpack(mems.strid))
+   -- print("count:", unpack(mems.count))
+   -- print("block:", unpack(mems.block))
+
+
+   for _,s in pairs {file, mems} do
+      s.space = hdf5.DataSpace()
+      s.space:set_extent(s.exten)
+      s.space:select_hyperslab(s.start, s.strid, s.count, s.block)
+   end
+
+
+   return file, mems
+end
+
 function m2Application:write_checkpoint_hdf5(fname, extras)
    print()
-   local file, mems = self:memory_selections()
+   local file_face, mems_face = { }, { }
+   local file_cell, mems_cell = self:memory_selections_cell()
+   file_face[1], mems_face[1] = self:memory_selections_face(1)
+   file_face[2], mems_face[2] = self:memory_selections_face(2)
+   file_face[3], mems_face[3] = self:memory_selections_face(3)
+
 
    if self._cart_comm:rank() == 0 then
       local h5file = hdf5.File(fname, 'w')
       local h5prim = hdf5.Group(h5file, 'cell_primitive')
       local h5face = hdf5.Group(h5file, 'face_magnetic_flux')
       for _,field in ipairs(struct.members('m2prim')) do
-	 local h5d = hdf5.DataSet(h5prim, field, 'w', {shape=file.exten})
+	 local h5d = hdf5.DataSet(h5prim, field, 'w', {shape=file_cell.exten})
 	 h5d:close()
       end
-      for field=1,3 do
-	 local h5d = hdf5.DataSet(h5face, field, 'w', {shape=file.exten})
-	 h5d:close()
+      for d=1,3 do
+      	 local h5d = hdf5.DataSet(h5face, d, 'w', {shape=file_face[d].exten})
+      	 h5d:close()
       end
       h5file:close()
    end
@@ -253,17 +307,17 @@ function m2Application:write_checkpoint_hdf5(fname, extras)
 
       for _,field in ipairs(struct.members('m2prim')) do
 	 self:_log('writing '..h5prim:path()..'/'..field, 1, 4)
-	 local h5d = hdf5.DataSet(h5prim, field, 'r+', {shape=file.exten})
+	 local h5d = hdf5.DataSet(h5prim, field, 'r+', {shape=file_cell.exten})
 	 local data = self:get_volume_data(field)
-	 h5d:write(data, mems.space, file.space)
+	 h5d:write(data, mems_cell.space, file_cell.space)
 	 h5d:close()
       end
-      for field=1,3 do
-	 self:_log('writing '..h5face:path()..'/'..field, 1, 4)
-	 local h5d = hdf5.DataSet(h5face, field, 'r+', {shape=file.exten})
-	 local data = self:get_face_data(field)
-	 h5d:write(data, mems.space, file.space)
-	 h5d:close()
+      for d=1,3 do
+      	 self:_log('writing '..h5face:path()..'/'..d, 1, 4)
+      	 local h5d = hdf5.DataSet(h5face, d, 'r+', {shape=file_face[d].exten})
+      	 local data = self:get_face_data(d)
+      	 h5d:write(data, mems_face[d].space, file_face[d].space)
+      	 h5d:close()
       end
 
       h5file:close()
@@ -318,7 +372,13 @@ end
 
 function m2Application:read_checkpoint_hdf5(fname)
    print()
-   local file, mems = self:memory_selections()
+
+   local file_face, mems_face = { }, { }
+   local file_cell, mems_cell = self:memory_selections_cell()
+   file_face[1], mems_face[1] = self:memory_selections_face(1)
+   file_face[2], mems_face[2] = self:memory_selections_face(2)
+   file_face[3], mems_face[3] = self:memory_selections_face(3)
+
 
    local h5file   = hdf5.File(fname, 'r')
    local h5prim   = hdf5.Group(h5file, 'cell_primitive')
@@ -337,17 +397,17 @@ function m2Application:read_checkpoint_hdf5(fname)
    -----------------------------------------------------------------------------
    for _,field in ipairs(struct.members('m2prim')) do
       self:_log('reading '..h5prim:path()..'/'..field, 1)
-      local N = prod(mems.space:get_extent())
+      local N = prod(mems_cell.space:get_extent())
       local buf = buffer.new_buffer(N * buffer.sizeof(buffer.double))
-      h5prim[field]:read(buf, mems.space, file.space)
+      h5prim[field]:read(buf, mems_cell.space, file_cell.space)
       self:set_volume_data(field, buf)
    end
-   for field=1,3 do
-      self:_log('reading '..h5face:path()..'/'..field, 1)
-      local N = prod(mems.space:get_extent())
+   for d=1,3 do
+      self:_log('reading '..h5face:path()..'/'..d, 1)
+      local N = prod(mems_face[d].space:get_extent())
       local buf = buffer.new_buffer(N * buffer.sizeof(buffer.double))
-      h5face[field]:read(buf, mems.space, file.space)
-      self:set_face_data(field, buf)
+      h5face[d]:read(buf, mems_face[d].space, file_face[d].space)
+      self:set_face_data(d, buf)
    end
 
 
@@ -358,9 +418,9 @@ function m2Application:read_checkpoint_hdf5(fname)
       local h5mem = h5status[member]
       if h5mem then -- in case status struct has new members since checkpoint
 	 local value = h5mem:value()
-    if type(self.status[member]) == 'number' or
-       type(self.status[member]) == 'string' then
-       self.status[member] = value
+	 if type(self.status[member]) == 'number' or
+	    type(self.status[member]) == 'string' then
+	    self.status[member] = value
 	 end
       end
    end

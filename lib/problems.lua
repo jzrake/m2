@@ -41,7 +41,7 @@ function TestProblem:update_model_parameters(user_mp)
          problem_mp[k] = v
       else
          error(("problem class '%s' does not accept model parameter '%s'")
-         :format(class.classname(self), k))
+	       :format(class.classname(self), k))
       end
    end
 end
@@ -104,10 +104,11 @@ function TestProblem:run(user_config_callback, restart_file)
    if restart_file then
       m2:read_checkpoint_hdf5(restart_file)
       m2:run_initial_data()
+      -- this syncs cells and faces, gets conserved, aux, and cell-centered B
    else
       m2:run_initial_data(self.initial_data_cell,
-      self.initial_data_face,
-      self.initial_data_edge)
+			  self.initial_data_face,
+			  self.initial_data_edge)
    end
    self:describe()
 
