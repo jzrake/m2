@@ -40,7 +40,7 @@ static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int d)
 /* static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d) */
 /* { */
 /*   int I[4]; */
-/*   mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I); */
+/*   mesh_linear_to_multi(F->id, m2->mesh.faces_shape[F->axis], I); */
 /*   return I[d] + m2->local_grid_start[d]; */
 /* } */
 

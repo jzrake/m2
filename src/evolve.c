@@ -19,8 +19,8 @@ static inline int global_index_edge(m2sim *m2, struct mesh_edge *E, int d);
 int m2sim_calculate_flux(m2sim *m2)
 {
   struct mesh_cell *cells[2];
-  struct mesh_face *F, *G;
-  int n, d;
+  struct mesh_face *F;
+  int n, d, q;
 
   /* Solve the riemann problem between all adjacent cells. Faces that have only
      one cell attached are given the flux of the interior cell. */
@@ -30,8 +30,7 @@ int m2sim_calculate_flux(m2sim *m2)
     }
   }
 
-  /* Here we apply reflecting boundary conditions on the fluxes, if
-     necessary. */
+  /* Here we apply boundary conditions on the fluxes, if necessary. */
   for (d=1; d<=3; ++d) {
 
     int B1, B2, B3;
@@ -49,32 +48,57 @@ int m2sim_calculate_flux(m2sim *m2)
     }
 
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      G = NULL;
       F = &m2->mesh.faces[d][n];
       mesh_face_cells(&m2->mesh, F, cells);
       /* TODO: this can be replaced with checking global index of faces
 	 directly */
-      if (cells[0] == NULL &&
-	  m2->boundary_condition_lower[d] == M2_BOUNDARY_REFLECTING) {
-	if (global_index_cell(m2, cells[1], d) == 0) {
-	  G = F + m2->mesh.faces_stride[d][d];
+      if (cells[0] == NULL) {
+	if (m2->boundary_condition_lower[d] == M2_BOUNDARY_REFLECTING) {
+	  if (global_index_cell(m2, cells[1], d) == 0) {
+
+	    /* TODO: generalize this to other than axis-1 reflecting */
+
+	    struct mesh_cell C = *cells[1];
+	    C.prim.v1 *= -1.0;
+	    C.prim.B2 *= -1.0;
+	    C.prim.B3 *= -1.0;
+	    m2sim_from_primitive(m2, &C.prim, NULL, NULL, C.volume,
+				 C.consA, &C.aux);
+
+	    C.grad1[1] *= -1; /* v-transverse */
+	    C.grad1[2] *= -1; /* v-transverse */
+	    C.grad1[3] *= -1; /* B-normal (doesn't matter) */
+	    C.grad1[6] *= -1; /* density */
+	    C.grad1[7] *= -1; /* pressure */
+	  }
+	}
+	else if (m2->boundary_condition_lower[d] == M2_BOUNDARY_POLAR) {
+	  for (q=0; q<8; ++q) F->flux[q] = 0.0;
 	}
       }
-      if (cells[1] == NULL &&
-	  m2->boundary_condition_upper[d] == M2_BOUNDARY_REFLECTING) {
-	if (global_index_cell(m2, cells[0], d) == m2->domain_resolution[d]-1) {
-	  G = F - m2->mesh.faces_stride[d][d];
+      if (cells[1] == NULL) {
+	if (m2->boundary_condition_upper[d] == M2_BOUNDARY_REFLECTING) {
+	  if (global_index_cell(m2, cells[0], d) == m2->domain_resolution[d]-1) {
+
+	    /* TODO: generalize this to other than axis-1 reflecting */
+
+	    struct mesh_cell C = *cells[0];
+	    C.prim.v1 *= -1.0;
+	    C.prim.B2 *= -1.0;
+	    C.prim.B3 *= -1.0;
+	    m2sim_from_primitive(m2, &C.prim, NULL, NULL, C.volume,
+				 C.consA, &C.aux);
+
+	    C.grad1[1] *= -1; /* v-transverse */
+	    C.grad1[2] *= -1; /* v-transverse */
+	    C.grad1[3] *= -1; /* B-normal (doesn't matter) */
+	    C.grad1[6] *= -1; /* density */
+	    C.grad1[7] *= -1; /* pressure */
+	  }
 	}
-      }
-      if (G) {
-	F->flux[DDD] = -G->flux[DDD];
-	F->flux[TAU] = -G->flux[TAU];
-	F->flux[S1] = +G->flux[S1];
-	F->flux[S2] = -G->flux[S2];
-	F->flux[S3] = -G->flux[S3];
-	F->flux[B1] = -G->flux[B1];
-	F->flux[B2] = +G->flux[B2];
-	F->flux[B3] = +G->flux[B3];
+	else if (m2->boundary_condition_upper[d] == M2_BOUNDARY_POLAR) {
+	  for (q=0; q<8; ++q) F->flux[q] = 0.0;
+	}
       }
     }
   }
@@ -108,35 +132,33 @@ int m2sim_calculate_emf(m2sim *m2)
       if (F[2]) E->emf += F[2]->flux[B2];
       if (F[3]) E->emf += F[3]->flux[B2];
       E->emf *= E->length / num_faces;
-
-
-
-      /* reflecting boundary condition */
-      a2 = (d+1-1)%3+1;
-      a3 = (d+2-1)%3+1;
-      if ((num_faces != 4) &&
-	  (m2->boundary_condition_lower[a2] == M2_BOUNDARY_REFLECTING ||
-	   m2->boundary_condition_lower[a3] == M2_BOUNDARY_REFLECTING ||
-	   m2->boundary_condition_upper[a2] == M2_BOUNDARY_REFLECTING ||
-	   m2->boundary_condition_upper[a3] == M2_BOUNDARY_REFLECTING)) {
+      if (num_faces != 4) {
+	/* boundary condition */
+	a2 = (d+1-1)%3+1;
+	a3 = (d+2-1)%3+1;
 	g2 = global_index_edge(m2, E, a2);
 	g3 = global_index_edge(m2, E, a3);
 	/* If the edge lies in any of the four domain boundary surfaces, and
-	   that surface is conducting, then set the emf on that edge to zero. */
+	   that surface is conducting, or the edge lies on the north or south
+	   pole, then set the EMF on that edge to zero. */
 	if (g2 == 0 &&
-	    m2->boundary_condition_lower[a2] == M2_BOUNDARY_REFLECTING) {
+	    (m2->boundary_condition_lower[a2] == M2_BOUNDARY_REFLECTING ||
+	     m2->boundary_condition_lower[a2] == M2_BOUNDARY_POLAR)) {
 	  E->emf = 0.0;
 	}
 	if (g3 == 0 &&
-	    m2->boundary_condition_lower[a3] == M2_BOUNDARY_REFLECTING) {
+	    (m2->boundary_condition_lower[a3] == M2_BOUNDARY_REFLECTING ||
+	     m2->boundary_condition_lower[a3] == M2_BOUNDARY_POLAR)) {
 	  E->emf = 0.0;
 	}
 	if (g2 == m2->domain_resolution[a2] &&
-	    m2->boundary_condition_upper[a2] == M2_BOUNDARY_REFLECTING) {
+	    (m2->boundary_condition_upper[a2] == M2_BOUNDARY_REFLECTING ||
+	     m2->boundary_condition_upper[a2] == M2_BOUNDARY_POLAR)) {
 	  E->emf = 0.0;
 	}
 	if (g3 == m2->domain_resolution[a3] &&
-	    m2->boundary_condition_upper[a3] == M2_BOUNDARY_REFLECTING) {
+	    (m2->boundary_condition_upper[a3] == M2_BOUNDARY_REFLECTING ||
+	     m2->boundary_condition_upper[a3] == M2_BOUNDARY_POLAR)) {
 	  E->emf = 0.0;
 	}
       }
@@ -621,7 +643,7 @@ int global_index_cell(m2sim *m2, struct mesh_cell *C, int d)
 int global_index_face(m2sim *m2, struct mesh_face *F, int d)
 {
   int I[4];
-  mesh_linear_to_multi(F->id, m2->mesh.faces_shape[d], I);
+  mesh_linear_to_multi(F->id, m2->mesh.faces_shape[F->axis], I);
   return I[d] + m2->local_grid_start[d];
 }
 
@@ -630,6 +652,6 @@ int global_index_face(m2sim *m2, struct mesh_face *F, int d)
 int global_index_edge(m2sim *m2, struct mesh_edge *E, int d)
 {
   int I[4];
-  mesh_linear_to_multi(E->id, m2->mesh.edges_shape[d], I);
+  mesh_linear_to_multi(E->id, m2->mesh.edges_shape[E->axis], I);
   return I[d] + m2->local_grid_start[d];
 }

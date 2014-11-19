@@ -971,7 +971,7 @@ function Spheromak:__init__()
       local d = r < shell and 1e0 or 1e5
       return {d, 0.1, 0.0, 0.0, 0.0}
    end
-   self.initial_data_face = function(x, n) -- !!ATTN!! this is setting B, not A
+   self.initial_data_edge = function(x, n)
       local A = { }
       if mps.spherical then
 	 local r, t, p = x[1]+1e-12, x[2], x[3]
@@ -1000,17 +1000,19 @@ function Spheromak:build_m2(runtime_cfg)
       lower={-L, -L, -L},
       resolution={N, N, N},
       periods={true,true,true},
-      scaling={'linear', 'linear', 'linear'},
+      scaling={'linear','linear','linear'},
       relativistic=false,
       magnetized=true,
       geometry='cartesian'
    }
    local ba_spherical = {
       upper={7.72525, math.pi, 2*math.pi},
-      lower={0, 0, 0},
-      resolution={4*N, N, 1},
-      periods={false,false,true},
-      scaling={'linear', 'linear', 'linear'},
+      lower={0.1, 0, 0},
+      resolution={N, N, 1},
+      --scaling={'linear', 'linear', 'linear'},
+      scaling={'logarithmic','linear','linear'},
+      bc_lower={'reflecting','polar','periodic'},
+      bc_upper={'reflecting','polar','periodic'},
       relativistic=false,
       magnetized=true,
       geometry='spherical'
