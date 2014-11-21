@@ -157,7 +157,7 @@ class PolarPlot(PlotDriver):
         ax = self.get_plot_axes()
 
         if self.chkpt.domain_resolution[3] == 1 and not args.profile:
-            self.chkpt.set_selection(slicer[1:,1:])
+            #self.chkpt.set_selection(slicer[1:,1:])
             data = self.chkpt.get_field(args.field)
             R, T = self.chkpt.cell_edge_meshgrid
             X = +R * np.sin(T)
@@ -168,16 +168,16 @@ class PolarPlot(PlotDriver):
             cax = ax.pcolormesh(X, Z, data, vmin=args.vmin, vmax=args.vmax)
         elif self.chkpt.domain_resolution[3] == 1:
             nt = self.chkpt.domain_resolution[2]
-            self.chkpt.set_selection(slicer[1:,nt/2])
+            self.chkpt.set_selection(slicer[:,nt/2])
             data = self.chkpt.get_field(args.field)
             R, T = self.chkpt.cell_edge_meshgrid
             if args.log_scaling:
-                ax.loglog(R[1:], 10**data)
+                ax.loglog(R, 10**data)
             else:
                 ax.plot(R[1:], data)
         elif args.profile:
             nt = self.chkpt.domain_resolution[2]
-            self.chkpt.set_selection(slicer[1:,nt/2,0])
+            self.chkpt.set_selection(slicer[:,nt/2,0])
             data = self.chkpt.get_field(args.field)
             R, T, P = self.chkpt.cell_edge_meshgrid
             if args.log_scaling:

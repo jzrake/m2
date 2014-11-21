@@ -605,6 +605,7 @@ function MagnetarWind:__init__()
    -- ==========================================================================
    mps.three_d = false; doc.three_d='run in three dimensions'
    mps.merger = false;  doc.merger='use a density profile for BNS merger'
+   mps.engine = false; doc.engine='use a rotating magnetosphere instead of wind'
    mps.r_inner=1e9; doc.r_inner='inner radius (in cm)'
    mps.r_outer=100; doc.r_outer='outer radius (in units of inner radius)'
    mps.r_cavity=10; doc.r_cavity='cavity radius (in units of inner radius)'
@@ -664,9 +665,22 @@ function MagnetarWind:__init__()
 	 return default_ic(x)
       end
    end
+   self.initial_data_edge = function(x, n)
+      if mps.engine then
+	 -- initialize the magnetosphere as a dipole
+	 local r = x[1]
+	 local t = x[2]
+	 local z = r * math.cos(t)
+	 local R = r * math.sin(t)
+	 local Ap = math.sin(t) / r^2
+	 return { 150.0 * Ap * n[3] }
+      else
+	 return { 0.0 }
+      end
+   end
 end
 function MagnetarWind:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 2.0
+   runtime_cfg.tmax = 512.0
 end
 function MagnetarWind:build_m2(runtime_cfg)
 
@@ -674,7 +688,8 @@ function MagnetarWind:build_m2(runtime_cfg)
       lower={  1.0, 0.0, 0.0},
       upper={100.0, math.pi, 2*math.pi},
       resolution={128,64,1},
-      periods={false,false,true},
+      bc_lower={'open','polar','periodic'},
+      bc_upper={'open','polar','periodic'},
       scaling={'logarithmic', 'linear', 'linear'},
       relativistic=true,
       magnetized=true,
@@ -698,34 +713,6 @@ function MagnetarWind:build_m2(runtime_cfg)
 
    local m2 = m2app.m2Application(build_args)
 
-   local function wind_inner_boundary_flux(V0)
-      local nhat = m2lib.dvec4(0,1,0,0)
-      local T = m2.status.time_simulation
-      local t = 0.5 * (V0.x0[2] + V0.x1[2])
-      local p = 0.5 * (V0.x0[3] + V0.x1[3])
-      if V0.global_index[1] == -1 then
-         local d = mps.d_wind
-         local B = mps.B_wind
-         local g = mps.g_wind
-         local h = mps.g_pert
-         g = g * (1.0 + h * math.sin(t) * math.sin(6*p)^2)
-	 g = g * (1.0 - math.exp(-T)) + math.exp(-T) -- ramp up
-	 B = B * (1.0 - math.exp(-T)) -- ramp up
-         V0.prim.v1 =(1.0 - g^-2)^0.5
-         V0.prim.v2 = 0.0
-         V0.prim.v3 = 0.0
-         V0.prim.B1 = 0.0
-         V0.prim.B2 = 0.0
-         V0.prim.B3 = B * math.sin(t)
-         V0.prim.d = d
-         V0.prim.p = d * 0.01
-         V0:from_primitive()
-         V0.flux1 = V0.aux:fluxes(nhat)
-      else
-         V0.flux1 = V0.aux:fluxes(nhat)
-      end
-   end
-
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
    m2:set_gamma_law_index(4./3)
    m2:set_rk_order(runtime_cfg.rkorder or 2)
@@ -733,11 +720,9 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 1.5)
    m2:set_gradient_fields(m2lib.M2_PRIMITIVE_AND_FOUR_VELOCITY)
    m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
-   m2:set_boundary_conditions_flux1(wind_inner_boundary_flux)
-   m2:set_boundary_conditions_flux2(outflow_bc_flux(2))
    m2:set_quartic_solver(runtime_cfg.quartic or m2lib.M2_QUARTIC_FULL_COMPLEX)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
-   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
+   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-4)
    m2:set_problem(self)
    return m2
 end
@@ -1011,7 +996,7 @@ function Spheromak:build_m2(runtime_cfg)
       resolution={N, N, 1},
       --scaling={'linear', 'linear', 'linear'},
       scaling={'logarithmic','linear','linear'},
-      bc_lower={'reflecting','polar','periodic'},
+      bc_lower={'open','polar','periodic'},
       bc_upper={'reflecting','polar','periodic'},
       relativistic=false,
       magnetized=true,

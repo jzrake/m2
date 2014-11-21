@@ -10,98 +10,46 @@
 static inline void global_sum(m2sim *m2, int *N);
 static inline void global_min(m2sim *m2, double *x);
 static inline double plm_gradient(double *xs, double *fs, double plm, int *error);
-static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis);
+/* static inline int global_index_cell(m2sim *m2, struct mesh_cell *C, int axis); */
 /* static inline int global_index_face(m2sim *m2, struct mesh_face *F, int d); */
 static inline int global_index_edge(m2sim *m2, struct mesh_edge *E, int d);
 
 
+void srcterms_cell_massive_rotator(m2sim *m2, double dt);
+void srcterms_cell_magnetarwind(m2sim *m2, double dt);
+void srcterms_cell_magnetarwind_inner_bnd(m2sim *m2, double dt);
+void bc_face_polar(m2sim *m2, int d, char which);
+void bc_face_reflecting1(m2sim *m2, int d, char which);
+void bc_face_reflecting2(m2sim *m2, int d, char which);
+
+#define bc_face_reflecting bc_face_reflecting2
+
 
 int m2sim_calculate_flux(m2sim *m2)
 {
-  struct mesh_cell *cells[2];
-  struct mesh_face *F;
-  int n, d, q;
+  int n, d;
 
   /* Solve the riemann problem between all adjacent cells. Faces that have only
      one cell attached are given the flux of the interior cell. */
   for (d=1; d<=3; ++d) {
     for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      m2sim_riemann_solver(m2, &m2->mesh.faces[d][n]);
+      m2sim_riemann_solver(m2, &m2->mesh.faces[d][n], NULL);
     }
   }
 
-  /* Here we apply boundary conditions on the fluxes, if necessary. */
   for (d=1; d<=3; ++d) {
-
-    int B1, B2, B3;
-    int S1, S2, S3;
-
-    if (m2->domain_resolution[d] == 1) {
-      continue;
+    switch (m2->boundary_condition_lower[d]) {
+    case M2_BOUNDARY_POLAR: bc_face_polar(m2, d, 'L'); break;
+    case M2_BOUNDARY_OPEN: break;
+    case M2_BOUNDARY_REFLECTING: bc_face_reflecting(m2, d, 'L'); break;
     }
-    else {
-      switch (d) {
-      case 1: B1 = B11; B2 = B22; B3 = B33; S1 = S11; S2 = S22; S3 = S33; break;
-      case 2: B1 = B22; B2 = B33; B3 = B11; S1 = S22; S2 = S33; S3 = S11; break;
-      case 3: B1 = B33; B2 = B11; B3 = B22; S1 = S33; S2 = S11; S3 = S22; break;
-      }
-    }
-
-    for (n=0; n<m2->mesh.faces_shape[d][0]; ++n) {
-      F = &m2->mesh.faces[d][n];
-      mesh_face_cells(&m2->mesh, F, cells);
-      /* TODO: this can be replaced with checking global index of faces
-	 directly */
-      if (cells[0] == NULL) {
-	if (m2->boundary_condition_lower[d] == M2_BOUNDARY_REFLECTING) {
-	  if (global_index_cell(m2, cells[1], d) == 0) {
-
-	    /* TODO: generalize this to other than axis-1 reflecting */
-
-	    struct mesh_cell C = *cells[1];
-	    C.prim.v1 *= -1.0;
-	    C.prim.B2 *= -1.0;
-	    C.prim.B3 *= -1.0;
-	    m2sim_from_primitive(m2, &C.prim, NULL, NULL, C.volume,
-				 C.consA, &C.aux);
-
-	    C.grad1[1] *= -1; /* v-transverse */
-	    C.grad1[2] *= -1; /* v-transverse */
-	    C.grad1[3] *= -1; /* B-normal (doesn't matter) */
-	    C.grad1[6] *= -1; /* density */
-	    C.grad1[7] *= -1; /* pressure */
-	  }
-	}
-	else if (m2->boundary_condition_lower[d] == M2_BOUNDARY_POLAR) {
-	  for (q=0; q<8; ++q) F->flux[q] = 0.0;
-	}
-      }
-      if (cells[1] == NULL) {
-	if (m2->boundary_condition_upper[d] == M2_BOUNDARY_REFLECTING) {
-	  if (global_index_cell(m2, cells[0], d) == m2->domain_resolution[d]-1) {
-
-	    /* TODO: generalize this to other than axis-1 reflecting */
-
-	    struct mesh_cell C = *cells[0];
-	    C.prim.v1 *= -1.0;
-	    C.prim.B2 *= -1.0;
-	    C.prim.B3 *= -1.0;
-	    m2sim_from_primitive(m2, &C.prim, NULL, NULL, C.volume,
-				 C.consA, &C.aux);
-
-	    C.grad1[1] *= -1; /* v-transverse */
-	    C.grad1[2] *= -1; /* v-transverse */
-	    C.grad1[3] *= -1; /* B-normal (doesn't matter) */
-	    C.grad1[6] *= -1; /* density */
-	    C.grad1[7] *= -1; /* pressure */
-	  }
-	}
-	else if (m2->boundary_condition_upper[d] == M2_BOUNDARY_POLAR) {
-	  for (q=0; q<8; ++q) F->flux[q] = 0.0;
-	}
-      }
+    switch (m2->boundary_condition_upper[d]) {
+    case M2_BOUNDARY_POLAR: bc_face_polar(m2, d, 'U'); break;
+    case M2_BOUNDARY_OPEN: break;
+    case M2_BOUNDARY_REFLECTING: bc_face_reflecting(m2, d, 'U'); break;
     }
   }
+
   return 0;
 }
 
@@ -138,6 +86,7 @@ int m2sim_calculate_emf(m2sim *m2)
 	a3 = (d+2-1)%3+1;
 	g2 = global_index_edge(m2, E, a2);
 	g3 = global_index_edge(m2, E, a3);
+
 	/* If the edge lies in any of the four domain boundary surfaces, and
 	   that surface is conducting, or the edge lies on the north or south
 	   pole, then set the EMF on that edge to zero. */
@@ -164,6 +113,7 @@ int m2sim_calculate_emf(m2sim *m2)
       }
     }
   }
+
   return 0;
 }
 
@@ -272,6 +222,7 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
   double x1[4];
   for (n=0; n<m2->mesh.cells_shape[0]; ++n) {
     C = &m2->mesh.cells[n];
+
     mesh_cell_faces(&m2->mesh, C, F);
     x0[0] = 0.0;
     x1[0] = dt;
@@ -283,7 +234,10 @@ int m2sim_add_source_terms(m2sim *m2, double dt)
     x1[3] = F[5]->x[3];
     m2aux_add_geometrical_source_terms(&C->aux, x0, x1, C->consA);
   }
-  /* TODO: put in source terms from stirring here */
+
+  srcterms_cell_magnetarwind_inner_bnd(m2, dt);
+  /* srcterms_cell_massive_rotator(m2, dt); */
+
   return 0;
 }
 
@@ -434,38 +388,43 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
   err += m2sim_calculate_gradient(m2);
   /* Outermost 1 cells have invalid gradient data. */
 
+
   err += m2sim_synchronize_cells(m2);
   /* Communicate outermost 1 cells across MPI and periodic boundaries. All
      cells have valid gradient data. */
 
+
   err += m2sim_calculate_flux(m2);
   /* Outermost 1 faces at MPI and periodic boundaries have invalid Godunov
      fluxes. */
-  /* TODO: set physical BC's on Godunov fluxes at domain and topological
-     boundary */
+
 
   err += m2sim_synchronize_faces(m2);
   /* Communicate outermost 1 faces across MPI and periodic boundaries. All
      faces have valid Godunov and magnetic fluxes. */
 
+
   err += m2sim_calculate_emf(m2);
-  /* TODO: set physical BC's on Godunov EMF's at domain and topological
-     boundary */
-  /* TODO: source terms from stirring the current go after the calculation of
-     Godunov EMF's */
   /* EMF's on MPI and periodic boundary are still wrong, because they only
      account for 3 of 4 faces on a planar boundary, and 2 of 4 faces at the
      intersection of two planar boundaries. */
 
+
   err += m2sim_exchange_flux(m2, dt);
-  /* TODO: communicate outermost 1 faces across MPI and periodic boundaries, to
-     account for incorrect EMF's on boundary faces */
   /* Conserved quantites in cells on MPI and periodic boundaries have the
      correct values because Godunov fluxes on even their face was
-     communicated. */
+     communicated. However, magnetic flux on MPI and periodic boundary faces is
+     invalid because the EMF on their perimeter was invalid. */
+
+
+  err += m2sim_synchronize_faces(m2);
+  /* Communicate outermost 1 faces across MPI and periodic boundaries, so that
+     now magnetic flux on MPI and periodic boundary faces is valid */
+
 
   err += m2sim_add_source_terms(m2, dt);
   /* Valid for all cells. */
+
 
   err += m2sim_enforce_user_constraint(m2);
   /* This is where additional user constraints are being enforced. These might
@@ -475,12 +434,15 @@ int m2sim_runge_kutta_substep(m2sim *m2, double dt, double rkparam)
      Modifications to cell-centered magnetic field, prim, or aux will be
      over-written in the last two steps. */
 
+
   err += m2sim_average_runge_kutta(m2, rkparam);
   /* Applies to consA and BfluxA only, all cells and faces have valid conserved
      quantities. */
 
+
   err += m2sim_magnetic_flux_to_cell_center(m2);
   /* All cells have valid cell-centered fields. */
+
 
   err += m2sim_from_conserved_all(m2);
   /* All cells and faces are valid. */

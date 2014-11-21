@@ -391,7 +391,7 @@ void m2sim_write_ascii_2d(m2sim *m2, const char *fname);
 void m2sim_run_initial_data(m2sim *m2);
 void m2sim_from_interpolated(m2sim *m2, double *y, m2prim *P);
 void m2sim_to_interpolated(m2sim *m2, m2prim *P, m2aux *A, double *y, int stride);
-int m2sim_riemann_solver(m2sim *m2, struct mesh_face *F);
+int m2sim_riemann_solver(m2sim *m2, struct mesh_face *F, struct mesh_cell *Cbnd);
 int m2sim_memory_usage(m2sim *m2);
 int m2sim_from_conserved_all(m2sim *m2);
 int m2sim_from_primitive_all(m2sim *m2);

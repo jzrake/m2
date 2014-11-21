@@ -11,7 +11,7 @@ static void _hllc_nrhyd(m2riemann_problem *R);
 static void _hllc_nrmhd(m2riemann_problem *R);
 
 
-int m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
+int m2sim_riemann_solver(m2sim *m2, struct mesh_face *F, struct mesh_cell *Cbnd)
 {
   struct mesh_cell *cells[2];
   m2riemann_problem R = { .m2=m2 };
@@ -41,12 +41,22 @@ int m2sim_riemann_solver(m2sim *m2, struct mesh_face *F)
   mesh_face_cells(&m2->mesh, F, cells);
 
   if (cells[0] == NULL) {
-    m2aux_fluxes(&cells[1]->aux, n, F->flux);
-    return 1;
+    if (Cbnd == NULL) {
+      m2aux_fluxes(&cells[1]->aux, n, F->flux);
+      return 1;
+    }
+    else {
+      cells[0] = Cbnd;
+    }
   }
   if (cells[1] == NULL) {
-    m2aux_fluxes(&cells[0]->aux, n, F->flux);
-    return 1;
+    if (Cbnd == NULL) {
+      m2aux_fluxes(&cells[0]->aux, n, F->flux);
+      return 1;
+    }
+    else {
+      cells[1] = Cbnd;
+    }
   }
 
   xL = cells[0]->x[F->axis];

@@ -357,7 +357,7 @@ DatasetController::DatasetController(GLUI_Panel *parent)
   DrawMesh(0),
   LogScale(0),
   AutoRange(1),
-  ColorMap(3),
+  ColorMap(4),
   DataMember(0),
   Visible(1)
 {
