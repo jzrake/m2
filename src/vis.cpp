@@ -239,7 +239,7 @@ SimulationController::SimulationController(GLUI_Panel *parent)
   new GLUI_Button(parent, "Save checkpoint", ACTION_SAVE_FILE, action_cb);
   time_label->deactivate();
   iter_label->deactivate();
-  zoom_sb->set_float_limits(-3.0, 0.0);
+  zoom_sb->set_float_limits(-4.0, 0.0);
   imagename_field->set_w(240);
   imagename_field->set_text("m2.ppm");
   chkptname_field->set_w(240);

@@ -632,80 +632,33 @@ function MagnetarWind:__init__()
    self.model_parameters_doc = doc
 
    -- ==========================================================================
-   mps.three_d = false; doc.three_d='run in three dimensions'
-   mps.merger = false; doc.merger='use a density profile for BNS merger'
-   mps.engine = false; doc.engine='use a rotating magnetosphere instead of wind'
-   mps.r_inner=1e9; doc.r_inner='inner radius (in cm)'
-   mps.r_outer=100; doc.r_outer='outer radius (in units of inner radius)'
-   mps.r_cavity=10; doc.r_cavity='cavity radius (in units of inner radius)'
-   mps.d_cavity=.1; doc.d_cavity='cavity density (code units)'
-   mps.p_cavity=-1; doc.p_cavity='cavity pressure, < 0 means match cavity edge'
-   mps.v_star=0.0;  doc.v_star='radial velocity of stellar envolope (in c)'
-   mps.d_star=100;  doc.d_star='star density (ignored for real stellar model)'
-   mps.d_wind=1.0;  doc.d_wind='wind density (code units)'
-   mps.B_wind=8.00; doc.B_wind='wind toroidal field value (code units)'
-   mps.g_wind=8.00; doc.g_wind='wind Lorentz factor'
-   mps.g_pert=0.00; doc.g_pert='fractional azimuthal variation in g_wind'
-   mps.d_pert=0.00; doc.d_pert='fractional azimuthal variation in density'
+   mps.sigma=0.1;  doc.sigma='wind magnetization'
+   mps.gamma=25;   doc.gamma='wind Lorentz factor'
+   mps.power=1e48; doc.power='wind luminosity (ergs/s)'
+   mps.Mej=0.01;   doc.Mej='mass of merger ejecta (solar masses)'
+   mps.r0=1e7;     doc.r0='inner radial boundary (cm)'
+   mps.r1=1e11;    doc.r1='outer radial boundary (cm)'
    -- ==========================================================================
 
-   local function merger_ic(x)
-      -- code units
-      -- [L] = r0 = 850 km
-      -- [T] = [L] / c ~ 0.003 seconds
-      -- [M] = Mej ~ 0.03 solar mass
-      local d0
-      local vr = 0.00
-      local r0 = 1.00
-      local r1 = 0.14 * r0
-      local rs = r0 / 85.0 -- star radius and inner boundary: 10 km
-      local rc = rs * mps.r_cavity
-      local r  = rs * x[1]
-      if r < rc then
-         d0 = mps.d_wind
-      elseif r < r0 then
-	 d0 = mps.d_star / (1 + (r/r1)^3.5) * (1 - r/r0)^0.75
-	 vr = 0.5 * r/r0
-      else
-	 d0 = 1e-2
-      end
-      return {d0, 0.01 * mps.d_wind, vr, 0.0, 0.0}
-   end
-
-   local function default_ic(x)
-      local d0
-      local rc = mps.r_cavity
-      local h = mps.d_pert
-      local r = x[1]
-      local t = x[2]
-      local p = x[3]
-      if r < rc then
-         d0 = mps.d_cavity
-      else
-         d0 = mps.d_star * (1 + h*math.sin(t)*math.cos(6*p)*math.exp(-r/rc))
-      end
-      return {d0, 0.01 * mps.d_wind, 0.0, 0.0, 0.0}
-   end
-
    self.initial_data_cell = function(x)
-      if mps.merger then
-	 return merger_ic(x)
+      local d, p, v
+      local re = 6.0e9 -- inner and outer extent of mass shell
+      local ri = 1.5e9
+      local r = x[1] * mps.r0 -- x[1] is in units of inner boundary
+      local t = x[2]
+      local a = 0.0 -- oblateness, 0 is isotropic
+      local C = 4.0 -- exponent of ejecta profile
+      local K = mps.Mej*2e27 * (3-C)/(re^(3-C)-ri^(3-C))/(4*math.pi)
+      local d_ambient = 1e-5 -- g/cm^3
+      --print(r, rc, ri, re)
+      if ri < r and r < re then
+	 d = K * (1 - a*math.cos(2*t)) * r^-C
+	 v = 0.2 * r/re
       else
-	 return default_ic(x)
+	 d = d_ambient
+	 v = 0.0
       end
-   end
-
-   self.initial_data_edge = function(x, n)
-      if mps.engine then
-	 -- initialize the magnetosphere as a dipole
-	 local r = x[1]
-	 local z = r * math.cos(x[2])
-	 local R = r * math.sin(x[2])
-	 local Ap = math.sin(x[2]) / r^2
-	 return { 50.0 * Ap * n[3] }
-      else
-	 return { 0.0 }
-      end
+      return {d, 1e-2 * d_ambient, v, 0.0, 0.0}
    end
 end
 function MagnetarWind:set_runtime_defaults(runtime_cfg)
@@ -728,9 +681,10 @@ function MagnetarWind:build_m2(runtime_cfg)
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local mps = self.model_parameters
    local N = runtime_cfg.resolution or 64
-   local r0 = 1.0
-   local r1 = mps.r_outer
-   build_args.upper[1] = r1
+   local r0 = mps.r0
+   local r1 = mps.r1
+   build_args.lower[1] = 1.0
+   build_args.upper[1] = r1/r0
    build_args.resolution[1] = N * math.floor(math.log10(r1/r0))
    build_args.resolution[2] = N
    build_args.resolution[3] = N
@@ -747,13 +701,14 @@ function MagnetarWind:build_m2(runtime_cfg)
       local t = 0.5 * (V0.x0[2] + V0.x1[2])
       local p = 0.5 * (V0.x0[3] + V0.x1[3])
       if V0.global_index[1] == -1 then
-         local d = mps.d_wind
-         local B = mps.B_wind
-         local g = mps.g_wind
-         local h = mps.g_pert
-         g = g * (1.0 + h * math.sin(t) * math.sin(6*p)^2)
-	 g = g * (1.0 - math.exp(-T)) + math.exp(-T) -- ramp up
-	 B = B * (1.0 - math.exp(-T)) -- ramp up
+	 local P = mps.power
+	 local c = 2.99e10 -- cm/s
+	 local rho_gamma2 = P / (4*math.pi*mps.r0^2*c^3)
+	 local g = mps.gamma
+	 local d = rho_gamma2 / g^2
+	 local B =(rho_gamma2 * mps.sigma * 2)^0.5
+	 g = g * (1.0 - math.exp(-T)) + 1.0 * math.exp(-T) -- ramp up
+	 B = B * (1.0 - math.exp(-T)) + 0.0 * math.exp(-t) -- ramp up
          V0.prim.v1 =(1.0 - g^-2)^0.5
          V0.prim.v2 = 0.0
          V0.prim.v3 = 0.0
