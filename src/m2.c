@@ -48,7 +48,7 @@ void m2sim_new(m2sim *m2)
   m2->coordinate_scaling1 = M2_LINEAR;
   m2->coordinate_scaling2 = M2_LINEAR;
   m2->coordinate_scaling3 = M2_LINEAR;
-  m2->geometry = M2_CARTESIAN; 
+  m2->geometry = M2_CARTESIAN;
   m2->relativistic = 0;
   m2->magnetized = 0;
   m2->rk_order = 2;
@@ -130,130 +130,130 @@ void m2sim_initialize(m2sim *m2)
     for (j=0; j<L[2]; ++j) {
       for (k=0; k<L[3]; ++k) {
 
-	V = m2->volumes + M2_IND(i,j,k);
-	memset(V, 0, sizeof(m2vol));
+        V = m2->volumes + M2_IND(i,j,k);
+        memset(V, 0, sizeof(m2vol));
 
-	V->m2 = m2;
-	V->aux.m2 = m2;
-	/* ----------------------- */
-	/* cache cell global index */
-	/* ----------------------- */
-	for (d=1; d<=3; ++d) {
-	  V->global_index[0] = M2_IND(i,j,k);
-	  V->global_index[1] = i + S[1];
-	  V->global_index[2] = j + S[2];
-	  V->global_index[3] = k + S[3];
-	}
-	/* the left-most cell along each fleshed out, non-periodic axis is a
-	   shell (it has no volume data, only +1/2 face data) */
-	if ((m2->periodic_dimension[1] == 0 && V->global_index[1] == -1) ||
-	    (m2->periodic_dimension[2] == 0 && V->global_index[2] == -1) ||
-	    (m2->periodic_dimension[3] == 0 && V->global_index[3] == -1)) {
-	  V->zone_type = M2_ZONE_TYPE_SHELL;
-	}
-	else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) || 
-		 (G[2] > 1 && (j < ng0[2] || j >= L[2] - ng1[2])) || 
-		 (G[3] > 1 && (k < ng0[3] || k >= L[3] - ng1[3]))) {
-	  V->zone_type = M2_ZONE_TYPE_GUARD;
-	}
-	else {
-	  V->zone_type = M2_ZONE_TYPE_FULL;
-	}
-	V->zone_health = M2_ZONE_HEALTH_GOOD;
+        V->m2 = m2;
+        V->aux.m2 = m2;
+        /* ----------------------- */
+        /* cache cell global index */
+        /* ----------------------- */
+        for (d=1; d<=3; ++d) {
+          V->global_index[0] = M2_IND(i,j,k);
+          V->global_index[1] = i + S[1];
+          V->global_index[2] = j + S[2];
+          V->global_index[3] = k + S[3];
+        }
+        /* the left-most cell along each fleshed out, non-periodic axis is a
+           shell (it has no volume data, only +1/2 face data) */
+        if ((m2->periodic_dimension[1] == 0 && V->global_index[1] == -1) ||
+            (m2->periodic_dimension[2] == 0 && V->global_index[2] == -1) ||
+            (m2->periodic_dimension[3] == 0 && V->global_index[3] == -1)) {
+          V->zone_type = M2_ZONE_TYPE_SHELL;
+        }
+        else if ((G[1] > 1 && (i < ng0[1] || i >= L[1] - ng1[1])) ||
+                 (G[2] > 1 && (j < ng0[2] || j >= L[2] - ng1[2])) ||
+                 (G[3] > 1 && (k < ng0[3] || k >= L[3] - ng1[3]))) {
+          V->zone_type = M2_ZONE_TYPE_GUARD;
+        }
+        else {
+          V->zone_type = M2_ZONE_TYPE_FULL;
+        }
+        V->zone_health = M2_ZONE_HEALTH_GOOD;
 
-	/* ----------------------- */
-	/* cache cell volumes      */
-	/* ----------------------- */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	if (V->zone_type != M2_ZONE_TYPE_SHELL) {
-	  V->volume = m2_volume_measure(x0, x1, m2->geometry);
-	}
-	else {
-	  V->volume = 0.0;
-	}
-	memcpy(V->x0, x0, 4 * sizeof(double));
-	memcpy(V->x1, x1, 4 * sizeof(double));
-	/* ------------------------ */
-	/* cache cell surface areas */
-	/* ------------------------ */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] + 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->area1 = m2_area_measure(x0, x1, m2->geometry, 1); /* axis 1 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] + 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->area2 = m2_area_measure(x0, x1, m2->geometry, 2); /* axis 2 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] + 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->area3 = m2_area_measure(x0, x1, m2->geometry, 3); /* axis 3 */
-	/* ---------------------------- */
-	/* cache cell linear dimensions */
-	/* ---------------------------- */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] - 0.5;
-	I0[2] = V->global_index[2] + 0.5;
-	I0[3] = V->global_index[3] + 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->line1 = m2_line_measure(x0, x1, m2->geometry, 1); /* axis 1 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] + 0.5;
-	I0[2] = V->global_index[2] - 0.5;
-	I0[3] = V->global_index[3] + 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->line2 = m2_line_measure(x0, x1, m2->geometry, 2); /* axis 2 */
-	I0[0] = 0.0;
-	I0[1] = V->global_index[1] + 0.5;
-	I0[2] = V->global_index[2] + 0.5;
-	I0[3] = V->global_index[3] - 0.5;
-	I1[0] = 0.0;
-	I1[1] = V->global_index[1] + 0.5;
-	I1[2] = V->global_index[2] + 0.5;
-	I1[3] = V->global_index[3] + 0.5;
-	m2sim_index_to_position(m2, I0, x0);
-	m2sim_index_to_position(m2, I1, x1);
-	V->line3 = m2_line_measure(x0, x1, m2->geometry, 3); /* axis 3 */
+        /* ----------------------- */
+        /* cache cell volumes      */
+        /* ----------------------- */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] - 0.5;
+        I0[2] = V->global_index[2] - 0.5;
+        I0[3] = V->global_index[3] - 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        if (V->zone_type != M2_ZONE_TYPE_SHELL) {
+          V->volume = m2_volume_measure(x0, x1, m2->geometry);
+        }
+        else {
+          V->volume = 0.0;
+        }
+        memcpy(V->x0, x0, 4 * sizeof(double));
+        memcpy(V->x1, x1, 4 * sizeof(double));
+        /* ------------------------ */
+        /* cache cell surface areas */
+        /* ------------------------ */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] + 0.5;
+        I0[2] = V->global_index[2] - 0.5;
+        I0[3] = V->global_index[3] - 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        V->area1 = m2_area_measure(x0, x1, m2->geometry, 1); /* axis 1 */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] - 0.5;
+        I0[2] = V->global_index[2] + 0.5;
+        I0[3] = V->global_index[3] - 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        V->area2 = m2_area_measure(x0, x1, m2->geometry, 2); /* axis 2 */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] - 0.5;
+        I0[2] = V->global_index[2] - 0.5;
+        I0[3] = V->global_index[3] + 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        V->area3 = m2_area_measure(x0, x1, m2->geometry, 3); /* axis 3 */
+        /* ---------------------------- */
+        /* cache cell linear dimensions */
+        /* ---------------------------- */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] - 0.5;
+        I0[2] = V->global_index[2] + 0.5;
+        I0[3] = V->global_index[3] + 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        V->line1 = m2_line_measure(x0, x1, m2->geometry, 1); /* axis 1 */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] + 0.5;
+        I0[2] = V->global_index[2] - 0.5;
+        I0[3] = V->global_index[3] + 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        V->line2 = m2_line_measure(x0, x1, m2->geometry, 2); /* axis 2 */
+        I0[0] = 0.0;
+        I0[1] = V->global_index[1] + 0.5;
+        I0[2] = V->global_index[2] + 0.5;
+        I0[3] = V->global_index[3] - 0.5;
+        I1[0] = 0.0;
+        I1[1] = V->global_index[1] + 0.5;
+        I1[2] = V->global_index[2] + 0.5;
+        I1[3] = V->global_index[3] + 0.5;
+        m2sim_index_to_position(m2, I0, x0);
+        m2sim_index_to_position(m2, I1, x1);
+        V->line3 = m2_line_measure(x0, x1, m2->geometry, 3); /* axis 3 */
       }
     }
   }
@@ -430,7 +430,7 @@ double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V))
     }
     else if (cut_cb) {
       if (cut_cb(V) == 0) {
-	continue;
+        continue;
       }
     }
     y += m2aux_get(&V->aux, member) * V->volume;

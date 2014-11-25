@@ -24,11 +24,11 @@ function TestProblem:read_hdf5_problem_data(h5file)
    for k,v in pairs(self.model_parameters or { }) do
       local str_val = h5mp[k]:value()
       if type(v) == 'number' then
-         self.model_parameters[k] = tonumber(str_val)
+	 self.model_parameters[k] = tonumber(str_val)
       elseif type(v) == 'boolean' then
-         self.model_parameters[k] = load("return "..str_val)()
+	 self.model_parameters[k] = load("return "..str_val)()
       elseif type(v) == 'string' then
-         self.model_parameters[k] = str_val
+	 self.model_parameters[k] = str_val
       end
    end
    h5mp:close()
@@ -38,10 +38,10 @@ function TestProblem:update_model_parameters(user_mp)
    local problem_mp = self.model_parameters or { }
    for k,v in pairs(user_mp or { }) do
       if problem_mp[k] ~= nil then
-         problem_mp[k] = v
+	 problem_mp[k] = v
       else
-         error(("problem class '%s' does not accept model parameter '%s'")
-         :format(class.classname(self), k))
+	 error(("problem class '%s' does not accept model parameter '%s'")
+	       :format(class.classname(self), k))
       end
    end
 end
@@ -82,7 +82,7 @@ function TestProblem:run(user_config_callback, restart_file)
       local h5f = hdf5.File(restart_file, 'r')
       local err, restored_runtime_cfg = serpent.load(h5f['runtime_cfg']:value())
       for k,v in pairs(restored_runtime_cfg) do
-         runtime_cfg[k] = v
+	 runtime_cfg[k] = v
       end -- required so that model_parameters are updated before m2 built
       self:read_hdf5_problem_data(h5f)
       h5f:close()
@@ -109,8 +109,8 @@ function TestProblem:run(user_config_callback, restart_file)
       m2:run_initial_data()
    else
       m2:run_initial_data(self.initial_data_cell,
-      self.initial_data_face,
-      self.initial_data_edge)
+			  self.initial_data_face,
+			  self.initial_data_edge)
    end
    self:describe()
 
@@ -147,11 +147,11 @@ function TestProblem:run(user_config_callback, restart_file)
 
       if m2.status.iteration_number > 0 and
          m2.status.iteration_number % runtime_cfg.reductions_cadence == 0 then
-	 local reduction = m2:get_reductions()
-	 local iter = m2.status.iteration_number
-	 m2.reductions_log[iter] = struct.items(reduction)
-	 m2.reductions_log[iter]['time'] = now
-	 m2.reductions_log[iter]['iteration'] = iter
+         local reduction = m2:get_reductions()
+         local iter = m2.status.iteration_number
+         m2.reductions_log[iter] = struct.items(reduction)
+         m2.reductions_log[iter]['time'] = now
+         m2.reductions_log[iter]['iteration'] = iter
       end
 
       m2.stirring:next_realization()
@@ -165,24 +165,24 @@ function TestProblem:run(user_config_callback, restart_file)
          'riemann_solver',
          'rk_order',
          'suppress_extrapolation_at_unhealthy_zones'
-      }
+					 }
 
       m2.status.drive_attempt = 0
       while keep_trying do
          m2:drive()
          if m2.status.error_code ~= 0 then
-            m2.status.drive_attempt = m2.status.drive_attempt + 1
-            keep_trying = self:reconfigure_after_failure(
+	    m2.status.drive_attempt = m2.status.drive_attempt + 1
+	    keep_trying = self:reconfigure_after_failure(
 	       m2,
 	       m2.status.drive_attempt)
-         else
-            keep_trying = false
-         end
+	 else
+	    keep_trying = false
+	 end
       end
 
       if m2.status.error_code ~= 0 then
-         log:log_message('run', 'exiting due to failures')
-         break
+	 log:log_message('run', 'exiting due to failures')
+	 break
       end
 
       if m2.status.drive_attempt > 0 then m2:update_config(cached_config) end
@@ -191,8 +191,8 @@ function TestProblem:run(user_config_callback, restart_file)
    end
 
    m2:write_checkpoint_hdf5(
-   ('%s/chkpt.final.h5'):format(runtime_cfg.output_path),
-   {runtime_cfg=runtime_cfg})
+      ('%s/chkpt.final.h5'):format(runtime_cfg.output_path),
+      {runtime_cfg=runtime_cfg})
 end
 
 
@@ -203,14 +203,14 @@ local function outflow_bc_flux(axis)
    nhat[axis] = 1.0
    local function bc(V0)
       if V0.global_index[axis] == -1 then
-         local V1 = V0:neighbor(axis, 1)
-         if V1 == nil then return end
-         V0[flux] = V1.aux:fluxes(nhat)
+	 local V1 = V0:neighbor(axis, 1)
+	 if V1 == nil then return end
+	 V0[flux] = V1.aux:fluxes(nhat)
       else
-         V0[flux] = V0.aux:fluxes(nhat)
+	 V0[flux] = V0.aux:fluxes(nhat)
       end
-  end
-  return bc
+   end
+   return bc
 end
 
 
@@ -256,13 +256,13 @@ function DensityWave:build_m2(runtime_cfg)
    local N2 = dims >= 2 and (runtime_cfg.resolution or 64) or 1
    local N3 = dims >= 3 and (runtime_cfg.resolution or 64) or 1
    local build_args = {lower={0.0, 0.0, 0.0},
-   upper={1.0, 1.0, 1.0},
-   resolution={N1,N2,N3},
-   periods={true,true,true},
-   scaling={'linear'},
-   relativistic=false,
-   magnetized=false,
-   geometry='cartesian'}
+		       upper={1.0, 1.0, 1.0},
+		       resolution={N1,N2,N3},
+		       periods={true,true,true},
+		       scaling={'linear'},
+		       relativistic=false,
+		       magnetized=false,
+		       geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    local m2 = m2app.m2Application(build_args)
@@ -286,13 +286,13 @@ end
 local Shocktube = class.class('Shocktube', TestProblem)
 function Shocktube:build_m2(runtime_cfg)
    local build_args = {lower={0.0, 0.0, 0.0},
-   upper={1.0, 1.0, 1.0},
-   resolution={512,1,1},
-   periods={false,false,false},
-   scaling={'linear'},
-   relativistic=false,
-   magnetized=true,
-   geometry='cartesian'}
+		       upper={1.0, 1.0, 1.0},
+		       resolution={512,1,1},
+		       periods={false,false,false},
+		       scaling={'linear'},
+		       relativistic=false,
+		       magnetized=true,
+		       geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    if runtime_cfg.resolution then
@@ -329,16 +329,16 @@ function BrioWu:__init__()
    self.gamma_law_index = 2.0
    self.initial_data_cell = function(x)
       if x[1] < 0.5 then
-         return {1.000, 1.0, 0.0, 0.0, 0.0}
+	 return {1.000, 1.0, 0.0, 0.0, 0.0}
       else
-         return {0.125, 0.1, 0.0, 0.0, 0.0}
+	 return {0.125, 0.1, 0.0, 0.0, 0.0}
       end
    end
    self.initial_data_face = function(x, n)
       if x[1] < 0.5 then
-         return {0.75*n[1] + n[2]}
+	 return {0.75*n[1] + n[2]}
       else
-         return {0.75*n[1] - n[2]}
+	 return {0.75*n[1] - n[2]}
       end
    end
 end
@@ -365,16 +365,16 @@ end
 function RyuJones:__init__()
    self.initial_data_cell = function(x)
       if x[1] < 0.5 then
-         return {1.08, 0.95, 1.2, 0.01, 0.5}
+	 return {1.08, 0.95, 1.2, 0.01, 0.5}
       else
-         return {1.00, 1.00, 0.0, 0.00, 0.0}
+	 return {1.00, 1.00, 0.0, 0.00, 0.0}
       end
    end
    self.initial_data_face = function(x, n)
       if x[1] < 0.5 then
-         return {2.0*n[1] + 4.0*n[2] + 2.0*n[3]}
+	 return {2.0*n[1] + 4.0*n[2] + 2.0*n[3]}
       else
-         return {2.0*n[1] + 3.6*n[2] + 2.0*n[3]}
+	 return {2.0*n[1] + 3.6*n[2] + 2.0*n[3]}
       end
    end
 end
@@ -402,17 +402,17 @@ function ContactWave:__init__()
    self.initial_data_cell = function(x)
       local vt = mps.vt
       if x[1] < 0.5 then
-         return {1.00, 1.00, 0.0, vt, vt}
+	 return {1.00, 1.00, 0.0, vt, vt}
       else
-         return {0.10, 1.00, 0.0,-vt,-vt}
+	 return {0.10, 1.00, 0.0,-vt,-vt}
       end
    end
    self.initial_data_face = function(x, n)
       local Bt = mps.Bt
       if x[1] < 0.5 then
-         return {1.0*n[1] + Bt*n[2] + Bt*n[3]}
+	 return {1.0*n[1] + Bt*n[2] + Bt*n[3]}
       else
-         return {1.0*n[1] - Bt*n[2] - Bt*n[3]}
+	 return {1.0*n[1] - Bt*n[2] - Bt*n[3]}
       end
    end
 end
@@ -439,9 +439,9 @@ function BlastMHD:__init__()
    self.initial_data_cell = function(x)
       local r = (x[1]^2 + x[2]^2 + x[3]^2)^0.5
       if r < 0.1 then
-         return {1.0, 10.0, 0.0, 0.0, 0.0}
+	 return {1.0, 10.0, 0.0, 0.0, 0.0}
       else
-         return {1.0, 0.10, 0.0, 0.0, 0.0}
+	 return {1.0, 0.10, 0.0, 0.0, 0.0}
       end
    end
    self.initial_data_face = function(x, n)
@@ -454,13 +454,13 @@ function BlastMHD:set_runtime_defaults(runtime_cfg)
 end
 function BlastMHD:build_m2(runtime_cfg)
    local build_args = {lower={-0.5,-0.5,-0.5},
-   upper={ 0.5, 0.5, 0.5},
-   resolution={64,64,1},
-   periods={true,true,true},
-   scaling={'linear', 'linear', 'linear'},
-   relativistic=false,
-   magnetized=true,
-   geometry='cartesian'}
+		       upper={ 0.5, 0.5, 0.5},
+		       resolution={64,64,1},
+		       periods={true,true,true},
+		       scaling={'linear', 'linear', 'linear'},
+		       relativistic=false,
+		       magnetized=true,
+		       geometry='cartesian'}
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
    if runtime_cfg.resolution then
@@ -488,9 +488,9 @@ end
 
 local Implosion2d = class.class('Implosion2d', TestProblem)
 Implosion2d.explanation = [[
---------------------------------------------------------------------------------
--- Implosion2d test
---------------------------------------------------------------------------------]]
+ --------------------------------------------------------------------------------
+ -- Implosion2d test
+ --------------------------------------------------------------------------------]]
 function Implosion2d:__init__()
    local mps = { }
    local doc = { }
@@ -500,9 +500,9 @@ function Implosion2d:__init__()
    self.initial_data_cell = function(x)
       local r = x[1] + x[2]
       if r > -0.4 then
-         return {1.0, 10.0, 0.0, 0.0, 0.0}
+	 return {1.0, 10.0, 0.0, 0.0, 0.0}
       else
-         return {0.1, 0.10, 0.0, 0.0, 0.0}
+	 return {0.1, 0.10, 0.0, 0.0, 0.0}
       end
    end
 end
@@ -524,11 +524,11 @@ function Implosion2d:build_m2(runtime_cfg)
          if V.global_index[2] == n2-2 then V1 = V:neighbor(2, -1); ax = 2; end
          if V.global_index[2] == n2-1 then V1 = V:neighbor(2, -3); ax = 2; end
          if V1 ~= nil then
-            V.prim = V1.prim
-            if ax == 1 then V.prim.v1 = -V.prim.v1 end
-            if ax == 2 then V.prim.v2 = -V.prim.v2 end
-            V:from_primitive()
-         end
+	    V.prim = V1.prim
+	    if ax == 1 then V.prim.v1 = -V.prim.v1 end
+	    if ax == 2 then V.prim.v2 = -V.prim.v2 end
+	    V:from_primitive()
+	 end
       end
    end
    local build_args = {
@@ -592,13 +592,13 @@ function Jet:build_m2(runtime_cfg)
    local r1 = 100.0
    local N = runtime_cfg.resolution or 64
    local build_args = {lower={r0, 0.0, 0.0},
-   upper={r1, math.pi/2, 2*math.pi},
-   resolution={ },
-   periods={false,false,true},
-   scaling={'logarithmic', 'linear', 'linear'},
-   relativistic=false,
-   magnetized=true,
-   geometry='spherical'}
+		       upper={r1, math.pi/2, 2*math.pi},
+		       resolution={ },
+		       periods={false,false,true},
+		       scaling={'logarithmic', 'linear', 'linear'},
+		       relativistic=false,
+		       magnetized=true,
+		       geometry='spherical'}
    build_args.resolution[1] = N / 2 * math.floor(math.log10(r1/r0))
    build_args.resolution[2] = N / 2
    build_args.resolution[3] = 1
@@ -621,10 +621,10 @@ end
 
 local MagnetarWind = class.class('MagnetarWind', TestProblem)
 MagnetarWind.explanation = [[
---------------------------------------------------------------------------------
--- Relativistic toroidally magnetized wind injected through a spherical inner
--- boundary
---------------------------------------------------------------------------------]]
+ --------------------------------------------------------------------------------
+ -- Relativistic toroidally magnetized wind injected through a spherical inner
+ -- boundary
+ --------------------------------------------------------------------------------]]
 function MagnetarWind:__init__()
    local mps = { }
    local doc = { }
@@ -640,17 +640,23 @@ function MagnetarWind:__init__()
    mps.r1=1e11;    doc.r1='outer radial boundary (cm)'
    -- ==========================================================================
 
+   -- Dimensions:
+   -- ================================
+   -- [M/L^3] = g/cm^3
+   -- [L/T] = c
+   -- [L] = 1e7 cm (or whatever r0 is)
+   -- ================================
+
    self.initial_data_cell = function(x)
-      local d, p, v
-      local re = 6.0e9 -- inner and outer extent of mass shell
+      local d, v
+      local re = 6.0e9 -- inner and outer extent of mass shell (cm)
       local ri = 1.5e9
       local r = x[1] * mps.r0 -- x[1] is in units of inner boundary
       local t = x[2]
       local a = 0.0 -- oblateness, 0 is isotropic
       local C = 4.0 -- exponent of ejecta profile
-      local K = mps.Mej*2e27 * (3-C)/(re^(3-C)-ri^(3-C))/(4*math.pi)
+      local K = mps.Mej*2e33 * (3-C) / (re^(3-C)-ri^(3-C)) / (4*math.pi)
       local d_ambient = 1e-5 -- g/cm^3
-      --print(r, rc, ri, re)
       if ri < r and r < re then
 	 d = K * (1 - a*math.cos(2*t)) * r^-C
 	 v = 0.2 * r/re
@@ -709,18 +715,18 @@ function MagnetarWind:build_m2(runtime_cfg)
 	 local B =(rho_gamma2 * mps.sigma * 2)^0.5
 	 g = g * (1.0 - math.exp(-T)) + 1.0 * math.exp(-T) -- ramp up
 	 B = B * (1.0 - math.exp(-T)) + 0.0 * math.exp(-t) -- ramp up
-         V0.prim.v1 =(1.0 - g^-2)^0.5
-         V0.prim.v2 = 0.0
-         V0.prim.v3 = 0.0
-         V0.prim.B1 = 0.0
-         V0.prim.B2 = 0.0
-         V0.prim.B3 = B * math.sin(t)
-         V0.prim.d = d
-         V0.prim.p = d * 0.01
-         V0:from_primitive()
-         V0.flux1 = V0.aux:fluxes(nhat)
+	 V0.prim.v1 =(1.0 - g^-2)^0.5
+	 V0.prim.v2 = 0.0
+	 V0.prim.v3 = 0.0
+	 V0.prim.B1 = 0.0
+	 V0.prim.B2 = 0.0
+	 V0.prim.B3 = B * math.sin(t)
+	 V0.prim.d = d
+	 V0.prim.p = d * 0.01
+	 V0:from_primitive()
+	 V0.flux1 = V0.aux:fluxes(nhat)
       else
-         V0.flux1 = V0.aux:fluxes(nhat)
+	 V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
 
@@ -739,25 +745,19 @@ function MagnetarWind:build_m2(runtime_cfg)
    m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
    m2:set_problem(self)
 
-   if mps.engine then
-      local m2jet = require 'm2jet'
-      m2:set_boundary_conditions_flux1(outflow_bc_flux(1))
-      m2:set_add_physical_source_terms(m2jet.jet_magnetosphere_source_terms)
-   end
-
    return m2
 end
 function MagnetarWind:reconfigure_after_failure(m2, attempt)
    local responses = {
-     function()
-         m2:set_cfl_parameter(0.1)
-         m2:set_plm_parameter(1.0)
+      function()
+	 m2:set_cfl_parameter(0.1)
+	 m2:set_plm_parameter(1.0)
       end,
       function()
-         m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE)
+	 m2:set_quartic_solver(m2lib.M2_QUARTIC_NONE)
       end,
       function()
-         m2:set_plm_parameter(0.0)
+	 m2:set_plm_parameter(0.0)
       end,
    }
    if responses[attempt] then
@@ -772,9 +772,9 @@ end
 
 local InternalShock = class.class('InternalShock', TestProblem)
 InternalShock.explanation = [[
---------------------------------------------------------------------------------
--- Collision of relativistic pancakes
---------------------------------------------------------------------------------]]
+  --------------------------------------------------------------------------------
+  -- Collision of relativistic pancakes
+  --------------------------------------------------------------------------------]]
 function InternalShock:__init__()
    local mps = { }
    local doc = { }
@@ -793,14 +793,14 @@ function InternalShock:__init__()
       local r2 = ((x[1] - 0.25)^2 + (x[2] - mps.b)^2)^0.5
       local d0, vx
       if r1 < mps.r0 then
-         d0 = 100.0
-         vx = mps.v0
+	 d0 = 100.0
+	 vx = mps.v0
       elseif r2 < mps.r0 then
-         d0 = 100.0
-         vx = -mps.v0
+	 d0 = 100.0
+	 vx = -mps.v0
       else
-         d0 = 1.0
-         vx = 0.0
+	 d0 = 1.0
+	 vx = 0.0
       end
       return {d0, 0.5, vx, 0.0, 0.0}
    end
@@ -871,7 +871,7 @@ function DecayingMHD:__init__()
       return {
          --m2lib.force_free_vector_potential(y, n, mps.model)
          m2lib.magnetic_rope_vector_potential(y, n)
-      }
+	     }
    end
    self.initial_data_face__ = function(x, n)
       -- This is a "magnetic rope" force-free solution
@@ -1106,8 +1106,8 @@ function Spheromak:build_m2(runtime_cfg)
       if V0.global_index[1] ~= -1 then
 	 V0.prim.v1 = 0.0
 	 V0.prim.B1 = 0.0
-         V0:from_primitive()
-         V0.flux1 = V0.aux:fluxes(nhat)
+	 V0:from_primitive()
+	 V0.flux1 = V0.aux:fluxes(nhat)
       end
    end
 
@@ -1147,5 +1147,4 @@ return {
    InternalShock = InternalShock,
    DecayingMHD   = DecayingMHD,
    Dynamo        = Dynamo,
-   Spheromak     = Spheromak,
-}
+   Spheromak     = Spheromak }

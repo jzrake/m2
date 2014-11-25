@@ -257,7 +257,7 @@ struct m2sim
   void *mpi_types;
 } ;
 #define M2_SIM_SERIALIZE(m2) ("S(f#f#i#i#i#i#i#iiiiiiiiiiffffff$(fffffiii))", \
-			      m2,4,4,4,4,4,4,4)
+                              m2,4,4,4,4,4,4,4)
 
 
 void m2_self_test();
@@ -267,11 +267,11 @@ double m2_area_measure(double x0[4], double x1[4], int geometry, int axis);
 double m2_line_measure(double x0[4], double x1[4], int geometry, int axis);
 void m2_to_cartesian(double x[4], double xcart[4], int geometry);
 int m2_solve_quartic_equation1(double d4, double d3,
-			       double d2, double d1, double d0,
-			       double roots[4]);
+                               double d2, double d1, double d0,
+                               double roots[4]);
 int m2_solve_quartic_equation2(double d4, double d3,
-			       double d2, double d1, double d0,
-			       double roots[4]);
+                               double d2, double d1, double d0,
+                               double roots[4]);
 double m2_force_free_vector_potential(double x[4], double n[4], int model);
 double m2_force_free_magnetic_field(double x[4], double n[4], int model);
 double m2_magnetic_rope_vector_potential(double x[4], double n[4]);
@@ -321,11 +321,11 @@ int m2sim_memory_usage(m2sim *m2);
 int m2sim_from_conserved_all(m2sim *m2);
 int m2sim_from_primitive_all(m2sim *m2);
 int m2sim_from_conserved(m2sim *m2, double *U, double *B, double *X, double dV,
-			 m2aux *aux, m2prim *P);
+                         m2aux *aux, m2prim *P);
 int m2sim_from_primitive(m2sim *m2, m2prim *P, double *B, double *X, double dV,
-			 double *U, m2aux *aux);
+                         double *U, m2aux *aux);
 int m2sim_from_auxiliary(m2sim *m2, m2aux *aux, double *X, double dV,
-			 m2prim *P, double *U);
+                         m2prim *P, double *U);
 double m2sim_minimum_courant_time(m2sim *m2);
 double m2sim_volume_integral(m2sim *m2, int member, int (*cut_cb)(m2vol *V));
 void m2sim_drive(m2sim *m2);
@@ -337,7 +337,7 @@ double m2aux_maximum_wavespeed(m2aux *aux, int *err);
 int m2aux_eigenvalues(m2aux *aux, double n[4], double *evals);
 int m2aux_fluxes(m2aux *aux, double n[4], double *F);
 int m2aux_add_geometrical_source_terms(m2aux *aux, double x0[4], double x1[4],
-				       double *U);
+                                       double *U);
 double m2aux_get(m2aux *aux, int member);
 double m2aux_measure(m2aux *aux, int member);
 double m2aux_mach(m2aux *aux, double n[4], int mode);
@@ -359,9 +359,9 @@ double m2stirring_get_field(m2stirring *S, double x[4], double n[4]);
 #define M2_STRING_SET(d,s) strncpy(d, s, 256); d[255] = '\0';
 
 #define M2_IND(i,j,k)((i)*L[2]*L[3]+(j)*L[3]+(k))
-#define M2_VOL(i,j,k)(((i)>=0)&&(i)<L[1]&&				\
-		      ((j)>=0)&&(j)<L[2]&&				\
-		      ((k)>=0)&&(k)<L[3]?m2->volumes+M2_IND(i,j,k):NULL)
+#define M2_VOL(i,j,k)(((i)>=0)&&(i)<L[1]&&                              \
+                      ((j)>=0)&&(j)<L[2]&&                              \
+                      ((k)>=0)&&(k)<L[3]?m2->volumes+M2_IND(i,j,k):NULL)
 #define M2_MAX3(a,b,c)(((a)>(b))?(((a)>(c))?(a):(c)):(((b)>(c))?(b):(c)))
 #define M2_MIN3(a,b,c)(((a)<(b))?(((a)<(c))?(a):(c)):(((b)<(c))?(b):(c)))
 
@@ -381,25 +381,25 @@ double m2stirring_get_field(m2stirring *S, double x[4], double n[4]);
 #define ERROR_FILE stderr
 #define FATAL_FILE stderr
 
-#define MSGF(level, format, ...) do {				\
-    FILE *out = NULL;						\
-    char *pre = "";						\
-    switch (level) {						\
-    case DEBUG: out = DEBUG_FILE; pre = "DEBUG"; break;		\
-    case INFO: out = INFO_FILE; pre = "INFO"; break;		\
-    case WARNING: out = WARNING_FILE; pre = "WARNING"; break;	\
-    case ERROR: out = ERROR_FILE; pre = "ERROR"; break; 	\
-    case FATAL: out = FATAL_FILE; pre = "FATAL"; break; 	\
-    }								\
-    if (out) {							\
-      fprintf(out, "[%s:%s] ", pre, __FUNCTION__);		\
-      fprintf(out, format, __VA_ARGS__);			\
-      fprintf(out, "\n");					\
-    }								\
-    if (level == FATAL) {					\
-      exit(1);							\
-    }								\
-  } while (0)							\
+#define MSGF(level, format, ...) do {                           \
+    FILE *out = NULL;                                           \
+    char *pre = "";                                             \
+    switch (level) {                                            \
+    case DEBUG: out = DEBUG_FILE; pre = "DEBUG"; break;         \
+    case INFO: out = INFO_FILE; pre = "INFO"; break;            \
+    case WARNING: out = WARNING_FILE; pre = "WARNING"; break;   \
+    case ERROR: out = ERROR_FILE; pre = "ERROR"; break;         \
+    case FATAL: out = FATAL_FILE; pre = "FATAL"; break;         \
+    }                                                           \
+    if (out) {                                                  \
+      fprintf(out, "[%s:%s] ", pre, __FUNCTION__);              \
+      fprintf(out, format, __VA_ARGS__);                        \
+      fprintf(out, "\n");                                       \
+    }                                                           \
+    if (level == FATAL) {                                       \
+      exit(1);                                                  \
+    }                                                           \
+  } while (0)                                                   \
 
 #define MSG(level, message) MSGF(level, "%s", message)
 
@@ -407,7 +407,7 @@ double m2stirring_get_field(m2stirring *S, double x[4], double n[4]);
 #define TIME(cmd) do {                                  \
     clock_t start = clock();                            \
     cmd;                                                \
-    printf("[%s] %s took %5.4f ms\n", __FUNCTION__,	\
+    printf("[%s] %s took %5.4f ms\n", __FUNCTION__,     \
            #cmd, 1e3*(clock() - start)/CLOCKS_PER_SEC); \
   } while (0)
 
@@ -419,7 +419,7 @@ double m2stirring_get_field(m2stirring *S, double x[4], double n[4]);
 #define ASSERT_F "[assertion:%s]$ %s == %s : %f\n"
 #define ASSERTEQL(E,v)printf(ASSERT_L,__FUNCTION__,#E,#v,E);assert(E==v||NOHUP);
 #define ASSERTEQI(E,v)printf(ASSERT_I,__FUNCTION__,#E,#v,E);assert(E==v||NOHUP);
-#define ASSERTEQF(E,v)printf(ASSERT_F,__FUNCTION__,#E,#v,E);	\
+#define ASSERTEQF(E,v)printf(ASSERT_F,__FUNCTION__,#E,#v,E);    \
   assert(fabs(E-v) < 1e-14||NOHUP);
 
 #endif /* M2_HEADER */
