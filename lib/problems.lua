@@ -653,17 +653,21 @@ function MagnetarWind:__init__()
       local ri = 1.5e9
       local r = x[1] * mps.r0 -- x[1] is in units of inner boundary
       local t = x[2]
-      local a = 0.0 -- oblateness, 0 is isotropic
       local C = 4.0 -- exponent of ejecta profile
       local K = mps.Mej*2e33 * (3-C) / (re^(3-C)-ri^(3-C)) / (4*math.pi)
       local d_ambient = 1e-5 -- g/cm^3
-      if ri < r and r < re then
-	 d = K * (1 - a*math.cos(2*t)) * r^-C
+
+      if r < ri then
+	 d = K * ri^-C * 1e-7 -- cavity density should not be too low
+	 v = 0.0
+      elseif r < re then
+	 d = K * r^-C
 	 v = 0.2 * r/re
       else
 	 d = d_ambient
 	 v = 0.0
       end
+
       return {d, 1e-2 * d_ambient, v, 0.0, 0.0}
    end
 end
