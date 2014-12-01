@@ -636,6 +636,7 @@ function MagnetarWind:__init__()
    mps.gamma=25;   doc.gamma='wind Lorentz factor'
    mps.power=1e48; doc.power='wind luminosity (ergs/s)'
    mps.Mej=0.01;   doc.Mej='mass of merger ejecta (solar masses)'
+   mps.Sej=1;      doc.Sej='factor by which to scale the ejecta location'
    mps.r0=1e7;     doc.r0='inner radial boundary (cm)'
    mps.r1=1e11;    doc.r1='outer radial boundary (cm)'
    -- ==========================================================================
@@ -649,8 +650,8 @@ function MagnetarWind:__init__()
 
    self.initial_data_cell = function(x)
       local d, v
-      local re = 6.0e9 -- inner and outer extent of mass shell (cm)
-      local ri = 1.5e9
+      local re = 6.0e9 * mps.Sej -- inner and outer extent of mass shell (cm)
+      local ri = 1.5e9 * mps.Sej
       local r = x[1] * mps.r0 -- x[1] is in units of inner boundary
       local t = x[2]
       local C = 4.0 -- exponent of ejecta profile

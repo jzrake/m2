@@ -17,7 +17,7 @@ class PlotDriver(object):
         if self._show_mode == 'hold':
             pass
         elif self._hardcopy:
-            plt.savefig(self._hardcopy, dpi=600)
+            plt.savefig(self._hardcopy, dpi=300)
             plt.clf()
         else:
             plt.show()
@@ -217,6 +217,90 @@ class PolarPlot(PlotDriver):
 
 
 
+class MagnetarWindPlot(PlotDriver):
+    """
+    Plotter for the MagnetarWind problem, assumes axial symmetry
+    """
+    def __init__(self, chkpt, args, ax):
+        self.chkpt = chkpt
+        self._args = args
+        self._ax = ax
+
+    def plot(self):
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from matplotlib.ticker import FuncFormatter, MultipleLocator
+
+        args = self._args
+        self.set_plot_axes(self._ax)
+        ax = self.get_plot_axes()
+
+        self.chkpt.set_selection(slicer[1:,1:])
+        self.chkpt.set_scaling(np.log10)
+        dataL = self.chkpt.get_field('d')
+
+        self.chkpt.set_scaling(lambda x: x)
+        dataR = self.chkpt.get_field('u1')
+
+        R, T = self.chkpt.cell_edge_meshgrid
+        r0 = float(self.chkpt.model_parameters['r0'])
+        r1 = float(self.chkpt.model_parameters['r1'])
+        t0 = r0 / 2.99e10
+        R *= r0
+
+        XR = +R * np.sin(T)
+        XL = -R * np.sin(T)
+        Z  = +R * np.cos(T)
+
+        # Figure out an effective gamma_max, ignoring the wind region
+        #n, bins = np.histogram(dataR.flat, bins=128, normed=True)
+        #g = 0.5*(bins[1:] + bins[:-1])
+        #n[g>12] = 0.0
+        #m = np.cumsum(n)
+        #gmax = g[m < 0.9995*m[-1]][-1]
+
+        gmax = 8
+        caxR = ax.pcolormesh(XR, Z, dataR, vmin=+0, vmax=gmax, cmap=args.cmap or 'afmhot')
+        caxL = ax.pcolormesh(XL, Z, dataL, vmin=-5, vmax=1, cmap=args.cmap or 'afmhot')
+
+        def formatter_func(x,n):
+            return r"$%2.1f$" % (x/r1)
+
+        formatter = FuncFormatter(formatter_func)
+
+        cbaxesR = ax.figure.add_axes([0.84, 0.1, 0.03, 0.8])
+        cbaxesL = ax.figure.add_axes([0.15, 0.1, 0.03, 0.8])
+        plt.colorbar(caxR, cax=cbaxesR, ticks=range(0,int(gmax)+1))
+        plt.colorbar(caxL, cax=cbaxesL, ticks=range(-5,1))
+        cbaxesL.yaxis.set_ticks_position('left')
+        cbaxesL.set_yticklabels([r'$10^{%d}$'%n for n in range(-6,1)])
+
+        ax.xaxis.set_major_formatter(formatter)
+        ax.set_yticks([])
+        ax.set_aspect('equal')
+        ax.set_xlabel(r'$r (10^{%d}\rm{cm})$' % np.log10(r1), fontsize=18)
+        plt.figtext(0.05, 0.5, r'$\rho \ (\rm{g/cm^3})$', rotation=90, fontsize=18)
+        plt.figtext(0.92, 0.5, r'$\Gamma \beta_r$', rotation=0, fontsize=18)
+
+        title = r"$t=%2.1f \ \rm{ms}$" % (self.chkpt.status['time_simulation']*t0)
+        ax.set_title(title)
+
+        rmax = args.rmax
+
+        if not rmax:
+            t = self.chkpt.status['time_simulation']*t0
+            rmax = 2.99e10 * t * 0.25
+            if rmax < 1e10: rmax = 1e10
+            if rmax > 5e11: rmax = 5e11
+
+        if rmax:
+            ax.set_xlim(-rmax, rmax)
+            ax.set_ylim(-rmax, rmax)
+
+        self.show()
+
+
+
 class PlotCommand(command.Command):
     _alias = "plot"
 
@@ -225,8 +309,12 @@ class PlotCommand(command.Command):
         parser.add_argument('--field', default='d')
         parser.add_argument('--vmin', type=float, default=None)
         parser.add_argument('--vmax', type=float, default=None)
+        parser.add_argument('--rmax', type=float, default=None,
+                            help="outer radial extent, if polar and 2d")
+        parser.add_argument('--cmap', type=str, default=None)
         parser.add_argument('--equatorial', action="store_true")
-        parser.add_argument('--axis', type=int, default=3, help="for 2d, cutplane axis: [1,2,3]")
+        parser.add_argument('--axis', type=int, default=3,
+                            help="for 2d, cutplane axis: [1,2,3]")
         parser.add_argument('--profile', action="store_true")
         parser.add_argument('--log-scaling', action="store_true")
         parser.add_argument('--no-colorbar', action="store_true")
@@ -237,6 +325,7 @@ class PlotCommand(command.Command):
     def run(self, args):
         import pprint
         import numpy as np
+        import matplotlib.pyplot as plt
 
         for filename in args.filenames:
             if args.verbose:
@@ -244,8 +333,11 @@ class PlotCommand(command.Command):
                 pprint.pprint(self.chkpt.config)
 
             chkpt = checkpoint.Checkpoint(filename)
-            chkpt.add_derived_field('gamma', transforms.LorentzFactor())
             chkpt.add_derived_field('beta', transforms.PlasmaBeta())
+            chkpt.add_derived_field('gamma', transforms.LorentzFactor())
+            chkpt.add_derived_field('u1', transforms.GammaBeta1())
+            chkpt.add_derived_field('u2', transforms.GammaBeta2())
+            chkpt.add_derived_field('u3', transforms.GammaBeta3())
             chkpt.set_scaling(np.log10 if args.log_scaling else lambda x: x)
 
             if chkpt.geometry == 'cartesian':
@@ -259,15 +351,24 @@ class PlotCommand(command.Command):
                     plotter = RectangularPlot3d(chkpt, args)
 
             elif chkpt.geometry == 'spherical':
-                plotter = PolarPlot(chkpt, args)
+                if chkpt.problem_name == 'MagnetarWind':
+                    fig = plt.figure(figsize=[10,8])
+                    ax = fig.add_subplot(111)
+                    plotter = MagnetarWindPlot(chkpt, args, ax)
+                else:
+                    plotter = PolarPlot(chkpt, args)
 
             if not args.output:
                 plotter.set_show_mode('hold')
             else:
-                plotter.set_hardcopy(filename.replace(*args.output.split(',')))
+                if '=' in args.output:
+                    imgname = filename.replace(*args.output.split('='))
+                else:
+                    imgname = args.output
+                plotter.set_hardcopy(imgname)
+
             plotter.plot()
 
         if not args.output:
-            import matplotlib.pyplot as plt
             plt.show()
 

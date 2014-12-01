@@ -6,6 +6,27 @@ class LorentzFactor(object):
         v3 = prim_selection['v3']
         return (1.0 - (v1**2 + v2**2 + v3**2))**-0.5
 
+class GammaBeta1(object):
+    def transform(self, prim_selection):
+        v1 = prim_selection['v1']
+        v2 = prim_selection['v2']
+        v3 = prim_selection['v3']
+        return v1 * (1.0 - (v1**2 + v2**2 + v3**2))**-0.5
+
+class GammaBeta2(object):
+    def transform(self, prim_selection):
+        v1 = prim_selection['v1']
+        v2 = prim_selection['v2']
+        v3 = prim_selection['v3']
+        return v2 * (1.0 - (v1**2 + v2**2 + v3**2))**-0.5
+
+class GammaBeta3(object):
+    def transform(self, prim_selection):
+        v1 = prim_selection['v1']
+        v2 = prim_selection['v2']
+        v3 = prim_selection['v3']
+        return v3 * (1.0 - (v1**2 + v2**2 + v3**2))**-0.5
+
 class PlasmaBeta(object):
     def transform(self, prim_selection):
         pg = prim_selection['p']
