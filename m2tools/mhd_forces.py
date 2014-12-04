@@ -92,9 +92,9 @@ class HydromagneticForceCalculator(object):
         N = B.shape[1:]
         d = lambda f, a: five_point_deriv(f, a, h=1.0/N[a])
         curl = np.zeros_like(B)
-        curl[0] = d(B[0], 2) - d(B[2], 0)
-        curl[1] = d(B[1], 0) - d(B[0], 1)
-        curl[2] = d(B[2], 1) - d(B[1], 2)
+        curl[0] = d(B[2], 1) - d(B[1], 2)
+        curl[1] = d(B[0], 2) - d(B[2], 0)
+        curl[2] = d(B[1], 0) - d(B[0], 1)
         return curl
 
     @logmethod
@@ -151,9 +151,12 @@ class CalculateForces(command.Command):
             'T+F': calc.magnetic_tension() +
             calc.magnetic_pressure_gradient_force()}
 
+        fields['B/J'] = fields['B'] / fields['J']
+        fields['B/J'] -= fields['B/J'].mean()
+
         for f in args.fields.split(','):
             plt.figure()
-            plt.imshow(fields[f][0,0])
+            plt.imshow(fields[f][0][:,0,:], interpolation='nearest')
             plt.title(f)
             plt.colorbar()
             plt.title(filename)

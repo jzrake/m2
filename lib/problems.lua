@@ -883,19 +883,13 @@ function DecayingMHD:__init__()
    -- ==========================================================================
    mps.three_d = true; doc.three_d  = 'run in three dimensions'
    mps.model = 0; doc.model = 'force-free model coefficients [0-3]'
-   mps.tile = 1; doc.tile = 'periodicity number'
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
-      local m = mps.tile
-      local y = m2lib.dvec4(x[0]*m, x[1]*m, x[2]*m, x[3]*m)
-      return {
-         --m2lib.force_free_vector_potential(y, n, mps.model)
-         m2lib.magnetic_rope_vector_potential(y, n)
-      }
+      return { m2lib.force_free_vector_potential(x, n, mps.model) }
    end
    self.initial_data_face__ = function(x, n)
       -- This is a "magnetic rope" force-free solution
@@ -916,7 +910,7 @@ function DecayingMHD:set_runtime_defaults(runtime_cfg)
 end
 function DecayingMHD:build_m2(runtime_cfg)
    local N = runtime_cfg.resolution or 32
-   local L = 1.0 * math.pi
+   local L = 1.0
    local build_args = {
       upper={ L,  L,  L},
       lower={-L, -L, -L},
