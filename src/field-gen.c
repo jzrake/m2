@@ -17,7 +17,7 @@ typedef struct fourier_mode
 
 
 
-double m2_force_free_vector_potential(double x[4], double n[4], int model)
+double m2_force_free_vector_potential(double x[4], double n[4], int model, int k2)
 {
 #define RAND jsw_random_double(&rand, -1, 1)
   int m,i,j,k;
@@ -25,8 +25,8 @@ double m2_force_free_vector_potential(double x[4], double n[4], int model)
   jsw_seed(&rand, model);
 
 
-  int k_cube = 5;
-  int k2_sphere = 11;
+  int k2_sphere = k2;//26;
+  int k_cube = floor(sqrt(k2_sphere)) + 1;
   fourier_mode *modes = NULL;
   int num_modes = 0;
   Complex A[4] = {0, 0, 0, 0};
@@ -95,9 +95,10 @@ double m2_force_free_vector_potential(double x[4], double n[4], int model)
 }
 
 
-double m2_force_free_magnetic_field(double x[4], double n[4], int model)
+double m2_force_free_magnetic_field(double x[4], double n[4], int model, int k2)
 {
-  return m2_force_free_vector_potential(x, n, model); /* correct up to factor of alpha */
+  /* correct up to factor of alpha */
+  return m2_force_free_vector_potential(x, n, model, k2);
 }
 
 

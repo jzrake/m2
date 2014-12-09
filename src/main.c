@@ -1096,8 +1096,9 @@ static int L_m2_force_free_vector_potential(lua_State *L)
 {
   double **x = (double **) luaL_checkudata(L, 1, "dvec4");
   double **n = (double **) luaL_checkudata(L, 2, "dvec4");
-  int M = luaL_checkint(L, 3);
-  double A = m2_force_free_vector_potential(*x, *n, M);
+  int M  = luaL_checkint(L, 3);
+  int k2 = luaL_checkint(L, 4);
+  double A = m2_force_free_vector_potential(*x, *n, M, k2);
   lua_pushnumber(L, A);
   return 1;
 }
@@ -1105,8 +1106,9 @@ static int L_m2_force_free_magnetic_field(lua_State *L)
 {
   double **x = (double **) luaL_checkudata(L, 1, "dvec4");
   double **n = (double **) luaL_checkudata(L, 2, "dvec4");
-  int M = luaL_checkint(L, 3);
-  double A = m2_force_free_magnetic_field(*x, *n, M);
+  int M  = luaL_checkint(L, 3);
+  int k2 = luaL_checkint(L, 4);
+  double A = m2_force_free_magnetic_field(*x, *n, M, k2);
   lua_pushnumber(L, A);
   return 1;
 }

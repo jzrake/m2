@@ -883,14 +883,16 @@ function DecayingMHD:__init__()
    -- ==========================================================================
    mps.three_d = true; doc.three_d  = 'run in three dimensions'
    mps.model = 0;      doc.model    = 'force-free model parameter (any integer)'
-   mps.amp = 0.1;      doc.amp      = 'amplitude of field'
+   mps.amp = 0.1; doc.amp      = 'amplitude of field'
+   mps.k2  = 11;  doc.k2       = 'square of the wavenumber where energy lives'
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
-      return { mps.amp * m2lib.force_free_vector_potential(x, n, mps.model) }
+      return {
+	 mps.amp * m2lib.force_free_vector_potential(x, n, mps.model, mps.k2) }
    end
    self.initial_data_face__ = function(x, n)
       -- This is a "magnetic rope" force-free solution
