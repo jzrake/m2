@@ -24,6 +24,28 @@ class HydromagneticForceCalculator(object):
                       self.checkpoint.cell_primitive['v3'][:]])
         return v
 
+    @logmethod
+    def vector_potential(self):
+        import numpy as np
+        Bx = self.magnetic_field()
+        Bk = np.fft.fftn(Bx, axes=[1,2,3])
+        Ks = self.get_ks(Bx.shape)
+        K2 = Ks[0]**2 + Ks[1]**2 + Ks[2]**2
+        K2[0,0,0] = 1
+        Ak = np.zeros_like(Bk)
+        Ak[0] = 1.j*(Ks[1]*Bk[2] - Ks[2]*Bk[1])/K2
+        Ak[1] = 1.j*(Ks[2]*Bk[0] - Ks[0]*Bk[2])/K2
+        Ak[2] = 1.j*(Ks[0]*Bk[1] - Ks[1]*Bk[0])/K2
+        Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
+        return Ax
+
+    @logmethod
+    def helicity(self):
+        import numpy as np
+        A = self.vector_potential()
+        B = self.magnetic_field()
+        return A[0]*B[0] + A[1]*B[1] + A[2]*B[2]
+
     def get_ks(self, shape):
         """
         Get the wavenumber array, assuming all dimensions are length 1, while
@@ -45,8 +67,8 @@ class HydromagneticForceCalculator(object):
         """
         import numpy as np
         Bx = self.magnetic_field()
-        Ks = self.get_ks(Bx.shape)
         Bk = np.fft.fftn(Bx, axes=[1,2,3])
+        Ks = self.get_ks(Bx.shape)
         N = Ks.shape[1:]
         d = five_point_deriv
         gradB = np.zeros((3,3) + N)
@@ -87,15 +109,7 @@ class HydromagneticForceCalculator(object):
 
     @logmethod
     def curlB(self):
-        import numpy as np
-        B = self.magnetic_field()
-        N = B.shape[1:]
-        d = lambda f, a: five_point_deriv(f, a, h=1.0/N[a])
-        curl = np.zeros_like(B)
-        curl[0] = d(B[2], 1) - d(B[1], 2)
-        curl[1] = d(B[0], 2) - d(B[2], 0)
-        curl[2] = d(B[1], 0) - d(B[0], 1)
-        return curl
+        return curl_of_field(self.magnetic_field())
 
     @logmethod
     def power_spectrum(self, which="magnetic", bins=256):
@@ -118,6 +132,17 @@ class HydromagneticForceCalculator(object):
         x = 0.5*(bins[1:] + bins[:-1])
         y = dP / dk
         return x, y
+
+
+def curl_of_field(B):
+    import numpy as np
+    d = lambda f, a: five_point_deriv(f, a, h=1.0/B.shape[a])
+    curl = np.zeros_like(B)
+    curl[0] = d(B[2], 1) - d(B[1], 2)
+    curl[1] = d(B[0], 2) - d(B[2], 0)
+    curl[2] = d(B[1], 0) - d(B[0], 1)
+    return curl
+
 
 def five_point_deriv(f, axis=0, h=1.0):
     import numpy as np
@@ -144,22 +169,21 @@ class CalculateForces(command.Command):
         import matplotlib.pyplot as plt
         calc = HydromagneticForceCalculator(filename)
         fields = {
-            'B' : calc.magnetic_field(),
-            'J' : calc.curlB(),
-            'T' : calc.magnetic_tension(),
-            'F' : calc.magnetic_pressure_gradient_force(),
-            'T+F': calc.magnetic_tension() +
-            calc.magnetic_pressure_gradient_force()}
-
-        fields['B/J'] = fields['B'] / fields['J']
-        fields['B/J'] -= fields['B/J'].mean()
+            'B' : lambda : calc.magnetic_field(),
+            'J' : lambda : calc.curlB(),
+            'H' : lambda : calc.curlB(),
+            'A' : lambda : calc.vector_potential(),
+            'H' : lambda : calc.helicity(),
+            'curlA' : lambda : curl_of_field(calc.vector_potential())}
 
         for f in args.fields.split(','):
+            data = fields[f]()[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+            if f is 'H':
+                print "total helicity is", data.mean()
             plt.figure()
-            plt.imshow(fields[f][0][:,0,:], interpolation='nearest')
+            plt.imshow(data, interpolation='nearest')
             plt.title(f)
             plt.colorbar()
-            plt.title(filename)
 
 
 class CalculatePowerSpectrum(command.Command):
