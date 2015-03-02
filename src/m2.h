@@ -67,6 +67,7 @@ enum m2flag {
   /* Riemann solvers */
   M2_RIEMANN_HLLE,
   M2_RIEMANN_HLLC,
+  M2_RIEMANN_HLLD,
 
   /* Quartic polynomial solvers */
   M2_QUARTIC_NONE,

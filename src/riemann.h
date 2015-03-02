@@ -30,5 +30,6 @@ typedef struct
 
 void riemann_solver_hlle(m2riemann_problem *R);
 void riemann_solver_hllc(m2riemann_problem *R);
+void riemann_solver_hlld(m2riemann_problem *R);
 
 #endif /* M2_RIEMANN_HEADER */

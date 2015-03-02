@@ -7,6 +7,7 @@
 
 static void _hllc_nrhyd(m2riemann_problem *R);
 static void _hllc_nrmhd(m2riemann_problem *R);
+static void _hlld_srmhd(m2riemann_problem *R);
 
 void riemann_solver_hlle(m2riemann_problem *R)
 {
@@ -38,6 +39,16 @@ void riemann_solver_hllc(m2riemann_problem *R)
   }
   else {
     _hllc_nrhyd(R);
+  }
+}
+
+void riemann_solver_hlld(m2riemann_problem *R)
+{
+  if (R->m2->relativistic && R->m2->magnetized) {
+    _hlld_srmhd(R);
+  }
+  else {
+    MSG(FATAL, "HLLD Riemann solver only implemented for srmhd");
   }
 }
 
@@ -244,3 +255,9 @@ void _hllc_nrmhd(m2riemann_problem *R)
   else if (Sm<s && s<=Sr) for (q=0; q<8; ++q) F[q] = Fr[q] + Sr*(Urs[q]-Ur[q]);
   else if (Sr<s         ) for (q=0; q<8; ++q) F[q] = Fr[q];
 }
+
+void _hlld_srmhd(m2riemann_problem *R)
+{
+
+}
+

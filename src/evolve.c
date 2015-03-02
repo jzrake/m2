@@ -126,6 +126,7 @@ static void riemann_solver(m2vol *VL, m2vol *VR, int axis, double *F,
   switch (VL->m2->riemann_solver) {
   case M2_RIEMANN_HLLE: riemann_solver_hlle(&R); break;
   case M2_RIEMANN_HLLC: riemann_solver_hllc(&R); break;
+  case M2_RIEMANN_HLLD: riemann_solver_hlld(&R); break;
   default: MSG(FATAL, "invalid riemann solver"); break;
   }
   memcpy(F, R.F_hat, 8 * sizeof(double));
