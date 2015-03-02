@@ -100,6 +100,7 @@ class Checkpoint(object):
                    self.time_stamp,
                    self.domain_resolution[1:])
         pprint.pprint(self.status)
+        pprint.pprint(self.config)
         pprint.pprint(self.model_parameters)
 
     def close(self):

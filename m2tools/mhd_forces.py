@@ -157,14 +157,25 @@ class CalculateForces(command.Command):
     _alias = "calc-forces"
     def configure_parser(self, parser):
         parser.add_argument("filenames", nargs='+')
+<<<<<<< Updated upstream
         parser.add_argument("--fields", default='A')
         parser.add_argument("--diff")
+=======
+        parser.add_argument("--fields", default='B')
+        parser.add_argument("--noplot", action="store_true")
+>>>>>>> Stashed changes
 
     def run(self, args):
         import matplotlib.pyplot as plt
+        self.helicity = [ ]
         for filename in args.filenames:
             self.run_file(filename, args)
-        plt.show()
+        if not args.noplot:
+            plt.show()
+        else:
+            import pickle
+            outf = open("helicity.pk", 'w')
+            pickle.dump(self.helicity, outf)
 
     def run_file(self, filename, args):
         import matplotlib.pyplot as plt
@@ -180,13 +191,25 @@ class CalculateForces(command.Command):
                 'curlA' : lambda : curl_of_field(chk.vector_potential())}
             return F[key]()
 
+        if 'H' in args.fields:
+            t = calc.checkpoint.status['time_simulation']
+            H = fields['H']().mean()
+            print H
+            self.helicity.append((t,H))
+
+        if args.noplot: return
+
         for f in args.fields.split(','):
+
             data = fields(calc, f)[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
             if diff is not None:
                 data -= fields(diff, f)[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
 
             if f is 'H':
                 print "total helicity is", data.mean()
+
+            data = fields[f]()[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+
             plt.figure()
             plt.imshow(data, interpolation='nearest')
             plt.title(f)
@@ -289,7 +312,8 @@ class CalculatePowerSpectrum(command.Command):
                 filename, args.which = filename.split(':')
             else:
                 args.which = 'magnetic'
-            self.run_file(filename, args)
+            x, y = self.run_file(filename, args)
+        plt.loglog(x, y[0]*(x/x[0])**(-5./3), label=r'$k^{-5/3}$')
         plt.legend(loc='best')
         plt.show()
 
@@ -299,6 +323,7 @@ class CalculatePowerSpectrum(command.Command):
         x, y = calc.power_spectrum(which=args.which, bins=args.bins)
         plt.xlim(x[0], x[-1])
         plt.loglog(x, y, label=filename+':'+args.which)
+        return x, y
 
 
 if __name__ == "__main__":
