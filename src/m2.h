@@ -205,6 +205,7 @@ struct m2reductions
   double total_kinetic_energy;
   double total_internal_energy;
   double total_magnetic_energy;
+  double mean_magnetization_sigma;
 } ;
 
 struct m2sim

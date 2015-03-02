@@ -136,7 +136,7 @@ class HydromagneticForceCalculator(object):
 
 def curl_of_field(B):
     import numpy as np
-    d = lambda f, a: five_point_deriv(f, a, h=1.0/B.shape[a])
+    d = lambda f, a: five_point_deriv(f, a, h=1.0/B.shape[a+1])
     curl = np.zeros_like(B)
     curl[0] = d(B[2], 1) - d(B[1], 2)
     curl[1] = d(B[0], 2) - d(B[2], 0)
@@ -157,7 +157,8 @@ class CalculateForces(command.Command):
     _alias = "calc-forces"
     def configure_parser(self, parser):
         parser.add_argument("filenames", nargs='+')
-        parser.add_argument("--fields", default='T+F')
+        parser.add_argument("--fields", default='A')
+        parser.add_argument("--diff")
 
     def run(self, args):
         import matplotlib.pyplot as plt
@@ -168,22 +169,111 @@ class CalculateForces(command.Command):
     def run_file(self, filename, args):
         import matplotlib.pyplot as plt
         calc = HydromagneticForceCalculator(filename)
-        fields = {
-            'B' : lambda : calc.magnetic_field(),
-            'J' : lambda : calc.curlB(),
-            'H' : lambda : calc.curlB(),
-            'A' : lambda : calc.vector_potential(),
-            'H' : lambda : calc.helicity(),
-            'curlA' : lambda : curl_of_field(calc.vector_potential())}
+        diff = HydromagneticForceCalculator(args.diff) if args.diff else None
+
+        def fields(chk, key):
+            F = {
+                'B' : lambda : chk.magnetic_field(),
+                'J' : lambda : chk.curlB(),
+                'A' : lambda : chk.vector_potential(),
+                'H' : lambda : chk.helicity(),
+                'curlA' : lambda : curl_of_field(chk.vector_potential())}
+            return F[key]()
 
         for f in args.fields.split(','):
-            data = fields[f]()[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+            data = fields(calc, f)[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+            if diff is not None:
+                data -= fields(diff, f)[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+
             if f is 'H':
                 print "total helicity is", data.mean()
             plt.figure()
             plt.imshow(data, interpolation='nearest')
             plt.title(f)
             plt.colorbar()
+
+
+
+class CalculateForceFreePotentialChange(command.Command):
+    _alias = "ff-decay"
+    def configure_parser(self, parser):
+        parser.add_argument("filenames", nargs='+')
+        parser.add_argument("--diff")
+
+    def run(self, args):
+        import numpy as np
+        import matplotlib.pyplot as plt
+        
+        alpha = 3**0.5 * 2 * np.pi
+
+        f0 = HydromagneticForceCalculator(args.filenames[0])
+        A0 = f0.vector_potential()
+        B0 = f0.magnetic_field()
+        J0 = f0.curlB()
+        ff_violation0 = J0 - alpha * B0
+
+        for filename in args.filenames[1:]:
+            f = HydromagneticForceCalculator(filename)
+            A = f.vector_potential()
+            B = f.magnetic_field()
+            J = f.curlB()
+            ff_violation = J - alpha * B
+
+            #plt.hist(ff_violation.flat, histtype='step', bins=256, log=True, label=filename)
+
+            plt.figure()
+            plt.suptitle("J - J0")
+            plt.imshow((J - J0)[2][:,:,0])
+            plt.colorbar()
+
+
+            plt.figure()
+            plt.suptitle("B - B0")
+            plt.imshow((B - B0)[2][:,:,0])
+            plt.colorbar()
+
+            plt.figure()
+            plt.suptitle("v3")
+            plt.imshow(f.checkpoint.cell_primitive["v3"][:,:,0])
+            plt.colorbar()
+
+
+            plt.figure()
+            plt.suptitle("B")
+            plt.imshow(B[2][:,:,0])
+            plt.colorbar()
+
+        #plt.legend()
+        plt.show()
+
+        # dA = A1 - A0
+        # dB = B1 - B0
+
+        # quantile = np.percentile(ff_violation0, 99.9)
+        # indices = np.where(ff_violation0 > quantile)
+        # i0 = indices[1][0]
+        # print i0
+
+
+        # plt.figure()
+        # plt.imshow(ff_violation0[1][i0,:,:])
+        # plt.colorbar()
+
+        # plt.figure()
+        # plt.imshow(ff_violation0[1][0,:,:])
+        # plt.colorbar()
+
+
+        # d2M = self.dot(dB, dB - alpha * dA)
+        # print d2M.mean() / d2M.std()
+
+
+    def dot(self, A, B):
+        return A[0]*B[0] + A[1]*B[1] + A[2]*B[2]
+
+    def mod(self, A):
+        return self.dot(A, A)**0.5
+
 
 
 class CalculatePowerSpectrum(command.Command):

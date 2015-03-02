@@ -374,6 +374,7 @@ int register_m2reductions(lua_State *L)
     MD(total_kinetic_energy),
     MD(total_internal_energy),
     MD(total_magnetic_energy),
+    MD(mean_magnetization_sigma),
     {NULL, 0, 0},
   };
   lua_struct_method_t methods[] = {
@@ -922,12 +923,15 @@ static int L_m2sim_get_reductions(lua_State *L)
     R->total_kinetic_energy  += v*m2aux_get(&V->aux, M2_KINETIC_ENERGY_DENSITY);
     R->total_internal_energy += v*m2aux_get(&V->aux, M2_INTERNAL_ENERGY_DENSITY);
     R->total_magnetic_energy += v*m2aux_get(&V->aux, M2_MAGNETIC_ENERGY_DENSITY);
+    R->mean_magnetization_sigma += v*m2aux_get(&V->aux, M2_SIGMA);
   }
 
 #if M2_HAVE_MPI
     MPI_Comm cart_comm = *((MPI_Comm *) m2->cart_comm);
-    MPI_Allreduce(MPI_IN_PLACE, (double*)R, 6, MPI_DOUBLE, MPI_SUM, cart_comm);
+    MPI_Allreduce(MPI_IN_PLACE, (double*)R, 7, MPI_DOUBLE, MPI_SUM, cart_comm);
 #endif
+
+    R->mean_magnetization_sigma /= R->total_volume;
 
   return 1;
 }

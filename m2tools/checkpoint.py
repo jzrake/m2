@@ -226,7 +226,10 @@ class Checkpoint(object):
 
     @property
     def cell_primitive(self):
-        return dict([k,v] for k,v in self._file['cell_primitive'].iteritems())
+        try:
+            return dict([k,v] for k,v in self._file['cell_primitive'].iteritems())
+        except KeyError: # it's a light checkpoint
+            return { }
 
     @property
     def face_magnetic_flux(self):

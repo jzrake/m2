@@ -25,7 +25,7 @@ class PlotReductions(command.Command):
         import matplotlib.pyplot as plt
         self.first = True
         for filename in args.filenames:
-            self.fit = filename == args.filenames[0]
+            self.fit = False#filename == args.filenames[0]
             self.run_file(filename, args)
     
         plt.legend(loc='best')
