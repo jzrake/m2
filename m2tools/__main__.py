@@ -6,6 +6,8 @@ import tovtk
 import stellar_model
 import mhd_forces
 import reductions
+import streamplot
+
 try:
     import local_tools
 except ImportError:

@@ -883,16 +883,33 @@ function DecayingMHD:__init__()
    -- ==========================================================================
    mps.three_d = true; doc.three_d  = 'run in three dimensions'
    mps.model = 0;      doc.model    = 'force-free model parameter (any integer)'
-   mps.amp = 0.1; doc.amp      = 'amplitude of field'
-   mps.k2  = 11;  doc.k2       = 'square of the wavenumber where energy lives'
+   mps.amp = 0.1;      doc.amp      = 'amplitude of field'
+   mps.k2  = 11;       doc.k2       = 'square of the wavenumber where energy lives'
+   mps.abc = false;    doc.abc      = 'if true, use simple ABC field'
+   mps.B1  = 1;        doc.B1       = 'ABC B1-parameter'
+   mps.B2  = 1;        doc.B2       = 'ABC B2-parameter'
+   mps.B3  = 1;        doc.B3       = 'ABC B3-parameter'
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       return {1.0, 1.0, 0.0, 0.0, 0.0}
    end
    self.initial_data_edge = function(x, n)
-      return {
-	 mps.amp * m2lib.force_free_vector_potential(x, n, mps.model, mps.k2) }
+      if mps.abc then
+	 local L = 2
+	 local alpha = math.sqrt(mps.k2) * 2 * math.pi / L
+	 local B1 = mps.B1
+	 local B2 = mps.B2
+	 local B3 = mps.B3
+	 local A = {B3 * math.cos(alpha * x[3]) - B2 * math.sin(alpha * x[2]),
+		    B1 * math.cos(alpha * x[1]) - B3 * math.sin(alpha * x[3]),
+		    B2 * math.cos(alpha * x[2]) - B1 * math.sin(alpha * x[1])}
+	 return {
+	    mps.amp * (n[1]*A[1] + n[2]*A[2] + n[3]*A[3])}
+      else
+	 return {
+	    mps.amp * m2lib.force_free_vector_potential(x, n, mps.model, mps.k2) }
+      end
    end
    self.initial_data_face__ = function(x, n)
       -- This is a "magnetic rope" force-free solution
