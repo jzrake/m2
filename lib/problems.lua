@@ -22,13 +22,15 @@ end
 function TestProblem:read_hdf5_problem_data(h5file)
    local h5mp = hdf5.Group(h5file, 'model_parameters', 'r')
    for k,v in pairs(self.model_parameters or { }) do
-      local str_val = h5mp[k]:value()
-      if type(v) == 'number' then
-         self.model_parameters[k] = tonumber(str_val)
-      elseif type(v) == 'boolean' then
-         self.model_parameters[k] = load("return "..str_val)()
-      elseif type(v) == 'string' then
-         self.model_parameters[k] = str_val
+      if h5mp[k] then -- in case that mp did not exist
+	 local str_val = h5mp[k]:value()
+	 if type(v) == 'number' then
+	    self.model_parameters[k] = tonumber(str_val)
+	 elseif type(v) == 'boolean' then
+	    self.model_parameters[k] = load("return "..str_val)()
+	 elseif type(v) == 'string' then
+	    self.model_parameters[k] = str_val
+	 end
       end
    end
    h5mp:close()
@@ -954,6 +956,7 @@ function DecayingMHD:build_m2(runtime_cfg)
    m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-6)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
    m2:set_problem(self)
    return m2
@@ -1022,6 +1025,7 @@ function Dynamo:build_m2(runtime_cfg)
    m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
    m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
    m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-6)
    m2:set_problem(self)
    return m2
 end
