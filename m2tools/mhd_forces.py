@@ -157,13 +157,11 @@ class CalculateForces(command.Command):
     _alias = "calc-forces"
     def configure_parser(self, parser):
         parser.add_argument("filenames", nargs='+')
-<<<<<<< Updated upstream
+
         parser.add_argument("--fields", default='A')
         parser.add_argument("--diff")
-=======
-        parser.add_argument("--fields", default='B')
         parser.add_argument("--noplot", action="store_true")
->>>>>>> Stashed changes
+
 
     def run(self, args):
         import matplotlib.pyplot as plt

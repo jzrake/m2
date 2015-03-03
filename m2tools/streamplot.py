@@ -8,7 +8,8 @@ class StreamlinePlot(command.Command):
 
     def configure_parser(self, parser):
         parser.add_argument('filenames', nargs='+')
-        parser.add_argument('--hardcopy', action='store_true')
+        parser.add_argument('--hardcopy', type=str, default=None,
+                            help="image format extension to use, onscreen if None")
         parser.add_argument('-o', '--output', default=None)
 
     def run(self, args):
@@ -48,7 +49,9 @@ class StreamlinePlot(command.Command):
             if args.output:
                 imgname = args.output
             else:
-                imgname = "%s/frame-%04d.jpg" % (os.path.dirname(filename), self.frame_number)
+                imgname = "%s/frame-%04d.%s" % (os.path.dirname(filename),
+                                                self.frame_number,
+                                                args.hardcopy)
 
             print "writing", imgname
             plt.savefig(imgname)
