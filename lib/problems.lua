@@ -796,81 +796,6 @@ end
 
 
 
-local InternalShock = class.class('InternalShock', TestProblem)
-InternalShock.explanation = [[
---------------------------------------------------------------------------------
--- Collision of relativistic pancakes
---------------------------------------------------------------------------------]]
-function InternalShock:__init__()
-   local mps = { }
-   local doc = { }
-   self.model_parameters = mps
-   self.model_parameters_doc = doc
-
-   -- ==========================================================================
-   mps.r0 = 0.10
-   mps.b = 0.08
-   mps.v0 = 0.8
-   mps.three_d = false; doc.three_d='run in three dimensions'
-   -- ==========================================================================
-
-   self.initial_data_cell = function(x)
-      local r1 = ((x[1] + 0.25)^2 + (x[2] + mps.b)^2)^0.5
-      local r2 = ((x[1] - 0.25)^2 + (x[2] - mps.b)^2)^0.5
-      local d0, vx
-      if r1 < mps.r0 then
-         d0 = 100.0
-         vx = mps.v0
-      elseif r2 < mps.r0 then
-         d0 = 100.0
-         vx = -mps.v0
-      else
-         d0 = 1.0
-         vx = 0.0
-      end
-      return {d0, 0.5, vx, 0.0, 0.0}
-   end
-
-   self.initial_data_face = function(x, n)
-      return {0.01 * n[1]}
-   end
-end
-function InternalShock:set_runtime_defaults(runtime_cfg)
-   runtime_cfg.tmax = 2.0
-end
-function InternalShock:build_m2(runtime_cfg)
-
-   local build_args = {
-      lower={-1.0,-0.5, 0.0},
-      upper={ 1.0, 0.5, 1.0},
-      resolution={128,64,1},
-      periods={true,true,true},
-      scaling={'linear', 'linear', 'linear'},
-      relativistic=true,
-      magnetized=true,
-      geometry='cartesian'
-   }
-   local N = runtime_cfg.resolution or 128
-   build_args.resolution[1] = N * 2
-   build_args.resolution[2] = N
-   local m2 = m2app.m2Application(build_args)
-   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 4.0)
-   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
-   m2:set_gamma_law_index(4./3)
-   m2:set_rk_order(runtime_cfg.rkorder or 2)
-   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.4)
-   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
-   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE_AND_FOUR_VELOCITY)
-   m2:set_riemann_solver(m2lib.M2_RIEMANN_HLLE)
-   m2:set_quartic_solver(runtime_cfg.quartic or m2lib.M2_QUARTIC_FULL_COMPLEX)
-   m2:set_suppress_extrapolation_at_unhealthy_zones(1)
-   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-8)
-   m2:set_problem(self)
-   return m2
-end
-
-
-
 local DecayingMHD = class.class('DecayingMHD', TestProblem)
 DecayingMHD.explanation = [[
 --------------------------------------------------------------------------------
@@ -912,19 +837,6 @@ function DecayingMHD:__init__()
 	 return {
 	    mps.amp * m2lib.force_free_vector_potential(x, n, mps.model, mps.k2) }
       end
-   end
-   self.initial_data_face__ = function(x, n)
-      -- This is a "magnetic rope" force-free solution
-      local r2 = x[1]*x[1] + x[2]*x[2]
-      local R2 = 0.2
-      local B0 = 1.0
-      local c = 1.0
-      local a = R2^-0.5 * (r2/R2) * (c * math.exp(r2/R2) - 1 - r2/R2)^-0.5
-      local Bz = B0 * math.exp(-0.5 * r2/R2)
-      local Bz_prime = -(r2^0.5/R2) * Bz
-      local Bp = -Bz_prime / a
-      local p_hat = {x[2]/r2^0.5, -x[1]/r2^0.5, 0}
-      return {Bp*p_hat[1] *n[1] + Bp*p_hat[2] * n[2] + Bz*n[3]}
    end
 end
 function DecayingMHD:set_runtime_defaults(runtime_cfg)
@@ -1178,6 +1090,66 @@ function Spheromak:reconfigure_after_failure(m2, attempt)
 end
 
 
+local Tubomak = class.class('Tubomak', TestProblem)
+Tubomak.explanation = [[
+--------------------------------------------------------------------------------
+-- Beltrami field with z-transational symmetry
+--------------------------------------------------------------------------------]]
+function Tubomak:__init__()
+   local mps = { }
+   local doc = { }
+   self.model_parameters = mps
+   self.model_parameters_doc = doc
+
+   -- ==========================================================================
+   mps.three_d = true; doc.three_d  = 'run in three dimensions'
+   mps.amp = 0.1;      doc.amp      = 'amplitude of field'
+   -- ==========================================================================
+
+   self.initial_data_cell = function(x)
+      return {1.0, 1.0, 0.0, 0.0, 0.0}
+   end
+   self.initial_data_face = function(x, n)
+      return { mps.amp * m2lib.tubomak_vector_potential(x, n) }
+   end
+end
+function Tubomak:set_runtime_defaults(runtime_cfg)
+   runtime_cfg.tmax = 0.4
+end
+function Tubomak:build_m2(runtime_cfg)
+   local N = runtime_cfg.resolution or 32
+   local L = 1.0
+   local build_args = {
+      upper={ L,  L,  L},
+      lower={-L, -L, -L},
+      resolution={N, N, N},
+      periods={true,true,true},
+      scaling={'linear', 'linear', 'linear'},
+      relativistic=false,
+      magnetized=true,
+      geometry='cartesian'
+   }
+   if runtime_cfg.relativistic then build_args.relativistic = true end
+   if runtime_cfg.unmagnetized then build_args.magnetized = false end
+   if not self.model_parameters.three_d then
+      build_args.resolution[3] = 1
+   end
+   local m2 = m2app.m2Application(build_args)
+   m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
+   m2:set_cadence_checkpoint_tpl(runtime_cfg.tpl_cadence or 0.0)
+   m2:set_gamma_law_index(5./3)
+   m2:set_rk_order(runtime_cfg.rkorder or 2)
+   m2:set_cfl_parameter(runtime_cfg.cfl_parameter or 0.3)
+   m2:set_plm_parameter(runtime_cfg.plm_parameter or 2.0)
+   m2:set_interpolation_fields(m2lib.M2_PRIMITIVE)
+   m2:set_pressure_floor(runtime_cfg.pressure_floor or 1e-6)
+   m2:set_riemann_solver(runtime_cfg.riemann_solver or m2lib.M2_RIEMANN_HLLE)
+   m2:set_problem(self)
+   return m2
+end
+
+
+
 return {
    DensityWave   = DensityWave,
    RyuJones      = RyuJones,
@@ -1187,8 +1159,8 @@ return {
    Implosion2d   = Implosion2d,
    Jet           = Jet,
    MagnetarWind  = MagnetarWind,
-   InternalShock = InternalShock,
    DecayingMHD   = DecayingMHD,
    Dynamo        = Dynamo,
    Spheromak     = Spheromak,
+   Tubomak       = Tubomak,
 }

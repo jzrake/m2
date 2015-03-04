@@ -105,7 +105,8 @@ class RectangularPlot2d(PlotDriver):
         data = self.chkpt.get_field(args.field)
 
         self.get_plot_axes()
-        plt.imshow(data.T, interpolation='nearest', origin='lower')
+        plt.imshow(data.T, interpolation='nearest', origin='lower',
+                   vmin=args.vmin, vmax=args.vmax)
         plt.colorbar()
         plt.axis('equal')
         plt.title(self.chkpt.filename+'/'+args.field)

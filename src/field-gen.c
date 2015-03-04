@@ -7,6 +7,9 @@
 
 typedef complex double Complex;
 
+static double BESSJ0(double X);
+static double BESSJ1(double X);
+static double BESSJ(int N, double X);
 
 
 typedef struct fourier_mode
@@ -102,30 +105,195 @@ double m2_force_free_magnetic_field(double x[4], double n[4], int model, int k2)
 }
 
 
-double m2_magnetic_rope_vector_potential(double x[4], double n[4])
+double m2_tubomak_vector_potential(double x[4], double n[4])
 {
-  double m[4] = {0, 1/sqrt(3), 1/sqrt(3), 1/sqrt(3)};
-  //double m[4] = {0, 0, 0, 1};
-  double Ap = 1.0; /* poloidal A -> toroidal B */
-  double At = 0.0; /* toroidal A -> poloidal B */
-  double L = 0.05;
-  double f = sqrt(x[1]*x[1] + x[2]*x[2]); /* cylindrical radius */
-  double R = sqrt(x[1]*x[1] + x[2]*x[2] + x[3]*x[3]);
-  //double D = 1 / (1 + pow(R/L, 3));
-  double D = pow(R/L,2) * exp(-pow(R/L, 4));
-  double mdotrhat = (m[1]*x[1] + m[2]*x[2] + m[3]*x[3]) / R;
-  double phihat[4] = {0,
-		      phihat[1] = x[2]/R*m[3] - x[3]/R*m[2],
-		      phihat[2] = x[3]/R*m[1] - x[1]/R*m[3],
-		      phihat[3] = x[1]/R*m[2] - x[2]/R*m[1]};
-  double A[4] = {0,
-		 Ap * (3*x[1]/R*mdotrhat - m[1]) * D,
-		 Ap * (3*x[2]/R*mdotrhat - m[2]) * D,
-		 Ap * (3*x[3]/R*mdotrhat - m[3]) * D};
+  double a = 2 * 3.83170597021; /* first zero of A-phi will be at r=1/2 */
+  double r = sqrt(x[1]*x[1] + x[2]*x[2]);
+  if (fabs(r) < 1e-12) r = 1e-12;
+  double Af =   a*BESSJ(1, a*r);
+  double Az = ((a*BESSJ(1, a*r))/r + (pow(a,2)*(BESSJ(0, a*r) - BESSJ(2, a*r)))/2.)/a;
+  double Ax = Af * (-x[2]/r);
+  double Ay = Af * (+x[1]/r);
+  if (r < 0.5) {
+    return Ax*n[1] + Ay*n[2] + Az*n[3];
+  }
+  else {
+    r = 0.5;
+    double Az = ((a*BESSJ(1, a*r))/r + (pow(a,2)*(BESSJ(0, a*r) - BESSJ(2, a*r)))/2.)/a;
+    return Az * n[3];
+  }
+}
 
-  A[1] += At * phihat[1] * (f/L) * D;
-  A[2] += At * phihat[2] * (f/L) * D;
-  A[3] += At * phihat[3] * (f/L) * D;
 
-  return A[1]*n[1] + A[2]*n[2] + A[3]*n[3];
+
+
+
+
+/***********************************************************************
+ *                                                                      *
+ *    Program to calculate the first kind Bessel function of integer    *
+ *    order N, for any REAL X, using the function BESSJ(N,X).           *
+ *                                                                      *
+ * -------------------------------------------------------------------- *
+ *                                                                      *
+ *    SAMPLE RUN:                                                       *
+ *                                                                      *
+ *    (Calculate Bessel function for N=2, X=0.75).                      *
+ *                                                                      *
+ *    Bessel function of order  2 for X =  0.7500:                      *
+ *                                                                      *
+ *         Y =  0.06707400                                              *
+ *                                                                      *
+ * -------------------------------------------------------------------- *
+ *   Reference: From Numath Library By Tuan Dang Trong in Fortran 77.   *
+ *                                                                      *
+ *                               C++ Release 1.0 By J-P Moreau, Paris.  *
+ *                                        (www.jpmoreau.fr)             *
+ ***********************************************************************/
+#include <math.h>
+#include <stdio.h>
+
+
+double BESSJ0 (double X) {
+  /***********************************************************************
+      This subroutine calculates the First Kind Bessel Function of
+      order 0, for any real number X. The polynomial approximation by
+      series of Chebyshev polynomials is used for 0<X<8 and 0<8/X<1.
+      REFERENCES:
+      M.ABRAMOWITZ,I.A.STEGUN, HANDBOOK OF MATHEMATICAL FUNCTIONS, 1965.
+      C.W.CLENSHAW, NATIONAL PHYSICAL LABORATORY MATHEMATICAL TABLES,
+      VOL.5, 1962.
+  ************************************************************************/
+  const double
+    P1=1.0, P2=-0.1098628627E-2, P3=0.2734510407E-4,
+    P4=-0.2073370639E-5, P5= 0.2093887211E-6,
+    Q1=-0.1562499995E-1, Q2= 0.1430488765E-3, Q3=-0.6911147651E-5,
+    Q4= 0.7621095161E-6, Q5=-0.9349451520E-7,
+    R1= 57568490574.0, R2=-13362590354.0, R3=651619640.7,
+    R4=-11214424.18, R5= 77392.33017, R6=-184.9052456,
+    S1= 57568490411.0, S2=1029532985.0, S3=9494680.718,
+    S4= 59272.64853, S5=267.8532712, S6=1.0;
+  double
+    AX,FR,FS,Z,FP,FQ,XX,Y, TMP;
+
+  if (X==0.0) return 1.0;
+  AX = fabs(X);
+  if (AX < 8.0) {
+    Y = X*X;
+    FR = R1+Y*(R2+Y*(R3+Y*(R4+Y*(R5+Y*R6))));
+    FS = S1+Y*(S2+Y*(S3+Y*(S4+Y*(S5+Y*S6))));
+    TMP = FR/FS;
+  }
+  else {
+    Z = 8./AX;
+    Y = Z*Z;
+    XX = AX-0.785398164;
+    FP = P1+Y*(P2+Y*(P3+Y*(P4+Y*P5)));
+    FQ = Q1+Y*(Q2+Y*(Q3+Y*(Q4+Y*Q5)));
+    TMP = sqrt(0.636619772/AX)*(FP*cos(XX)-Z*FQ*sin(XX));
+  }
+  return TMP;
+}
+
+double Sign(double X, double Y) {
+  if (Y<0.0) return (-fabs(X));
+  else return (fabs(X));
+}
+
+double BESSJ1 (double X) {
+  /**********************************************************************
+      This subroutine calculates the First Kind Bessel Function of
+      order 1, for any real number X. The polynomial approximation by
+      series of Chebyshev polynomials is used for 0<X<8 and 0<8/X<1.
+      REFERENCES:
+      M.ABRAMOWITZ,I.A.STEGUN, HANDBOOK OF MATHEMATICAL FUNCTIONS, 1965.
+      C.W.CLENSHAW, NATIONAL PHYSICAL LABORATORY MATHEMATICAL TABLES,
+      VOL.5, 1962.
+  ***********************************************************************/
+  const double  
+    P1=1.0, P2=0.183105E-2, P3=-0.3516396496E-4, P4=0.2457520174E-5,
+    P5=-0.240337019E-6,  P6=0.636619772,
+    Q1= 0.04687499995, Q2=-0.2002690873E-3, Q3=0.8449199096E-5,
+    Q4=-0.88228987E-6, Q5= 0.105787412E-6,
+    R1= 72362614232.0, R2=-7895059235.0, R3=242396853.1,
+    R4=-2972611.439,   R5=15704.48260,  R6=-30.16036606,
+    S1=144725228442.0, S2=2300535178.0, S3=18583304.74,
+    S4=99447.43394,    S5=376.9991397,  S6=1.0;
+
+  double AX,FR,FS,Y,Z,FP,FQ,XX, TMP;
+
+  AX = fabs(X);
+  if (AX < 8.0) {
+    Y = X*X;
+    FR = R1+Y*(R2+Y*(R3+Y*(R4+Y*(R5+Y*R6))));
+    FS = S1+Y*(S2+Y*(S3+Y*(S4+Y*(S5+Y*S6))));
+    TMP = X*(FR/FS);
+  }
+  else {
+    Z = 8.0/AX;
+    Y = Z*Z;
+    XX = AX-2.35619491;
+    FP = P1+Y*(P2+Y*(P3+Y*(P4+Y*P5)));
+    FQ = Q1+Y*(Q2+Y*(Q3+Y*(Q4+Y*Q5)));
+    TMP = sqrt(P6/AX)*(cos(XX)*FP-Z*sin(XX)*FQ)*Sign(S6,X);
+  }
+  return TMP;
+}
+
+double BESSJ (int N, double X) {
+  /************************************************************************
+      This subroutine calculates the first kind modified Bessel function
+      of integer order N, for any REAL X. We use here the classical
+      recursion formula, when X > N. For X < N, the Miller's algorithm
+      is used to avoid overflows.
+      ----------------------------- 
+      REFERENCE:
+      C.W.CLENSHAW, CHEBYSHEV SERIES FOR MATHEMATICAL FUNCTIONS,
+      MATHEMATICAL TABLES, VOL.5, 1962.
+  *************************************************************************/
+  const int IACC = 40; 
+  const double BIGNO = 1e10,  BIGNI = 1e-10;
+    
+  double TOX,BJM,BJ,BJP,SUM,TMP;
+  int J, JSUM, M;
+
+  if (N == 0) return BESSJ0(X);
+  if (N == 1) return BESSJ1(X);
+  if (X == 0.0) return 0.0;
+
+  TOX = 2.0/X;
+  if (X > 1.0*N) {
+    BJM = BESSJ0(X);
+    BJ  = BESSJ1(X);
+    for (J=1; J<N; J++) {
+      BJP = J*TOX*BJ-BJM;
+      BJM = BJ;
+      BJ  = BJP;
+    }
+    return BJ;
+  }
+  else {
+    M = (int) (2*((N+floor(sqrt(1.0*(IACC*N))))/2));
+    TMP = 0.0;
+    JSUM = 0;
+    SUM = 0.0;
+    BJP = 0.0;
+    BJ  = 1.0;
+    for (J=M; J>0; J--) {
+      BJM = J*TOX*BJ-BJP;
+      BJP = BJ;
+      BJ  = BJM;
+      if (fabs(BJ) > BIGNO) {
+	BJ  = BJ*BIGNI;
+	BJP = BJP*BIGNI;
+	TMP = TMP*BIGNI;
+	SUM = SUM*BIGNI;
+      }
+      if (JSUM != 0)  SUM += BJ;
+      JSUM = 1-JSUM;
+      if (J == N)  TMP = BJP;
+    }
+    SUM = 2.0*SUM-BJ;
+    return (TMP/SUM);
+  }
 }
