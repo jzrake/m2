@@ -816,23 +816,40 @@ function DecayingMHD:__init__()
    mps.B1  = 1;        doc.B1       = 'ABC B1-parameter'
    mps.B2  = 1;        doc.B2       = 'ABC B2-parameter'
    mps.B3  = 1;        doc.B3       = 'ABC B3-parameter'
+   mps.H   = 1;        doc.H        = 'helicity (fraction of maximal)'
+   mps.hydro = false;  doc.hydro    = 'B -> V'
    -- ==========================================================================
 
+   local function ABCflow(M, x)
+	 local L = 2
+	 local H = M.H
+	 local B1 = M.B1
+	 local B2 = M.B2
+	 local B3 = M.B3
+	 local alpha = math.sqrt(M.k2) * 2 * math.pi / L
+	 local A = {B3 * math.cos(alpha * x[3]) - H * B2 * math.sin(alpha * x[2]),
+		    B1 * math.cos(alpha * x[1]) - H * B3 * math.sin(alpha * x[3]),
+		    B2 * math.cos(alpha * x[2]) - H * B1 * math.sin(alpha * x[1])}
+	 return A
+   end
+
    self.initial_data_cell = function(x)
-      return {1.0, 1.0, 0.0, 0.0, 0.0}
+      if mps.abc and mps.hydro then
+	 local v = ABCflow(mps, x)
+	 return {1.0, 1.0, mps.amp*v[1], mps.amp*v[2], mps.amp*v[3]}
+      else
+	 return {1.0, 1.0, 0, 0, 0}
+      end
    end
    self.initial_data_edge = function(x, n)
       if mps.abc then
-	 local L = 2
-	 local alpha = math.sqrt(mps.k2) * 2 * math.pi / L
-	 local B1 = mps.B1
-	 local B2 = mps.B2
-	 local B3 = mps.B3
-	 local A = {B3 * math.cos(alpha * x[3]) - B2 * math.sin(alpha * x[2]),
-		    B1 * math.cos(alpha * x[1]) - B3 * math.sin(alpha * x[3]),
-		    B2 * math.cos(alpha * x[2]) - B1 * math.sin(alpha * x[1])}
-	 return {
-	    mps.amp * (n[1]*A[1] + n[2]*A[2] + n[3]*A[3])}
+	 if mps.hydro then
+	    return {0.0}
+	 else
+	    local A = ABCflow(mps, x)
+	    return {
+	       mps.amp * (n[1]*A[1] + n[2]*A[2] + n[3]*A[3])}
+	 end
       else
 	 return {
 	    mps.amp * m2lib.force_free_vector_potential(x, n, mps.model, mps.k2) }
@@ -956,74 +973,14 @@ function Spheromak:__init__()
    self.model_parameters_doc = doc
 
    -- ==========================================================================
-   mps.spherical = true; doc.spherical = "run with spherical coordinates"
    mps.amp = 100;        doc.amp = "amplitude of initial field"
    -- ==========================================================================
 
-   local c = math.cos
-   local s = math.sin
-
-   local smooth = 0.5 -- smoothing width of the initial field at the cavity wall
-
-   --local shell = 4.493409457909064
-   local shell = 7.725251836937707
-   --local shell = 9.09501
-   --local shell = 5.76346
-
-   local function ell_one_m_zero(r, t, p)
-      -- zeros at 4.49341, 7.72552
-      local Ar = 1.0 * r^-3 * c(t) * (r*c(r) - s(r))
-      local At = 0.5 * r^-3 * s(t) * (r*c(r) + s(r) * (r^2 - 1))
-      local Ap = 0.5 * r^-2 * s(t) * (r*c(r) - s(r))
-      return Ar, At, Ap
-   end
-   local function ell_two_m_zero(r, t, p)
-      -- zeros at 5.76346, 9.09501
-      local Ar = 0.25 * r^-4 * (1 + 3*c(2*t)) * (3*r*c(r) + (r^2-3)*s(r))
-      local At =-0.50 * r^-4 * s(t) * c(t) * (r*c(r)  * (r^2-6) - 3*s(r)*(r^2-2))
-      local Ap = 0.50 * r^-3 * s(t) * c(t) * (3*r*c(r) + (r^2-3)*s(r))
-      return Ar, At, Ap
-   end
-   local function apply_smooth(A, r)
-      if r > shell then
-	 A[1] = A[1] * (1 - math.tanh((r-shell)/smooth))
-	 A[2] = A[2] * (1 - math.tanh((r-shell)/smooth))
-	 A[3] = A[3] * (1 - math.tanh((r-shell)/smooth))
-      end
-   end
-
-   local function cartesian_to_spherical(x)
-      local R = (x[1]^2 + x[2]^2)^0.5 + 1e-16 -- prevent divide-by-zero
-      local r = (R   ^2 + x[3]^2)^0.5 + 1e-16
-      local t = math.acos(x[3] / r)
-      local p = math.atan(x[2] / x[1])
-      local rhat = { x[1]/r, x[2]/r, x[3]/r}
-      local that = { x[3]/r * x[1]/R, x[3]/r * x[2]/R, -R/r}
-      local phat = {-x[2]/R, x[1]/R, 0}
-      return r, t, p, rhat, that, phat
-   end
-
    self.initial_data_cell = function(x)
-      local r = mps.spherical and x[1] or (x[1]^2 + x[2]^2 + x[3]^2)^0.5
-      local d = r < shell and 1e0 or 1e5
-      return {d, 0.1, 0.0, 0.0, 0.0}
+      return {1, 1, 0, 0, 0}
    end
    self.initial_data_face = function(x, n)
-      local A = { }
-      if mps.spherical then
-	 local r, t, p = x[1]+1e-12, x[2], x[3]
-	 local Ar, At, Ap = ell_one_m_zero(r, t, p)
-	 A[1], A[2], A[3] = Ar, At, Ap
-	 --apply_smooth(A, r)
-      else
-	 local r, t, p, rhat, that, phat = cartesian_to_spherical(x)
-	 local Ar, At, Ap = ell_one_m_zero(r, t, p)
-	 A[1] = Ar * rhat[1] + At * that[1] + Ap * phat[1]
-	 A[2] = Ar * rhat[2] + At * that[2] + Ap * phat[2]
-	 A[3] = Ar * rhat[3] + At * that[3] + Ap * phat[3]
-	 apply_smooth(A, r)
-      end
-      return { mps.amp*(A[1]*n[1] + A[2]*n[2] + A[3]*n[3]) }
+      return { mps.amp * m2lib.spheromak_vector_potential(x, n) }
    end
 end
 function Spheromak:set_runtime_defaults(runtime_cfg)
@@ -1032,7 +989,7 @@ end
 function Spheromak:build_m2(runtime_cfg)
    local N = runtime_cfg.resolution or 32
    local L = 10.0
-   local ba_cartesian = {
+   local build_args = {
       upper={ L,  L,  L},
       lower={-L, -L, -L},
       resolution={N, N, N},
@@ -1042,33 +999,11 @@ function Spheromak:build_m2(runtime_cfg)
       magnetized=true,
       geometry='cartesian'
    }
-   local ba_spherical = {
-      upper={7.72525, math.pi, 2*math.pi},
-      lower={0, 0, 0},
-      resolution={4*N, N, 1},
-      periods={false,false,true},
-      scaling={'linear', 'linear', 'linear'},
-      relativistic=false,
-      magnetized=true,
-      geometry='spherical'
-   }
-   local mps = self.model_parameters
-   local build_args = mps.spherical and ba_spherical or ba_cartesian
-
-
-   local function radial_boundary(V0)
-      local nhat = m2lib.dvec4(0,1,0,0)
-      if V0.global_index[1] ~= -1 then
-	 V0.prim.v1 = 0.0
-	 V0.prim.B1 = 0.0
-         V0:from_primitive()
-         V0.flux1 = V0.aux:fluxes(nhat)
-      end
-   end
 
    if runtime_cfg.relativistic then build_args.relativistic = true end
    if runtime_cfg.unmagnetized then build_args.magnetized = false end
 
+   local mps = self.model_parameters
    local m2 = m2app.m2Application(build_args)
 
    m2:set_cadence_checkpoint_hdf5(runtime_cfg.hdf5_cadence or 0.1)
@@ -1107,10 +1042,18 @@ function Tubomak:__init__()
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
-      return {1.0, 1.0, 0.0, 0.0, 0.0}
+      local P = {1.0, 1.0, 0.0, 0.0, 0.0}
+      if (x[1] < 0.0) then P[3] =  1 end
+      if (x[1] > 0.0) then P[3] = -1 end
+      return P
    end
    self.initial_data_face = function(x, n)
-      return { mps.amp * m2lib.tubomak_vector_potential(x, n) }
+      local r0 = 0.5
+      local x1 = m2lib.dvec4(x[0]/r0, (x[1]-0.5)/r0, x[2]/r0, x[3]/r0)
+      local x2 = m2lib.dvec4(x[0]/r0, (x[1]+0.5)/r0, x[2]/r0, x[3]/r0)
+      local A1 = m2lib.tubomak_vector_potential(x1, n)
+      local A2 = m2lib.tubomak_vector_potential(x2, n)
+      return { mps.amp * (A1 + A2) }
    end
 end
 function Tubomak:set_runtime_defaults(runtime_cfg)

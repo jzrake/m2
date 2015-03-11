@@ -38,9 +38,11 @@ class PlotReductions(command.Command):
 
         try:
             k02 = int(self.last_checkpoint_used.model_parameters['k2'])
+            model = int(self.last_checkpoint_used.model_parameters['model'])
         except:
             k02 = 11
-        model = int(self.last_checkpoint_used.model_parameters['model'])
+            model = 1
+
         plt.legend(loc='best')
         plt.title(r"$\tilde{\alpha}^2=%d, \ \rm{model}=%d$"%(k02, model))
         plt.show()
