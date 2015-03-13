@@ -974,13 +974,23 @@ function Spheromak:__init__()
 
    -- ==========================================================================
    mps.amp = 100;        doc.amp = "amplitude of initial field"
+   mps.num =   1;        doc.num = "if 1, do one, if 2 do two"
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
       return {1, 1, 0, 0, 0}
    end
    self.initial_data_face = function(x, n)
-      return { mps.amp * m2lib.spheromak_vector_potential(x, n) }
+      if mps.num == 1 then
+	 local B = m2lib.spheromak_vector_potential(x, n)
+	 return { mps.amp * B }
+      elseif mps.num == 2 then
+	 local x1 = m2lib.dvec4(x[0], x[1], x[2], x[3] - 2.5)
+	 local x2 = m2lib.dvec4(x[0],-x[1],-x[2],-x[3] - 2.5)
+	 local B1 = m2lib.spheromak_vector_potential(x1, n)
+	 local B2 = m2lib.spheromak_vector_potential(x2, n)
+	 return { mps.amp * (B1 + B2) }
+      end
    end
 end
 function Spheromak:set_runtime_defaults(runtime_cfg)
@@ -1017,7 +1027,6 @@ function Spheromak:build_m2(runtime_cfg)
    m2:set_suppress_extrapolation_at_unhealthy_zones(1)
    m2:set_pressure_floor(0.1)
    m2:set_problem(self)
-   m2:set_boundary_conditions_flux1(mps.spherical and outer_radial_boundary or nil)
    return m2
 end
 function Spheromak:reconfigure_after_failure(m2, attempt)

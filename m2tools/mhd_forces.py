@@ -187,24 +187,17 @@ class CalculateForces(command.Command):
                 'curlA' : lambda : curl_of_field(chk.vector_potential())}
             return F[key]()
 
-        if 'H' in args.fields:
-            t = calc.checkpoint.status['time_simulation']
-            H = fields['H']().mean()
-            print H
-            self.helicity.append((t,H))
-
         if args.noplot: return
 
         for f in args.fields.split(','):
 
-            data = fields(calc, f)[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+            j = calc.checkpoint.domain_resolution[1]/2
+            data = fields(calc, f)[0][:,j,:] if f is not 'H' else fields(calc, f)[:,j,:]
             if diff is not None:
-                data -= fields(diff, f)[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
+                data -= fields(calc, f)[0][:,j,:] if f is not 'H' else fields(calc, f)[:,j,:]
 
             if f is 'H':
                 print "total helicity is", data.mean()
-
-            data = fields[f]()[0][:,0,:] if f is not 'H' else fields[f]()[:,0,:]
 
             plt.figure()
             plt.imshow(data, interpolation='nearest')
