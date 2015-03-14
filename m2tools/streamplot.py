@@ -11,7 +11,8 @@ class LineIntegralConvolutionPlot(command.Command):
 
     def configure_parser(self, parser):
         parser.add_argument('filenames', nargs='+')
-        parser.add_argument('--hardcopy', action='store_true')
+        parser.add_argument('--hardcopy', type=str, default=None,
+                            help="image format extension to use, onscreen if None")
         parser.add_argument('-o', '--output', default=None)
 
     def run(self, args):
@@ -58,7 +59,9 @@ class LineIntegralConvolutionPlot(command.Command):
             if args.output:
                 imgname = args.output
             else:
-                imgname = "%s/frame-%04d.jpg" % (os.path.dirname(filename), self.frame_number)
+                imgname = "%s/frame-%04d.%s" % (os.path.dirname(filename),
+                                                self.frame_number,
+                                                args.hardcopy)
 
             print "writing", imgname
             plt.savefig(imgname)
@@ -68,6 +71,59 @@ class LineIntegralConvolutionPlot(command.Command):
 
 
 
+class ReliefPlot(command.Command):
+    _alias = "relief"
+
+    def configure_parser(self, parser):
+        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('--hardcopy', type=str, default=None,
+                            help="image format extension to use, onscreen if None")
+        parser.add_argument('-o', '--output', default=None)
+
+    def run(self, args):
+        import matplotlib.pyplot as plt
+
+        self.frame_number = 0
+        for filename in args.filenames:
+            self.run_file(args, filename)
+
+        if not args.hardcopy:
+            plt.show()
+
+    def run_file(self, args, filename):
+        import matplotlib.pyplot as plt
+        import os
+
+        chkpt = checkpoint.Checkpoint(filename)
+        B1 = chkpt.cell_primitive['B1'][...].T
+        B2 = chkpt.cell_primitive['B2'][...].T
+        B3 = chkpt.cell_primitive['B3'][...].T
+
+        if not args.hardcopy:
+            plt.figure()
+
+        plt.imshow(B3, extent=[-1,1,-1,1], cmap='bone')
+        plt.axis('equal')
+        plt.xlim(-1, 1)
+        plt.ylim(-1, 1)
+        plt.gca().get_xaxis().set_visible(False)
+        plt.gca().get_yaxis().set_visible(False)
+
+
+        if args.hardcopy:
+            self.frame_number += 1
+            if args.output:
+                imgname = args.output
+            else:
+                imgname = "%s/frame-%04d.%s" % (os.path.dirname(filename),
+                                                self.frame_number,
+                                                args.hardcopy)
+
+            print "writing", imgname
+            plt.savefig(imgname)
+            plt.clf()
+
+        chkpt.close()
 class StreamlinePlot(command.Command):
     _alias = "streamplot"
 

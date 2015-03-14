@@ -62,8 +62,8 @@ class PlotReductions(command.Command):
         N = reduction.checkpoint.domain_resolution[1]
 
         plot = plt.semilogy
-        plot(t, Ek, c='k', lw=N/64.0, ls='-' , label='kinetic'  if self.first else None)
-        plot(t, Em, c='k', lw=N/64.0, ls='-.', label='magnetic' if self.first else None)
+        plot(t, Ek, c='k', lw=2, ls='-' , label='kinetic'  if self.first else None)
+        plot(t, Em, c='k', lw=2, ls='-.', label='magnetic' if self.first else None)
         self.first = False
 
 #         twin_vals = {64:[53,58],
