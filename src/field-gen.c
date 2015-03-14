@@ -99,7 +99,7 @@ double m2_force_free_magnetic_field(double x[4], double n[4], int model, int k2)
 }
 
 
-double m2_spheromak_vector_potential(double x[4], double n[4])
+double m2_spheromak(double x[4], double n[4], int N, int L, int M)
 {
   double R = 1e-16 + sqrt(x[1]*x[1] + x[2]*x[2]);
   double r = 1e-16 + sqrt(x[1]*x[1] + x[2]*x[2] + x[3]*x[3]);
@@ -109,9 +109,6 @@ double m2_spheromak_vector_potential(double x[4], double n[4])
   double that[4] = {0, x[3]/r * x[1]/R, x[3]/r * x[2]/R, -R/r};
   double phat[4] = {0,-x[2]/R, x[1]/R, 0};
 
-  int N = 1;
-  int L = 1;
-  int M = 0;
   double r0 = SphericalBesselJZero(N, L);
   double Br, Bt, Bp, B[4];
 

@@ -975,6 +975,10 @@ function Spheromak:__init__()
    -- ==========================================================================
    mps.amp = 100;        doc.amp = "amplitude of initial field"
    mps.num =   1;        doc.num = "if 1, do one, if 2 do two"
+   mps.box =  20;        doc.box = "width of the box"
+   mps.N = 1;            doc.N = "radial number"
+   mps.L = 1;            doc.L = "polar number"
+   mps.M = 0;            doc.M = "azimuthal number"
    -- ==========================================================================
 
    self.initial_data_cell = function(x)
@@ -982,13 +986,13 @@ function Spheromak:__init__()
    end
    self.initial_data_face = function(x, n)
       if mps.num == 1 then
-	 local B = m2lib.spheromak_vector_potential(x, n)
+	 local B = m2lib.spheromak(x, n, mps.N, mps.L, mps.M)
 	 return { mps.amp * B }
       elseif mps.num == 2 then
 	 local x1 = m2lib.dvec4(x[0], x[1], x[2], x[3] - 2.5)
 	 local x2 = m2lib.dvec4(x[0],-x[1],-x[2],-x[3] - 2.5)
-	 local B1 = m2lib.spheromak_vector_potential(x1, n)
-	 local B2 = m2lib.spheromak_vector_potential(x2, n)
+	 local B1 = m2lib.spheromak(x1, n, mps.N, mps.L, mps.M)
+	 local B2 = m2lib.spheromak(x2, n, mps.N, mps.L, mps.M)
 	 return { mps.amp * (B1 + B2) }
       end
    end
@@ -998,7 +1002,7 @@ function Spheromak:set_runtime_defaults(runtime_cfg)
 end
 function Spheromak:build_m2(runtime_cfg)
    local N = runtime_cfg.resolution or 32
-   local L = 10.0
+   local L = self.model_parameters.box / 2
    local build_args = {
       upper={ L,  L,  L},
       lower={-L, -L, -L},

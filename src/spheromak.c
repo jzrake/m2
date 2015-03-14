@@ -183,7 +183,7 @@ double SphericalBesselJZero(int N, int L)
     case 4: return 11.7049071546;
     }
   }
-  printf("WARNING: SphericalBesselJZero unknown L and M values\n");
+  printf("WARNING: SphericalBesselJZero unknown N and L values %d %d\n", N, L);
   return 0.0;
 }
 

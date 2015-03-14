@@ -1124,11 +1124,14 @@ static int L_m2_tubomak_vector_potential(lua_State *L)
   lua_pushnumber(L, A);
   return 1;
 }
-static int L_m2_spheromak_vector_potential(lua_State *L)
+static int L_m2_spheromak(lua_State *L)
 {
   double **x = (double **) luaL_checkudata(L, 1, "dvec4");
   double **n = (double **) luaL_checkudata(L, 2, "dvec4");
-  double A = m2_spheromak_vector_potential(*x, *n);
+  int N = luaL_checkint(L, 3);
+  int K = luaL_checkint(L, 4);
+  int M = luaL_checkint(L, 5);
+  double A = m2_spheromak(*x, *n, N, K, M);
   lua_pushnumber(L, A);
   return 1;
 }
@@ -1160,8 +1163,8 @@ int luaopen_m2lib(lua_State *L)
   lua_pushcfunction(L, L_m2_force_free_vector_potential);
   lua_setfield(L, -2, "force_free_vector_potential");
 
-  lua_pushcfunction(L, L_m2_spheromak_vector_potential);
-  lua_setfield(L, -2, "spheromak_vector_potential");
+  lua_pushcfunction(L, L_m2_spheromak);
+  lua_setfield(L, -2, "spheromak");
 
   lua_pushcfunction(L, L_m2_tubomak_vector_potential);
   lua_setfield(L, -2, "tubomak_vector_potential");
