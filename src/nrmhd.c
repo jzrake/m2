@@ -174,6 +174,7 @@ double nrmhd_measure(m2aux *aux, int flag)
   case M2_INTERNAL_ENERGY_DENSITY: return ug;
   case M2_KINETIC_ENERGY_DENSITY: return eg - ug;
   case M2_MAGNETIC_ENERGY_DENSITY: return pb;
+  case M2_TOTAL_ENERGY_DENSITY: return eg + pb;
   default:
     return 0.0;
   }

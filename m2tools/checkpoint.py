@@ -311,7 +311,6 @@ class Checkpoint(object):
             z = x1 * np.cos(x2)
         return x, y, z
 
-    @autolog.logmethod
     def get_reduction(self, column):
         import numpy as np
         I = self._file['reductions_log']['iteration'][:]
