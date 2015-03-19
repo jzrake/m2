@@ -13,7 +13,7 @@ def power_spectrum(Bx, bins):
     Bk = np.fft.fftn(Bx, axes=[1,2])
     B2 = (Bk[0]*Bk[0].conj() + Bk[1]*Bk[1].conj() + Bk[2]*Bk[2].conj()).real
     K = (Ks[0]**2 + Ks[1]**2 + Ks[2]**2)**0.5
-    dP, bins = np.histogram(K, bins=bins, weights=B2, normed=True)
+    dP, bins = np.histogram(K, bins=bins, weights=B2)
     dk = 1.0*(bins[1:] - bins[:-1])
     x  = 0.5*(bins[1:] + bins[:-1])
     y  = dP / dk
