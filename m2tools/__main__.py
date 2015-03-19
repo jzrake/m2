@@ -7,6 +7,7 @@ import stellar_model
 import mhd_forces
 import reductions
 import streamplot
+import pspec2d
 
 try:
     import local_tools
