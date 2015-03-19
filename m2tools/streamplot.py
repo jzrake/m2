@@ -50,7 +50,8 @@ class Plot2d(command.Command):
         method = {"stream": self.run_stream,
                   "lic": self.run_lic,
                   "relief": self.run_relief,
-                  "current": self.run_current}[args.kind]
+                  "current": self.run_current,
+                  "current_diff": self.run_current_diff}[args.kind]
 
         chkpt = checkpoint.Checkpoint(filename)
 
@@ -131,7 +132,8 @@ class Plot2d(command.Command):
         ax.get_yaxis().set_visible(False)
 
 
-    def run_current(self, ax, B1, B2, B3, B, X, Y, args):
+    def run_current_diff(self, ax, B1, B2, B3, B, X, Y, args):
+
         def five_point_deriv(f, axis=0, h=1.0):
             return (-1*np.roll(f, -2, axis) +
                     +8*np.roll(f, -1, axis) + 
@@ -139,10 +141,31 @@ class Plot2d(command.Command):
                     +1*np.roll(f, +2, axis)) / (12.0 * h)
 
         d = lambda f, a: five_point_deriv(f, a)
-        curl = np.zeros_like(B)
-        jz = d(B2, 0) - d(B1, 1)
+        jz = d(B2, 1) - d(B1, 0) # I know this looks wrong, but B1,B2,B3 are transposed
 
-        ax.set_title('current density (out-of-page)')
+        if not hasattr(self, "_jz0"): self._jz0 = jz
+
+        ax.set_title('$\delta j_z$ (perturbed current out-of-page)')
+        ax.imshow(jz - self._jz0, extent=[-1,1,-1,1], cmap='bone')
+        ax.axis('equal')
+        ax.set_xlim(-1, 1)
+        ax.set_ylim(-1, 1)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+
+    def run_current(self, ax, B1, B2, B3, B, X, Y, args):
+
+        def five_point_deriv(f, axis=0, h=1.0):
+            return (-1*np.roll(f, -2, axis) +
+                    +8*np.roll(f, -1, axis) + 
+                    -8*np.roll(f, +1, axis) + 
+                    +1*np.roll(f, +2, axis)) / (12.0 * h)
+
+        d = lambda f, a: five_point_deriv(f, a)
+        jz = d(B2, 1) - d(B1, 0) # I know this looks wrong, but B1,B2,B3 are transposed
+
+        ax.set_title('$j_z$ (current out-of-page)')
         ax.imshow(jz, extent=[-1,1,-1,1], cmap='bone')
         ax.axis('equal')
         ax.set_xlim(-1, 1)

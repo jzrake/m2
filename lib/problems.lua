@@ -823,10 +823,10 @@ function DecayingMHD:__init__()
    local function ABCflow(M, x)
 	 local L = 2
 	 local H = M.H
-	 local B1 = M.B1
-	 local B2 = M.B2
-	 local B3 = M.B3
 	 local alpha = math.sqrt(M.k2) * 2 * math.pi / L
+	 local B1 = M.B1 / alpha * 2
+	 local B2 = M.B2 / alpha * 2
+	 local B3 = M.B3 / alpha * 2
 	 local A = {B3 * math.cos(alpha * x[3]) - H * B2 * math.sin(alpha * x[2]),
 		    B1 * math.cos(alpha * x[1]) - H * B3 * math.sin(alpha * x[3]),
 		    B2 * math.cos(alpha * x[2]) - H * B1 * math.sin(alpha * x[1])}
