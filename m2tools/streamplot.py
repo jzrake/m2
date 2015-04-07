@@ -55,17 +55,14 @@ class Plot2d(command.Command):
                   "current": self.run_current,
                   "current_diff": self.run_current_diff}[args.kind]
 
-        chkpt = checkpoint.Checkpoint(filename)
+        chkpt = checkpoint.MaraCheckpoint(filename)
 
         B1 = chkpt.cell_primitive['B1'][...].T
         B2 = chkpt.cell_primitive['B2'][...].T
         B3 = chkpt.cell_primitive['B3'][...].T
-        try:
-            x, y = chkpt.cell_center_meshgrid
-            X = (1*x + 0*y).T
-            Y = (0*x + 1*y).T
-        except:
-            X, Y = None, None
+        x, y = chkpt.cell_center_meshgrid
+        X = (1*x + 0*y).T
+        Y = (0*x + 1*y).T
         B = (B1**2 + B2**2 + B3**2)**0.5
 
         if args.field:
