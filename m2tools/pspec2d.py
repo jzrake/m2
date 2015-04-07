@@ -32,8 +32,12 @@ class PowerSpectrum2D(command.Command):
                             help="don't plot anything, just cache the answer")
         parser.add_argument("-s", "--smooth", default=0, type=int)
         parser.add_argument("-c", "--compensate", default=0, type=float)
-        parser.add_argument("--bins", type=str, default='1:2048:512', help="k0:k1:num_bin_edges")
+        parser.add_argument("--bins", type=str, default='1:2048:512',
+                            help="if calculating, k0:k1:num_bin_edges; for time-series k0,k1,k2,...")
         parser.add_argument("--title", default=None, type=str)
+        parser.add_argument("--fit-window", default=None, help="k0:k1 or t0:t1")
+        parser.add_argument("--save-series", default=None, type=str,
+                            help="name of a file to write the time series")
 
 
     def run(self, args):
@@ -72,9 +76,7 @@ class PowerSpectrum2D(command.Command):
             if args.smooth:
                 W = args.smooth
                 y = smooth(y, window_len=(2*W+1))[W:-W]
-            if not args.noshow: plt.loglog(k, y, ls='-', marker='o', mfc='none', label=r'$t=%3.2e$'%t)
-
-        #if not args.noshow: plt.loglog(k, k**-3.0, c='k', lw=2, ls='--', label=r"$k^{-3}$")
+            if not args.noshow: plt.loglog(k, y, ls='-', marker=None, mfc='none', label=r'$t=%3.2e$'%t)
 
         plt.xlabel(r"$k/k_1$", fontsize=18)
         plt.ylabel(r"$k^{%3.2f} P_k$"%args.compensate, fontsize=18)
@@ -85,19 +87,66 @@ class PowerSpectrum2D(command.Command):
         import matplotlib.pyplot as plt
         import numpy as np
 
-        ks, Ps, ts = [], [], []
-        for filename in args.filenames:
-            k, P, t = self.load_or_calculate_spectrum(filename, args)
-            ks.append(k)
-            Ps.append(P)
-            ts.append(t)
+        ks, Ps, ts = self.load_or_calculate_time_series(args)
 
-        P = np.array(Ps)
-        for ki in [0,1,2,3,4,5,6]:
-            plt.plot(ts, P[:,ki], '-o', label=r'$k=%3.2f$' % ks[0][ki])
+        kimax = np.argmax(Ps, axis=1)
+        Pmax = [Ps[ti,ki] for ti, ki in enumerate(kimax)]
+        kmax = [ks[ti,ki] for ti, ki in enumerate(kimax)]
+
+        kind = "Pmax"
+
+        if kind == "kmax":
+            plt.loglog(ts, kmax)
+            plt.ylabel(r"$k_t$", fontsize=16)
+
+        if kind == "Pmax":
+            plt.loglog(ts, Pmax)
+            plt.ylabel(r"$P(k_t,t)$", fontsize=16)
+
+        if kind == "Pkt":
+            try:
+               k0s = [int(k) for k in args.bins.split(',')]
+            except:
+               k0s = range(10)
+
+            for ki in k0s:
+                plt.loglog(ts, Ps[:,ki], '-', label=r'$k=%3.2f$' % ks[0][ki])
+
+            plt.ylabel(r"$P_k(t)$", fontsize=16)
+            plt.legend(loc='best')
+
         plt.xlabel(r"$t$", fontsize=16)
-        plt.ylabel(r"$P_k(t)$", fontsize=16)
-        plt.legend(loc='best')
+
+
+    def load_or_calculate_time_series(self, args):
+        import numpy as np
+
+        if args.filenames[0].endswith('.npz'):
+            # We assume filenames are time-series databases
+            print "loading the time series database from", args.filenames[0]
+            db = np.load(args.filenames[0])
+            return db['ks'], db['Ps'], db['ts']
+
+        elif args.filenames[0].endswith('.h5'):
+            # We assume filenames are HDF5 checkpoints with 'spectra' group
+            print "calculating the time series of spectra"
+            ks, Ps, ts = [], [], []
+            for filename in args.filenames:
+                k, P, t = self.load_or_calculate_spectrum(filename, args)
+                ks.append(k)
+                Ps.append(P)
+                ts.append(t)
+
+            sorted_ind = np.argsort(ts)
+            ks = np.array(ks)[sorted_ind]
+            Ps = np.array(Ps)[sorted_ind]
+            ts = np.array(ts)[sorted_ind]
+
+            if args.save_series:
+                print "saving the time series database as", args.save_series
+                np.savez(args.save_series, ts=ts, ks=ks, Ps=Ps)
+
+            return ks, Ps, ts
 
 
     def load_or_calculate_spectrum(self, filename, args):

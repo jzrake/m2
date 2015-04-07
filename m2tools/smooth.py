@@ -54,3 +54,13 @@ def smooth(x,window_len=11,window='hanning'):
 
     y = numpy.convolve(w/w.sum(), s, mode='valid')
     return y
+
+
+
+def downsample(A, factor):
+
+    if factor == 0:
+        return A
+    else:
+        return downsample(0.5 * (A[0:-2:2] + A[1:-1:2]), factor-1)
+

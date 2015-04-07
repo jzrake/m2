@@ -13,6 +13,8 @@ class Plot2d(command.Command):
         parser.add_argument('filenames', nargs='+')
         parser.add_argument('--reductions', action='store_true')
         parser.add_argument('--kind', default="stream", choices=["stream", "lic", "relief", "current"])
+        parser.add_argument('--field', type=str, default=None,
+                            help="if relief, HDF5 dataset to use for image")
         parser.add_argument('--hardcopy', type=str, default=None,
                             help="image format extension to use, onscreen if None")
         parser.add_argument('-o', '--output', default=None, help="override default image name")
@@ -58,11 +60,19 @@ class Plot2d(command.Command):
         B1 = chkpt.cell_primitive['B1'][...].T
         B2 = chkpt.cell_primitive['B2'][...].T
         B3 = chkpt.cell_primitive['B3'][...].T
-        x, y = chkpt.cell_center_meshgrid
-        X = (1*x + 0*y).T
-        Y = (0*x + 1*y).T
+        try:
+            x, y = chkpt.cell_center_meshgrid
+            X = (1*x + 0*y).T
+            Y = (0*x + 1*y).T
+        except:
+            X, Y = None, None
         B = (B1**2 + B2**2 + B3**2)**0.5
 
+        if args.field:
+            args.relief_data = chkpt._file[args.field][...].T
+        else:
+            args.relief_data = B3
+            
         method(ax1, B1, B2, B3, B, X, Y, args)
 
         if args.reductions:
@@ -123,8 +133,11 @@ class Plot2d(command.Command):
 
 
     def run_relief(self, ax, B1, B2, B3, B, X, Y, args):
-        ax.set_title('out-of-page magnetic field')
-        ax.imshow(B3, extent=[-1,1,-1,1], cmap='bone')
+        if args.field:
+            ax.set_title(args.field)
+        else:
+            ax.set_title('out-of-page magnetic field')
+        ax.imshow(args.relief_data, extent=[-1,1,-1,1], cmap='bone', interpolation='nearest')
         ax.axis('equal')
         ax.set_xlim(-1, 1)
         ax.set_ylim(-1, 1)
